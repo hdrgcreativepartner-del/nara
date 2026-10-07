@@ -27,9 +27,8 @@ assert.ok(css.includes("#page-chat .profile-prompt")&&css.includes("display:grid
 assert.ok(css.includes("#page-chat .chips")&&css.includes("flex-wrap:nowrap!important"),"Prompt chips must stay single-row horizontal scroll");
 assert.ok(css.includes(".chat-actions"),"Assistant clarification choices must wrap responsively");
 assert.ok(html.includes('id="ico-more"'),"Agenda must use a three-dot options icon");
-assert.ok(css.includes(".agenda-menu"),"Agenda options popup must exist");
-assert.ok(js.includes("data-agenda-action"),"Agenda menu actions must be wired");
 assert.ok(html.includes('id="agendaSheet"'),"Agenda actions must use a global action sheet");
+assert.ok(js.includes("runAgendaSheetAction")&&html.includes("data-sheet-action"),"Agenda action sheet must be wired");
 assert.ok(html.includes('id="ico-check-circle"'),"Agenda completion must use a clear check icon");
 assert.ok(js.includes("explicitTargetIntent"),"Target must be a first-class intent");
 console.log("NARA UI contract passed: agenda action sheet, clear check, target intent, smart choices, responsive layout.");
