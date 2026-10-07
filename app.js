@@ -10,9 +10,9 @@ const state=load();
 let recognition=null,voiceSession=false,voiceFinal="";
 
 function fresh(){
-  return {profile:{name:""},messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],reminders:[],notes:[],habits:[],goals:[]};
+  return {profile:{name:""},settings:{reminderLead:30},messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],reminders:[],notes:[],habits:[],goals:[]};
 }
-function load(){try{return {...fresh(),...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch{return fresh()}}
+function load(){try{const base=fresh(),saved=JSON.parse(localStorage.getItem(KEY)||"{}")||{};return {...base,...saved,profile:{...base.profile,...(saved.profile||{})},settings:{...base.settings,...(saved.settings||{})}}}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
 function msg(role,text,result=""){state.messages.push({id:uid(),role,text,result,at:new Date().toISOString()})}
 function firstName(){return ((state.profile&&state.profile.name)||"").trim().split(/\s+/)[0]||""}
@@ -81,7 +81,11 @@ function financeType(t){
   if(/\bfee\b|\bhonor\b/.test(s))return"income";
   return null;
 }
-function reminderIntent(t){return /meeting|rapat|jadwal|deadline|ingatkan|janji|jemput|berangkat|telepon|hubungi|kirim|bayar.+(?:besok|tanggal)|besok|lusa/.test(t.toLowerCase())}
+function reminderIntent(t){
+  const s=t.toLowerCase();
+  if(/ingatkan|pengingat|reminder|meeting|rapat|jadwal|deadline|janji|jemput|berangkat|telepon|hubungi|kirim|loading|pemasangan|pasang|review|temui|nemui/.test(s))return true;
+  return /\b(besok|lusa|tanggal\s+\d+)\b/.test(s)&&/\b(pergi|ke|bayar|beli|ambil|antar|datang|ketemu|temu|kerja|acara)\b/.test(s);
+}
 function noteIntent(t){return /catat|note|ide|gagasan|jangan lupa bahwa/.test(t.toLowerCase())}
 function habitIntent(t){return /rutin|habit|kebiasaan|kali seminggu|setiap hari|olahraga|sholat|salat|belajar hal baru|belajar\s+\d+\s*menit/.test(t.toLowerCase())}
 
@@ -129,12 +133,16 @@ function process(text){
 
   const results=[];
   for(const clause of splitClauses(text)){
+    const lower=clause.toLowerCase();
+    if(/\b(besok|lusa|nanti)\b/.test(lower)&&!reminderIntent(clause)&&clause.trim().split(/\s+/).length<6){
+      results.push("Besok kamu ingin aku ingatkan tentang apa? Tambahkan kegiatannya ya.");continue;
+    }
     const ft=financeType(clause),amount=ft?parseAmount(clause):null;
     if(ft&&amount){
       const category=categoryFor(clause),date=parseDate(clause),title=cleanTitle(clause)||category;
       const futureBill=ft==="expense"&&/(bayar|tagihan)/i.test(clause)&&/(besok|lusa|tanggal)/i.test(clause)&&date!==localISO();
       if(futureBill){
-        state.reminders.push({id:uid(),title:title||"Tagihan",date,time:parseTime(clause),done:false,kind:"bill",amount,category});
+        state.reminders.push({id:uid(),title:title||"Tagihan",date,time:parseTime(clause),done:false,kind:"bill",amount,category,leadMinutes:state.settings.reminderLead||30,notified:false});
         results.push(`Siap, tagihan “${title||"Tagihan"}” sebesar ${rupiah(amount)} aku ingatkan untuk ${fmtDate(date)}.`);
         continue;
       }
@@ -149,7 +157,7 @@ function process(text){
     }
     if(reminderIntent(clause)){
       const date=parseDate(clause),time=parseTime(clause),title=cleanTitle(clause)||"Pengingat";
-      state.reminders.push({id:uid(),title,date,time,done:false});
+      state.reminders.push({id:uid(),title,date,time,done:false,leadMinutes:state.settings.reminderLead||30,notified:false});
       results.push(`Siap, aku ingatkan “${title}” pada ${fmtDate(date)}${time?" pukul "+time:""}.`);
       continue;
     }
@@ -185,7 +193,7 @@ function renderToday(){
   $("#focusText").textContent=(agenda[0]&&agenda[0].title)||(habits.length?"Jaga konsistensi habit hari ini.":"Belum ada agenda mendesak.");
   const d=new Date();$("#dateBadge").innerHTML=`<b>${d.getDate()}</b><br>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d)}`;
   $("#todayAgenda").classList.toggle("empty",!agenda.length);
-  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row"><button class="rowicon reminder-done" data-id="${r.id}" aria-label="Tandai reminder selesai">○</button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}${r.amount?" · "+rupiah(r.amount):""}</span></div></div>`).join(""):"Belum ada agenda mendatang.";
+  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row"><button class="rowicon reminder-done" data-id="${r.id}" aria-label="Tandai reminder selesai">○</button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}${r.amount?" · "+rupiah(r.amount):""} · ${r.leadMinutes||state.settings.reminderLead||30} mnt sebelumnya</span></div><button class="edit-action edit-reminder" data-id="${r.id}" aria-label="Edit pengingat"><svg><use href="#ico-edit"/></svg></button></div>`).join(""):"Belum ada agenda mendatang.";
   $("#todayHabits").classList.toggle("empty",!habits.length);
   $("#todayHabits").innerHTML=habits.length?habits.map(h=>{const done=h.doneDates.includes(today);return `<div class="row"><button class="rowicon habit-toggle" data-id="${h.id}" aria-label="Tandai kebiasaan">${done?"✓":"○"}</button><div class="rowmain"><strong>${esc(h.name)}</strong><span>${h.period==="weekly"?h.target+"× per minggu":"Setiap hari"}</span></div><span class="rowvalue">${done?"Selesai":""}</span></div>`}).join(""):"Belum ada kebiasaan yang kamu pantau.";
   const total=txTotals(t=>t.date===today);$("#todayIncome").textContent=rupiah(total.income);$("#todayExpense").textContent=rupiah(total.expense);$("#todayNet").textContent=rupiah(total.income-total.expense);
@@ -194,15 +202,23 @@ function row(icon,title,sub,value,klass=""){return `<div class="row"><div class=
 function renderFinance(){
   const total=txTotals(),month=localISO().slice(0,7),mt=txTotals(t=>t.date.startsWith(month));
   $("#balanceTotal").textContent=rupiah(total.income-total.expense);$("#monthIncome").textContent=rupiah(mt.income);$("#monthExpense").textContent=rupiah(mt.expense);$("#sideBalance").textContent=rupiah(total.income-total.expense);
-  const recent=[...state.transactions].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,12);
-  $("#transactionList").classList.toggle("empty",!recent.length);$("#transactionList").innerHTML=recent.length?recent.map(t=>`<div class="row"><div class="rowicon">${t.type==="income"?"+":"−"}</div><div class="rowmain"><strong>${esc(t.title)}</strong><span>${esc(t.category)} · ${fmtDate(t.date)}</span></div><div class="rowvalue ${t.type==="income"?"good":"bad"}">${t.type==="income"?"+":"−"} ${rupiah(t.amount)}</div><button class="rowaction delete-tx" data-id="${t.id}" aria-label="Hapus transaksi">×</button></div>`).join(""):"Belum ada transaksi.";
+  const recent=[...state.transactions].sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).slice(0,12);
+  $("#transactionList").classList.toggle("empty",!recent.length);$("#transactionList").innerHTML=recent.length?recent.map(t=>`<div class="row"><div class="rowicon">${t.type==="income"?"+":"−"}</div><div class="rowmain"><strong>${esc(t.title)}</strong><span>${esc(categoryLabel(t.category))} · ${fmtDate(t.date)}</span></div><div class="rowvalue ${t.type==="income"?"good":"bad"}">${t.type==="income"?"+":"−"} ${rupiah(t.amount)}</div><div class="row-actions"><button class="edit-action edit-tx" data-id="${t.id}" aria-label="Edit transaksi"><svg><use href="#ico-edit"/></svg></button><button class="rowaction delete-tx" data-id="${t.id}" aria-label="Hapus transaksi">×</button></div></div>`).join(""):"Belum ada transaksi.";
   const cats={};state.transactions.filter(t=>t.type==="expense"&&t.date.startsWith(month)).forEach(t=>cats[t.category]=(cats[t.category]||0)+t.amount);
-  const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...entries.map(x=>x[1]));
+  const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...entries.map(x=>x[1])),sum=entries.reduce((a,x)=>a+x[1],0);
   $("#categoryBreakdown").classList.toggle("empty",!entries.length);$("#categoryBreakdown").innerHTML=entries.length?entries.map(([k,v])=>`<div class="cat"><span>${esc(categoryLabel(k))}</span><b>${rupiah(v)}</b><div class="bar"><i style="width:${Math.round(v/max*100)}%"></i></div></div>`).join(""):"Belum ada data.";
+  const palette=["#2563eb","#5b82eb","#8aa9f4","#b1c6f8","#d1ddfb","#9aa9c6"];
+  let acc=0,segments=entries.slice(0,6).map(([k,v],i)=>{const from=sum?acc/sum*100:0;acc+=v;const to=sum?acc/sum*100:0;return `${palette[i]} ${from}% ${to}%`});
+  $("#spendingDonut").style.background=segments.length?`conic-gradient(${segments.join(",")})`:"#e7ebf2";
+  $("#donutTotal").textContent=rupiah(sum);
+  $("#donutLegend").innerHTML=entries.length?entries.slice(0,6).map(([k,v],i)=>`<div class="donut-item"><i style="background:${palette[i]}"></i><span>${esc(categoryLabel(k))}</span><b>${sum?Math.round(v/sum*100):0}%</b></div>`).join(""):`<div class="empty">Belum ada pengeluaran.</div>`;
+  const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const iso=localISO(d),tt=txTotals(t=>t.date===iso);days.push({d,iso,...tt})}
+  const peak=Math.max(1,...days.flatMap(x=>[x.income,x.expense]));$("#cashflowTrend").textContent=rupiah(days.reduce((a,x)=>a+x.income-x.expense,0));
+  $("#cashflowChart").innerHTML=days.map(x=>`<div class="cash-day"><div class="cash-bars"><i class="cash-bar income" style="height:${Math.max(2,x.income/peak*100)}%"></i><i class="cash-bar expense" style="height:${Math.max(2,x.expense/peak*100)}%"></i></div><small>${new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(x.d).slice(0,3)}</small></div>`).join("");
 }
 function renderNotes(){
   const q=(($("#noteSearch")&&$("#noteSearch").value)||"").toLowerCase(),notes=[...state.notes].filter(n=>(n.title+" "+n.body).toLowerCase().includes(q)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
-  $("#notesGrid").innerHTML=notes.length?notes.map(n=>`<article class="note"><button class="cardaction delete-note" data-id="${n.id}" aria-label="Hapus note">×</button><h3>${esc(n.title)}</h3><p>${esc(n.body)}</p><div class="notemeta">${fmtDate(n.date)}</div></article>`).join(""):`<div class="empty">Belum ada note.</div>`;
+  $("#notesGrid").innerHTML=notes.length?notes.map(n=>`<article class="note"><div class="note-actions"><button class="edit-action edit-note" data-id="${n.id}" aria-label="Edit catatan"><svg><use href="#ico-edit"/></svg></button><button class="cardaction delete-note" data-id="${n.id}" aria-label="Hapus catatan">×</button></div><h3>${esc(n.title)}</h3><p>${esc(n.body)}</p><div class="notemeta">${fmtDate(n.date)}</div></article>`).join(""):`<div class="empty">Belum ada note.</div>`;
 }
 function weeklyDone(h){
   const d=new Date(),day=(d.getDay()+6)%7,monday=new Date(d);monday.setDate(d.getDate()-day);monday.setHours(0,0,0,0);
@@ -225,7 +241,7 @@ function renderGoals(){
     const d=new Date(),dow=(d.getDay()+6)%7,monday=new Date(d);monday.setDate(d.getDate()-dow);
     const dots=days.map((x,i)=>{const dd=new Date(monday);dd.setDate(monday.getDate()+i);const date=localISO(dd),done=h.doneDates.includes(date);return `<button class="daydot ${done?"done":""}" data-habit="${h.id}" data-date="${date}">${x}</button>`}).join("");
     const count=weeklyDone(h),target=h.period==="weekly"?h.target:7;
-    return `<div class="habit"><div class="habithead"><strong>${esc(h.name)}</strong><span><small>${count}/${target}</small><button class="rowaction delete-habit" data-id="${h.id}" aria-label="Hapus habit">×</button></span></div><div class="weekdots">${dots}</div></div>`
+    return `<div class="habit"><div class="habithead"><strong>${esc(h.name)}</strong><span><small>${count}/${target}</small><button class="edit-action edit-habit" data-id="${h.id}" aria-label="Edit kebiasaan"><svg><use href="#ico-edit"/></svg></button><button class="rowaction delete-habit" data-id="${h.id}" aria-label="Hapus kebiasaan">×</button></span></div><div class="weekdots">${dots}</div></div>`
   }).join(""):"Tambahkan kebiasaan lewat obrolan atau tombol + Kebiasaan.";
 }
 function renderSummary(){
@@ -251,7 +267,7 @@ function renderAccount(){
   if($("#backupReminderCount"))$("#backupReminderCount").textContent=state.reminders.length;
   if($("#backupHabitCount"))$("#backupHabitCount").textContent=state.habits.length;
 }
-function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile();renderAccount()}
+function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile();renderAccount();renderSettings()}
 
 function go(page){
   $$(".page").forEach(x=>x.classList.toggle("active",x.id===`page-${page}`));$$(".navbtn[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
@@ -264,12 +280,12 @@ function openQuick(type){
 }
 function syncQuick(){
   const t=$("#quickType").value,finance=["expense","income"].includes(t),rem=t==="reminder",habit=t==="habit";
-  $("#amountWrap").classList.toggle("hidden",!finance);$("#dateWrap").classList.toggle("hidden",!(finance||rem));$("#timeWrap").classList.toggle("hidden",!rem);$("#freqWrap").classList.toggle("hidden",!habit);
+  $("#amountWrap").classList.toggle("hidden",!finance);$("#dateWrap").classList.toggle("hidden",!(finance||rem));$("#timeWrap").classList.toggle("hidden",!rem);$("#reminderLeadWrap").classList.toggle("hidden",!rem);$("#freqWrap").classList.toggle("hidden",!habit);
 }
 function quickSubmit(e){
   e.preventDefault();const type=$("#quickType").value,title=$("#quickTitle").value.trim();if(!title)return;
   if(["expense","income"].includes(type)){const amount=Number($("#quickAmount").value.replace(/\D/g,""));if(!amount)return alert("Masukkan nominal.");state.transactions.push({id:uid(),type,amount,category:categoryFor(title),title,date:$("#quickDate").value||localISO(),createdAt:new Date().toISOString()})}
-  if(type==="reminder")state.reminders.push({id:uid(),title,date:$("#quickDate").value||localISO(),time:$("#quickTime").value,done:false});
+  if(type==="reminder")state.reminders.push({id:uid(),title,date:$("#quickDate").value||localISO(),time:$("#quickTime").value,done:false,leadMinutes:Number($("#quickReminderLead").value)||state.settings.reminderLead||30,notified:false});
   if(type==="note")state.notes.push({id:uid(),title:title.slice(0,48),body:title,date:localISO(),createdAt:new Date().toISOString()});
   if(type==="habit"){const f=$("#quickFrequency").value,spec={name:title,period:f==="daily"?"daily":"weekly",target:f==="3-week"?3:1};addHabit(spec,true)}
   $("#quickForm").reset();$("#quickDate").value=localISO();$("#quickDialog").close();save();
@@ -277,8 +293,40 @@ function quickSubmit(e){
 
 
 
+let editContext=null,lastReminderCheck=0;
+function openEditor(kind,id){
+  let item=null;
+  if(kind==="note")item=state.notes.find(x=>x.id===id);
+  if(kind==="tx")item=state.transactions.find(x=>x.id===id);
+  if(kind==="reminder")item=state.reminders.find(x=>x.id===id);
+  if(kind==="habit")item=state.habits.find(x=>x.id===id);
+  if(!item)return;editContext={kind,id};
+  $("#editKind").value=kind;$("#editId").value=id;$("#editTitle").value=item.title||item.name||"";$("#editBody").value=item.body||"";
+  $("#editAmount").value=item.amount||"";$("#editDate").value=item.date||localISO();$("#editTime").value=item.time||"";$("#editLead").value=String(item.leadMinutes||state.settings.reminderLead||30);
+  $("#editBodyWrap").classList.toggle("hidden",kind!=="note");$("#editAmountWrap").classList.toggle("hidden",kind!=="tx");$("#editDateWrap").classList.toggle("hidden",!["tx","reminder"].includes(kind));$("#editTimeWrap").classList.toggle("hidden",kind!=="reminder");$("#editLeadWrap").classList.toggle("hidden",kind!=="reminder");
+  $("#editHeading").textContent={note:"Edit catatan",tx:"Edit transaksi",reminder:"Edit pengingat",habit:"Edit kebiasaan"}[kind];$("#editDialog").showModal();
+}
+function saveEditor(e){e.preventDefault();if(!editContext)return;const {kind,id}=editContext,title=$("#editTitle").value.trim();if(!title)return;
+  if(kind==="note"){const x=state.notes.find(x=>x.id===id);if(x){x.title=title;x.body=$("#editBody").value.trim()||title}}
+  if(kind==="tx"){const x=state.transactions.find(x=>x.id===id);if(x){x.title=title;x.amount=Number($("#editAmount").value.replace(/\D/g,""))||x.amount;x.date=$("#editDate").value||x.date;x.category=categoryFor(title)}}
+  if(kind==="reminder"){const x=state.reminders.find(x=>x.id===id);if(x){x.title=title;x.date=$("#editDate").value||x.date;x.time=$("#editTime").value;x.leadMinutes=Number($("#editLead").value)||30;x.notified=false}}
+  if(kind==="habit"){const x=state.habits.find(x=>x.id===id);if(x){const old=x.name;x.name=title;state.goals.filter(g=>g.habitName===old).forEach(g=>{g.habitName=title;g.title=title})}}
+  $("#editDialog").close();editContext=null;save();
+}
+function restoreBackupFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const parsed=JSON.parse(reader.result),data=parsed.data||parsed;if(!data||!Array.isArray(data.notes)||!Array.isArray(data.transactions))throw new Error("Format tidak cocok");if(!confirm("Pulihkan backup ini? Data NARA saat ini akan diganti."))return;localStorage.setItem(KEY,JSON.stringify(data));location.reload()}catch(e){alert("File backup tidak valid.")}};reader.readAsText(file)}
+function resetAllData(){if(!confirm("Reset semua data NARA di perangkat ini?"))return;if(!confirm("Yakin? Catatan, transaksi, pengingat, dan target akan dihapus."))return;localStorage.removeItem(KEY);location.reload()}
+function showReminder(r,minutes){$("#reminderToastTitle").textContent=r.title;$("#reminderToastTime").textContent=minutes<=1?"Agenda segera dimulai":`${minutes} menit lagi · ${r.time||""}`;$("#reminderToast").hidden=false;
+  if(Notification&&Notification.permission==="granted"){try{new Notification("NARA · Pengingat",{body:`${r.title} — ${minutes} menit lagi`})}catch(e){}}
+}
+function checkReminders(){
+  const now=Date.now();if(now-lastReminderCheck<30000)return;lastReminderCheck=now;
+  state.reminders.filter(r=>!r.done&&r.date&&r.time&&!r.notified).forEach(r=>{const when=new Date(`${r.date}T${r.time}:00`).getTime(),lead=(r.leadMinutes||state.settings.reminderLead||30),diff=Math.ceil((when-now)/60000);if(diff<=lead&&diff>=0){r.notified=true;showReminder(r,diff);try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}});
+}
+function requestNotifications(){if(!("Notification"in window)){$("#notificationStatus").textContent="Browser ini belum mendukung notifikasi.";return}Notification.requestPermission().then(p=>{$("#notificationStatus").textContent=p==="granted"?"Notifikasi browser sudah aktif.":"Izin notifikasi belum diberikan.";})}
+function renderSettings(){if($("#defaultReminderLead"))$("#defaultReminderLead").value=String(state.settings.reminderLead||30)}
+
 function downloadBackup(){
-  const payload={app:"NARA",version:"3.1",exportedAt:new Date().toISOString(),data:state};
+  const payload={app:"NARA",version:"5.0",exportedAt:new Date().toISOString(),data:state};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob),a=document.createElement("a");
   a.href=url;a.download="NARA-backup-"+localISO()+".json";
@@ -294,8 +342,8 @@ function updateAccountName(name){
   if($("#accountSaveStatus")){$("#accountSaveStatus").textContent="Nama sudah diperbarui.";setTimeout(()=>{$("#accountSaveStatus").textContent="Perubahan tersimpan di perangkat ini."},1800)}
 }
 
-function setVoiceUI(active,transcript=""){if($("#micButton"))$("#micButton").classList.toggle("active",active);if($("#listeningPanel"))$("#listeningPanel").hidden=!active;if($("#voiceStatus")){$("#voiceStatus").classList.toggle("listening",active);$("#voiceStatus span").textContent=active?"Mendengarkan…":"Suara siap"}if(transcript&&$("#voiceTranscript"))$("#voiceTranscript").textContent=transcript}
-function webSpeechStart(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return false;if(!recognition){recognition=new SR();recognition.lang="id-ID";recognition.interimResults=true;recognition.continuous=false;recognition.maxAlternatives=1;recognition.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript;if(e.results[i].isFinal)voiceFinal+=txt;else interim+=txt}const shown=(voiceFinal||interim).trim();setVoiceUI(true,shown||"Silakan bicara.");$("#chatInput").value=shown};recognition.onerror=e=>{setVoiceUI(false);voiceSession=false;if($("#voiceTranscript"))$("#voiceTranscript").textContent=e.error==="not-allowed"?"Izin mikrofon diperlukan.":"Fitur suara tidak tersedia."};recognition.onend=()=>{setVoiceUI(false);const txt=voiceFinal.trim();voiceFinal="";if(txt){voiceSession=true;sendText(txt);$("#chatInput").value=""}else voiceSession=false}}try{voiceFinal="";voiceSession=true;recognition.start();setVoiceUI(true);return true}catch{return false}}
+function setVoiceUI(active,transcript=""){if($("#voiceMode"))$("#voiceMode").hidden=!active;if($("#voiceModeTranscript")&&transcript)$("#voiceModeTranscript").textContent=transcript;if($("#micButton"))$("#micButton").classList.toggle("active",active);if($("#listeningPanel"))$("#listeningPanel").hidden=!active;if($("#voiceStatus")){$("#voiceStatus").classList.toggle("listening",active);$("#voiceStatus span").textContent=active?"Mendengarkan…":"Suara siap"}if(transcript&&$("#voiceTranscript"))$("#voiceTranscript").textContent=transcript}
+function webSpeechStart(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return false;if(!recognition){recognition=new SR();recognition.lang="id-ID";recognition.interimResults=true;recognition.continuous=false;recognition.maxAlternatives=1;recognition.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript;if(e.results[i].isFinal)voiceFinal+=txt;else interim+=txt}const shown=(voiceFinal||interim).trim();setVoiceUI(true,shown||"Silakan bicara…");$("#chatInput").value=shown};recognition.onerror=e=>{setVoiceUI(false);voiceSession=false;if($("#voiceTranscript"))$("#voiceTranscript").textContent=e.error==="not-allowed"?"Izin mikrofon diperlukan.":"Fitur suara tidak tersedia."};recognition.onend=()=>{setVoiceUI(false);const txt=voiceFinal.trim();voiceFinal="";if(txt){voiceSession=true;sendText(txt);$("#chatInput").value=""}else voiceSession=false}}try{voiceFinal="";voiceSession=true;recognition.start();setVoiceUI(true);return true}catch{return false}}
 function startVoice(){try{if(window.NaraAndroid&&window.NaraAndroid.startVoiceInput){voiceSession=true;setVoiceUI(true);window.NaraAndroid.startVoiceInput();return}}catch{}if(!webSpeechStart()){setVoiceUI(false);voiceSession=false;msg("assistant","Maaf, fitur suara belum didukung di browser ini. Kamu tetap bisa mengetik seperti biasa.");save()}}
 function stopVoice(){try{if(recognition)recognition.stop()}catch{}setVoiceUI(false)}
 window.NaraVoiceResult=function(text){setVoiceUI(false);if(text){voiceSession=true;sendText(String(text));$("#chatInput").value=""}else voiceSession=false};
@@ -310,7 +358,7 @@ function boot(){
 }
 
 document.addEventListener("click",e=>{
-  const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);
+  const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);const en=e.target.closest(".edit-note");if(en)openEditor("note",en.dataset.id);const et=e.target.closest(".edit-tx");if(et)openEditor("tx",et.dataset.id);const er=e.target.closest(".edit-reminder");if(er)openEditor("reminder",er.dataset.id);const eh=e.target.closest(".edit-habit");if(eh)openEditor("habit",eh.dataset.id);
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}
   const act=e.target.closest("[data-action]");if(act){const map={quick:"expense",transaction:"expense",note:"note",habit:"habit"};openQuick(map[act.dataset.action])}
   const ht=e.target.closest(".habit-toggle");if(ht){const h=state.habits.find(x=>x.id===ht.dataset.id),d=localISO();if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
@@ -326,7 +374,7 @@ $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){
 $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
 $("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",stopVoice);$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});
-$("#downloadBackup").addEventListener("click",downloadBackup);
+$("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());$("#closeVoiceMode").addEventListener("click",stopVoice);$("#voiceCancel").addEventListener("click",stopVoice);$("#voiceDone").addEventListener("click",stopVoice);$("#dismissReminderToast").addEventListener("click",()=>$("#reminderToast").hidden=true);
 $("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});
 $("#profilePromptSkip").addEventListener("click",()=>{$("#profilePromptForm").hidden=true});
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;

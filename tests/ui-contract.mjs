@@ -12,4 +12,8 @@ assert.ok(js.includes('profilePromptForm').toString(),"Profile prompt must have 
 assert.ok(!js.includes('finishOnboarding('),"Legacy onboarding gate must be removed");
 assert.ok(js.includes('getRegistrations'),"Beta build must unregister stale service workers");
 assert.ok(sw.includes('unregister()'),"Retirement service worker must unregister itself");
-console.log("NARA UI contract passed: app-first, non-blocking profile, no onboarding gate, no beta cache trap.");
+assert.ok(html.includes('id="voiceMode"'),"Voice assistant mode must exist");
+assert.ok(html.includes('id="editDialog"'),"Edit dialog must exist");
+assert.ok(html.includes('id="cashflowChart"')&&html.includes('id="spendingDonut"'),"Finance infographics must exist");
+assert.ok(html.includes('id="resetNara"'),"Reset control must exist");
+console.log("NARA UI contract passed: app-first, voice mode, finance charts, editable data, reset.");
