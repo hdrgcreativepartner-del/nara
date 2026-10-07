@@ -1,5 +1,5 @@
-const CACHE="nara-web-v3-310";
-const ASSETS=["./","./index.html","./styles.css?v=3.1.0","./app.js?v=3.1.0","./manifest.webmanifest?v=3.1.0","./icon.svg","./nara-logo.svg"];
+const CACHE="nara-web-v3-311";
+const ASSETS=["./","./index.html","./styles.css?v=3.1.1","./app.js?v=3.1.1","./manifest.webmanifest?v=3.1.1","./icon.svg","./nara-logo.svg"];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",event=>{
