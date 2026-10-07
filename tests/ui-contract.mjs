@@ -29,4 +29,7 @@ assert.ok(css.includes(".chat-actions"),"Assistant clarification choices must wr
 assert.ok(html.includes('id="ico-more"'),"Agenda must use a three-dot options icon");
 assert.ok(css.includes(".agenda-menu"),"Agenda options popup must exist");
 assert.ok(js.includes("data-agenda-action"),"Agenda menu actions must be wired");
-console.log("NARA UI contract passed: agenda menu, intent-first assistant, smart choices, responsive layout and fixed composer.");
+assert.ok(html.includes('id="agendaSheet"'),"Agenda actions must use a global action sheet");
+assert.ok(html.includes('id="ico-check-circle"'),"Agenda completion must use a clear check icon");
+assert.ok(js.includes("explicitTargetIntent"),"Target must be a first-class intent");
+console.log("NARA UI contract passed: agenda action sheet, clear check, target intent, smart choices, responsive layout.");

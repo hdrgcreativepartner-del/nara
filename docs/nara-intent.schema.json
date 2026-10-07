@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NARA Intelligence Intent",
+  "type": "object",
+  "required": [
+    "intent",
+    "confidence",
+    "entities",
+    "needs_clarification",
+    "suggested_action"
+  ],
+  "properties": {
+    "intent": {
+      "enum": [
+        "finance_expense",
+        "finance_income",
+        "agenda",
+        "note",
+        "target",
+        "habit",
+        "state_change",
+        "conversation",
+        "unknown"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "entities": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "amount": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "category": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "YYYY-MM-DD"
+        },
+        "time": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "HH:mm 24-hour"
+        },
+        "daypart": {
+          "enum": [
+            "pagi",
+            "siang",
+            "sore",
+            "malam",
+            null
+          ]
+        },
+        "period": {
+          "enum": [
+            "daily",
+            "weekly",
+            "monthly",
+            null
+          ]
+        },
+        "reminder_lead_minutes": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "source_text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "needs_clarification": {
+      "type": "boolean"
+    },
+    "missing_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "clarification_question": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "quick_replies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "suggested_action": {
+      "enum": [
+        "save",
+        "ask",
+        "update",
+        "ignore"
+      ]
+    }
+  }
+}
