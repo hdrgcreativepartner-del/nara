@@ -1,13 +1,18 @@
 {
-  "name":"NARA — Personal Daily Assistant",
-  "short_name":"NARA",
-  "description":"Personal daily assistant untuk reminder, notes, finance, goals, dan habits.",
-  "start_url":"./",
-  "scope":"./",
-  "display":"standalone",
-  "background_color":"#f4f5f7",
-  "theme_color":"#111827",
-  "icons":[
-    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  "name": "NARA — Personal Daily Assistant",
+  "short_name": "NARA",
+  "description": "NARA — asisten harian untuk catatan, pengingat, keuangan, target, dan kebiasaan.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f4f3",
+  "theme_color": "#101214",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }
