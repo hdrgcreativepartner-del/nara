@@ -83,7 +83,7 @@ assert.equal(get("state.transactions[0].amount"),100000);
 
 reset();
 run("Besok jam 10 meeting dengan Pak Budi");
-vm.runInContext("renderToday()",context);
+vm.runInContext('state.settings.agendaRange="week";renderToday()',context);
 assert.match(elements.get("#todayAgenda").innerHTML,/Pak Budi/i);
 assert.match(elements.get("#todayAgenda").innerHTML,/reminder-done/);
 
@@ -263,3 +263,13 @@ reset();
 const ambiguous=run("kayaknya weekend ini ke Banyuwangi");
 assert.equal(get("state.reminders.length"),0);
 assert.ok(get("state.pending")!==null);
+
+reset();
+vm.runInContext(`
+state.reminders.push(
+{id:"a",title:"Siang",date:localISO(),time:"13:00",done:false,leadMinutes:30},
+{id:"b",title:"Pagi",date:localISO(),time:"08:00",done:false,leadMinutes:30},
+{id:"c",title:"Selesai",date:localISO(),time:"07:00",done:true,leadMinutes:30}
+)`,context);
+assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext(`[...state.reminders].sort(agendaSort).map(x=>x.id)`,context))),["b","a","c"]);
+assert.equal(vm.runInContext(`agendaInRange(state.reminders[0],"today")`,context),true);

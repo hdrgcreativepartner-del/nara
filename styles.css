@@ -742,3 +742,84 @@ dialog.action-sheet-dialog[open] .action-sheet{
   }
   *{scroll-behavior:auto!important}
 }
+
+/* NARA v5.9 — agenda hierarchy and consistent completion controls */
+.agenda-card{overflow:visible!important}
+.agenda-cardhead>div{display:flex;align-items:baseline;justify-content:space-between;width:100%;gap:12px}
+.agenda-cardhead #agendaCount{font-size:10px;color:var(--muted);white-space:nowrap}
+.agenda-range{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:4px;
+  padding:4px;
+  margin:2px 0 12px;
+  border-radius:14px;
+  background:#f1f3f5;
+}
+.agenda-range button{
+  min-height:38px;
+  border:0;
+  border-radius:11px;
+  background:transparent;
+  color:#7a827e;
+  font-size:10px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.agenda-range button.active{
+  background:#fff;
+  color:#1f57c8;
+  box-shadow:0 2px 8px rgba(20,32,50,.08);
+}
+.agenda-row{
+  display:grid!important;
+  grid-template-columns:auto 62px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center!important;
+}
+.agenda-time-block{
+  min-width:0;
+  padding-right:2px;
+}
+.agenda-time-block b{
+  display:block;
+  font-size:14px;
+  line-height:1.1;
+  color:#111827;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em;
+}
+.agenda-time-block span{
+  display:block;
+  margin-top:4px;
+  font-size:9px;
+  color:#7c847f;
+  line-height:1.2;
+  white-space:normal;
+}
+.agenda-copy strong{font-size:12px;line-height:1.35}
+.agenda-copy span{font-size:9px;margin-top:4px;color:#8a918d}
+.agenda-row.done .agenda-time-block b,.agenda-row.done .agenda-time-block span{color:#9aa19d}
+.agenda-row.done .agenda-copy strong{text-decoration:line-through}
+.agenda-row.done{
+  order:99;
+  background:linear-gradient(90deg,rgba(245,247,249,.65),rgba(255,255,255,0));
+}
+.agenda-check{
+  width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;
+  border-radius:14px!important;
+}
+.agenda-check svg{width:22px;height:22px}
+.habit-row .agenda-check{align-self:center}
+.habit-status{font-size:9px;color:#8b938e;white-space:nowrap}
+.habit-status.done{color:#2563eb;font-weight:800}
+@media(max-width:440px){
+  .agenda-row{grid-template-columns:auto 56px minmax(0,1fr) auto;gap:8px}
+  .agenda-time-block b{font-size:13px}
+  .agenda-time-block span{font-size:8px}
+  .agenda-range button{font-size:9px}
+}
+@media(max-width:350px){
+  .agenda-row{grid-template-columns:auto 50px minmax(0,1fr) auto;gap:6px}
+  .agenda-time-block b{font-size:12px}
+}

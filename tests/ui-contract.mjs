@@ -47,4 +47,8 @@ assert.ok(css.includes("rgba(10,15,24,.80)"),"Modal backdrop must use an 80% dim
 assert.ok(css.includes("@media(prefers-reduced-motion:reduce)"),"Motion must respect reduced-motion preference");
 assert.ok(css.includes("--tap:44px"),"Core controls must preserve comfortable touch targets");
 assert.ok(js.includes('r.done?"Buka kembali":"Tandai selesai"'),"Agenda action must reflect completion state");
-console.log("NARA UI contract passed: centered floating modals, contextual agenda action, 80% backdrop, accessible motion, touch targets, minimized targets, Median contrast.");
+assert.ok(html.includes('data-agenda-range="today"')&&html.includes('data-agenda-range="week"')&&html.includes('data-agenda-range="month"'),"Agenda must expose today/week/month filters");
+assert.ok(js.includes("agendaSort")&&js.includes("agendaInRange"),"Agenda must sort and filter through dedicated logic");
+assert.ok(js.includes('class="agenda-check habit-toggle'),"Habit completion control must match agenda check UI");
+assert.ok(css.includes(".agenda-time-block"),"Agenda date and time must have a clear visual block");
+console.log("NARA UI contract passed: commercial agenda filters, time hierarchy, consistent habit controls, centered modals, Median contrast.");

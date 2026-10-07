@@ -12,7 +12,7 @@ if(typeof document!=="undefined"&&document.documentElement&&document.documentEle
 let recognition=null,voiceSession=false,voiceFinal="";
 
 function fresh(){
-  return {profile:{name:""},settings:{reminderLead:30},pending:null,lastCreated:null,messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],liabilities:[],receivables:[],reminders:[],notes:[],habits:[],goals:[]};
+  return {profile:{name:""},settings:{reminderLead:30,agendaRange:"today"},pending:null,lastCreated:null,messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],liabilities:[],receivables:[],reminders:[],notes:[],habits:[],goals:[]};
 }
 function load(){try{const base=fresh(),saved=JSON.parse(localStorage.getItem(KEY)||"{}")||{};return {...base,...saved,profile:{...base.profile,...(saved.profile||{})},settings:{...base.settings,...(saved.settings||{})},liabilities:Array.isArray(saved.liabilities)?saved.liabilities:[],receivables:Array.isArray(saved.receivables)?saved.receivables:[]}}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
@@ -527,17 +527,50 @@ function renderChat(showTyping=false){
   syncChatSafeArea();
 }
 function txTotals(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>{if(t.type==="income")a.income+=t.amount;if(t.type==="expense")a.expense+=t.amount;return a},{income:0,expense:0})}
+function startOfWeekISO(d=new Date()){
+  const x=new Date(d),dow=(x.getDay()+6)%7;x.setDate(x.getDate()-dow);return localISO(x)
+}
+function endOfWeekISO(d=new Date()){
+  const x=new Date(d),dow=(x.getDay()+6)%7;x.setDate(x.getDate()-dow+6);return localISO(x)
+}
+function agendaInRange(r,range,today=localISO()){
+  if(range==="today")return r.date===today;
+  if(range==="week")return r.date>=startOfWeekISO()&&r.date<=endOfWeekISO();
+  if(range==="month")return r.date.startsWith(today.slice(0,7));
+  return true;
+}
+function agendaSort(a,b){
+  if(Number(a.done)!==Number(b.done))return Number(a.done)-Number(b.done);
+  const ad=(a.date||"9999-99-99")+" "+(a.time||"99:99"),bd=(b.date||"9999-99-99")+" "+(b.time||"99:99");
+  return ad.localeCompare(bd);
+}
+function agendaDateLabel(date,today=localISO()){
+  if(date===today)return"Hari ini";
+  if(date===addDays(1))return"Besok";
+  return new Intl.DateTimeFormat("id-ID",{weekday:"short",day:"numeric",month:"short"}).format(new Date(date+"T12:00:00"));
+}
 function renderToday(){
-  const today=localISO(),agenda=[...state.reminders].sort((a,b)=>(Number(a.done)-Number(b.done))||(a.date+(a.time||"99:99")).localeCompare(b.date+(b.time||"99:99"))).slice(0,12),activeAgenda=agenda.filter(r=>!r.done),habits=state.habits;
-  $("#agendaCount").textContent=agenda.length;$("#habitCount").textContent=habits.length;
-  $("#focusText").textContent=(activeAgenda[0]&&activeAgenda[0].title)||(habits.length?"Jaga konsistensi habit hari ini.":"Belum ada agenda mendesak.");
+  const today=localISO(),range=state.settings.agendaRange||"today",allAgenda=[...state.reminders].sort(agendaSort),agenda=allAgenda.filter(r=>agendaInRange(r,range,today)),todayActive=allAgenda.filter(r=>!r.done&&r.date===today).sort(agendaSort),habits=state.habits;
+  $("#agendaCount").textContent=agenda.length+" agenda";$("#habitCount").textContent=habits.length;
+  $("#focusText").textContent=(todayActive[0]&&todayActive[0].title)||(habits.length?"Jaga konsistensi kebiasaan hari ini.":"Belum ada agenda hari ini.");
   const d=new Date();$("#dateBadge").innerHTML=`<b>${d.getDate()}</b><br>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d)}`;
+  document.querySelectorAll("[data-agenda-range]").forEach(b=>{const active=b.dataset.agendaRange===range;b.classList.toggle("active",active);b.setAttribute("aria-selected",String(active))});
   $("#todayAgenda").classList.toggle("empty",!agenda.length);
-  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row agenda-row ${r.done?"done":""}" data-agenda-id="${r.id}"><button class="agenda-check reminder-done ${r.done?"done":""}" data-id="${r.id}" aria-label="${r.done?"Buka kembali agenda":"Tandai agenda selesai"}"><svg><use href="#ico-check-circle"/></svg></button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.done?`Selesai${r.completedAt?" · "+new Intl.DateTimeFormat("id-ID",{hour:"2-digit",minute:"2-digit"}).format(new Date(r.completedAt)):""}`:`${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}${r.amount?" · "+rupiah(r.amount):""} · ingatkan ${r.leadMinutes||state.settings.reminderLead||30} mnt sebelumnya`}</span></div><button class="agenda-menu-trigger" data-id="${r.id}" aria-label="Opsi agenda"><svg><use href="#ico-more"/></svg></button></div>`).join(""):"Belum ada agenda mendatang.";
+  const emptyLabel=range==="today"?"Belum ada agenda hari ini.":range==="week"?"Belum ada agenda minggu ini.":"Belum ada agenda bulan ini.";
+  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>{
+    const dateLabel=agendaDateLabel(r.date,today),timeLabel=r.time||"—";
+    return `<div class="row agenda-row ${r.done?"done":""}" data-agenda-id="${r.id}">
+      <button class="agenda-check reminder-done ${r.done?"done":""}" data-id="${r.id}" aria-label="${r.done?"Buka kembali agenda":"Tandai agenda selesai"}"><svg><use href="#ico-check-circle"/></svg></button>
+      <div class="agenda-time-block"><b>${esc(timeLabel)}</b><span>${esc(dateLabel)}</span></div>
+      <div class="rowmain agenda-copy"><strong>${esc(r.title)}</strong><span>${r.done?`Selesai${r.completedAt?" · "+new Intl.DateTimeFormat("id-ID",{hour:"2-digit",minute:"2-digit"}).format(new Date(r.completedAt)):""}`:`Pengingat ${r.leadMinutes||state.settings.reminderLead||30} menit sebelumnya`}</span></div>
+      <button class="agenda-menu-trigger" data-id="${r.id}" aria-label="Opsi agenda"><svg><use href="#ico-more"/></svg></button>
+    </div>`
+  }).join(""):emptyLabel;
   $("#todayHabits").classList.toggle("empty",!habits.length);
-  $("#todayHabits").innerHTML=habits.length?habits.map(h=>{const done=h.doneDates.includes(today);return `<div class="row"><button class="rowicon habit-toggle" data-id="${h.id}" aria-label="Tandai kebiasaan">${done?"✓":"○"}</button><div class="rowmain"><strong>${esc(h.name)}</strong><span>${h.period==="weekly"?h.target+"× per minggu":"Setiap hari"}</span></div><span class="rowvalue">${done?"Selesai":""}</span></div>`}).join(""):"Belum ada kebiasaan yang kamu pantau.";
+  $("#todayHabits").innerHTML=habits.length?habits.map(h=>{const done=h.doneDates.includes(today);return `<div class="row habit-row"><button class="agenda-check habit-toggle ${done?"done":""}" data-id="${h.id}" aria-label="${done?"Buka kembali kebiasaan":"Tandai kebiasaan selesai"}"><svg><use href="#ico-check-circle"/></svg></button><div class="rowmain"><strong>${esc(h.name)}</strong><span>${h.period==="weekly"?h.target+"× per minggu":"Setiap hari"}</span></div><span class="habit-status ${done?"done":""}">${done?"Selesai":""}</span></div>`}).join(""):"Belum ada kebiasaan yang kamu pantau.";
   const total=txTotals(t=>t.date===today);$("#todayIncome").textContent=rupiah(total.income);$("#todayExpense").textContent=rupiah(total.expense);$("#todayNet").textContent=rupiah(total.income-total.expense);
 }
+
 function row(icon,title,sub,value,klass=""){return `<div class="row"><div class="rowicon">${icon}</div><div class="rowmain"><strong>${esc(title)}</strong><span>${esc(sub)}</span></div>${value?`<div class="rowvalue ${klass}">${esc(value)}</div>`:""}</div>`}
 function renderFinance(){
   const total=txTotals(),month=localISO().slice(0,7),mt=txTotals(t=>t.date.startsWith(month));
@@ -739,6 +772,7 @@ document.addEventListener("click",e=>{
   if(trigger){e.stopPropagation();openAgendaSheet(trigger.dataset.id);return}
   const sheetAction=e.target.closest("[data-sheet-action]");
   if(sheetAction){runAgendaSheetAction(sheetAction.dataset.sheetAction);return}
+  const rangeBtn=e.target.closest("[data-agenda-range]");if(rangeBtn){state.settings.agendaRange=rangeBtn.dataset.agendaRange;save();return}
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);const en=e.target.closest(".edit-note");if(en)openEditor("note",en.dataset.id);const et=e.target.closest(".edit-tx");if(et)openEditor("tx",et.dataset.id);const er=e.target.closest(".edit-reminder");if(er)openEditor("reminder",er.dataset.id);const eh=e.target.closest(".edit-habit");if(eh)openEditor("habit",eh.dataset.id);const eg=e.target.closest(".edit-target");if(eg)openEditor("target",eg.dataset.id);
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}const choice=e.target.closest("[data-chat-choice]");if(choice)sendText(choice.dataset.chatChoice);
   const act=e.target.closest("[data-action]");if(act){const map={quick:"expense",transaction:"expense",note:"note",target:"target",habit:"habit"};openQuick(map[act.dataset.action])}
