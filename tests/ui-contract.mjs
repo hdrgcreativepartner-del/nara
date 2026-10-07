@@ -19,4 +19,7 @@ assert.ok(html.includes('id="cashflowChart"')&&html.includes('id="spendingDonut"
 assert.ok(html.includes('id="resetNara"'),"Reset control must exist");
 assert.ok(js.includes("scrollChatToBottom"),"Chat must keep the newest reply above the composer");
 assert.ok(css.includes("--chat-safe-bottom")||css.includes("scroll-padding-bottom"),"Chat must reserve a safe area above composer");
-console.log("NARA UI contract passed: app-first, fixed composer, safe reply scroll, voice mode, finance charts, editable data, reset.");
+assert.ok(html.includes('id="conversationScroll"'),"Intro and messages must share one scroll surface");
+assert.ok(js.includes('$("#conversationScroll")'),"Chat auto-scroll must target the conversation surface");
+assert.ok(html.includes("Powered by <b>HDRG Creative Partner</b>"),"Account footer branding must exist");
+console.log("NARA UI contract passed: scrollable intro, fixed composer, account footer, voice mode, finance charts, editable data, reset.");
