@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=3.1.1">
+  <link rel="manifest" href="./manifest.webmanifest?v=3.1.2">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=3.1.1">
+  <link rel="stylesheet" href="./styles.css?v=3.1.2">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -163,7 +163,33 @@
 </form>
 </dialog>
 
-<script src="./app.js?v=3.1.1"></script>
+<script src="./app.js?v=3.1.2"></script>
+<script>
+(function(){
+  var form=document.getElementById("onboardingForm");
+  var input=document.getElementById("userName");
+  if(!form||!input)return;
+  form.addEventListener("submit",function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    var name=(input.value||"").trim();
+    if(!name)return false;
+    if(typeof window.finishOnboarding==="function"){
+      window.finishOnboarding(name);
+      return false;
+    }
+    try{
+      var key="nara-mvp-v1";
+      var data=JSON.parse(localStorage.getItem(key)||"{}")||{};
+      data.profile={name:name,onboarded:true};
+      localStorage.setItem(key,JSON.stringify(data));
+    }catch(err){}
+    var ob=document.getElementById("onboarding");
+    if(ob){ob.hidden=true;ob.style.display="none";}
+    return false;
+  },false);
+})();
+</script>
 <script>
 (function(){
   function forcePastSplash(){
