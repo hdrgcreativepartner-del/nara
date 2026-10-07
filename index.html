@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=5.8.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=5.9.0">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=5.8.0">
+  <link rel="stylesheet" href="./styles.css?v=5.9.0">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -101,7 +101,15 @@
       <div class="sectionhead"><div><small>Daily overview</small><h2 id="todayHeading">Hari ini</h2></div><button data-action="quick">+ Tambah</button></div>
       <article class="hero"><div><label>Fokus hari ini</label><h3 id="focusText">Belum ada agenda mendesak.</h3></div><div id="dateBadge" class="datebadge"></div></article>
       <div class="twocol">
-        <article class="card"><div class="cardhead"><h3>Agenda</h3><span id="agendaCount">0</span></div><div id="todayAgenda" class="list empty">Belum ada reminder hari ini.</div></article>
+        <article class="card agenda-card">
+  <div class="cardhead agenda-cardhead"><div><h3>Agenda</h3><span id="agendaCount">0 agenda</span></div></div>
+  <div class="agenda-range" role="tablist" aria-label="Rentang agenda">
+    <button type="button" data-agenda-range="today" class="active" role="tab">Hari ini</button>
+    <button type="button" data-agenda-range="week" role="tab">Minggu ini</button>
+    <button type="button" data-agenda-range="month" role="tab">Bulan ini</button>
+  </div>
+  <div id="todayAgenda" class="list empty">Belum ada agenda hari ini.</div>
+</article>
         <article class="card"><div class="cardhead"><h3>Kebiasaan</h3><span id="habitCount">0</span></div><div id="todayHabits" class="list empty">Belum ada kebiasaan yang kamu pantau.</div></article>
       </div>
       <article class="card"><div class="cardhead"><h3>Uang hari ini</h3><span id="todayNet">Rp0</span></div><div class="moneygrid"><div><small>Pemasukan</small><strong id="todayIncome">Rp0</strong></div><div><small>Pengeluaran</small><strong id="todayExpense">Rp0</strong></div></div></article>
@@ -188,7 +196,7 @@
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 5.8</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 5.9</small></div><span>Beta</span></div>
     </article>
   </div>
   <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
@@ -272,7 +280,7 @@
 </form>
 </dialog>
 
-<script src="./app.js?v=5.8.0"></script>
+<script src="./app.js?v=5.9.0"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");
