@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=5.6.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=5.7.0">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=5.6.0">
+  <link rel="stylesheet" href="./styles.css?v=5.7.0">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -31,6 +31,8 @@
 <symbol id="ico-upload" viewBox="0 0 24 24"><path d="M12 21V9M8 13l4-4 4 4"/><path d="M5 5h14"/></symbol>
 <symbol id="ico-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol><symbol id="ico-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></symbol>
 <symbol id="ico-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.6 2.6L16.5 9"/></symbol>
+<symbol id="ico-collapse" viewBox="0 0 24 24"><path d="m7 14 5-5 5 5"/></symbol>
+<symbol id="ico-expand" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
 </svg>
 <div id="splash" class="splash"><div class="splash-grid"></div><div class="splash-orb orb-a"></div><div class="splash-orb orb-b"></div><div class="splash-brand"><img class="splash-logo-img" src="./assets/nara-splash.webp" alt="NARA — Notes, Assistant, Reminder & Accounting"></div><div class="splash-foot"><i></i><span>Teman kecil untuk menemani harimu</span></div></div>
 <div class="app" id="appRoot">
@@ -186,7 +188,7 @@
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 5.6</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 5.7</small></div><span>Beta</span></div>
     </article>
   </div>
   <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
@@ -229,7 +231,16 @@
   </div>
 </dialog>
 
-<dialog id="editDialog">
+<dialog id="confirmDialog" class="center-dialog">
+  <div class="confirm-card">
+    <small>NARA</small>
+    <h3 id="confirmTitle">Konfirmasi</h3>
+    <p id="confirmMessage">Lanjutkan tindakan ini?</p>
+    <div class="confirm-actions"><button id="confirmCancel" type="button">Batal</button><button id="confirmOk" class="danger" type="button">Hapus</button></div>
+  </div>
+</dialog>
+
+<dialog id="editDialog" class="center-dialog">
 <form id="editForm" class="modal edit-modal">
   <input id="editId" type="hidden"><input id="editKind" type="hidden">
   <div class="modalhead"><div><small>EDIT DATA</small><h3 id="editHeading">Perbaiki pencatatan</h3></div><button type="button" class="square" id="closeEditDialog">×</button></div>
@@ -248,7 +259,7 @@
 </form>
 </dialog>
 
-<dialog id="quickDialog">
+<dialog id="quickDialog" class="center-dialog">
 <form id="quickForm" class="modal">
   <div class="modalhead"><div><small>TAMBAH CEPAT</small><h3>Tambahkan sesuatu</h3></div><button type="button" class="square" id="closeDialog">×</button></div>
   <label>Jenis<select id="quickType"><option value="expense">Pengeluaran</option><option value="income">Pemasukan</option><option value="reminder">Pengingat</option><option value="note">Catatan</option><option value="target">Target</option><option value="habit">Kebiasaan</option></select></label>
@@ -261,7 +272,7 @@
 </form>
 </dialog>
 
-<script src="./app.js?v=5.6.0"></script>
+<script src="./app.js?v=5.7.0"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");

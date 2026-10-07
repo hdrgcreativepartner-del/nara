@@ -37,4 +37,7 @@ assert.ok(css.includes(".agenda-row.done"),"Completed agendas must stay visible 
 assert.ok(css.includes(".target-add-step"),"Target page must let users add their own steps");
 assert.ok(js.includes('openEditor("target"'),"Targets must be editable");
 assert.ok(js.includes("nextWeekdayDate"),"Natural weekday dates must be supported");
-console.log("NARA UI contract passed: user-defined target steps, editable targets, natural weekday dates, persistent completed agenda.");
+assert.ok(css.includes(".target-card.collapsed")&&js.includes("data-target-collapse"),"Targets must support compact minimized list mode");
+assert.ok(html.includes('id="confirmDialog"')&&css.includes(".center-dialog"),"Critical confirmations must use centered app dialogs");
+assert.ok(css.includes(".median-app .modal"),"Median dialogs must force readable light contrast");
+console.log("NARA UI contract passed: minimized targets, centered high-contrast dialogs, Median contrast, smart reasoning regressions.");

@@ -234,3 +234,32 @@ assert.equal(get("state.reminders.length"),1);
 assert.equal(get("state.reminders[0].date"),"2026-10-10");
 assert.equal(get("state.reminders[0].time"),"21:00");
 assert.match(get("state.reminders[0].title"),/Meeting dengan Andi/i);
+
+reset();
+run("bulan ini aku pengen menyelesaikan proposal sponsor");
+assert.equal(get("state.goals.length"),1);
+assert.equal(get("state.notes.length"),0);
+assert.match(get("state.goals[0].title"),/Proposal sponsor/i);
+
+reset();
+run("ingatkan aku besok jam 12 malam cek rendering");
+assert.equal(get("state.reminders[0].time"),"00:00");
+
+reset();
+run("ingatkan aku besok jam 12 siang makan siang");
+assert.equal(get("state.reminders[0].time"),"12:00");
+
+reset();
+run("sabtu depan jam 7 malam ke Banyuwangi");
+assert.equal(get("state.reminders[0].date"),"2026-10-10");
+assert.equal(get("state.reminders[0].time"),"19:00");
+
+reset();
+run("besok jam 10 meeting dengan Budi");
+run("salah, maksudnya Sabtu depan");
+assert.equal(get("state.reminders[0].date"),"2026-10-10");
+
+reset();
+const ambiguous=run("kayaknya weekend ini ke Banyuwangi");
+assert.equal(get("state.reminders.length"),0);
+assert.ok(get("state.pending")!==null);
