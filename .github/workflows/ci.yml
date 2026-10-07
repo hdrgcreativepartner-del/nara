@@ -18,6 +18,8 @@ jobs:
         run: node --check app.js && node --check sw.js
       - name: Conversational smoke tests
         run: node tests/smoke.mjs
+      - name: First-run UI contract
+        run: node tests/ui-contract.mjs
       - name: Required files
         run: |
           test -f index.html

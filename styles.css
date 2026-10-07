@@ -103,3 +103,14 @@ body{background:var(--bg)}
 .privacy-row{display:flex;justify-content:space-between;gap:18px;align-items:center}.privacy-dot{width:10px;height:10px;border-radius:50%;background:#35b967;box-shadow:0 0 0 5px rgba(53,185,103,.11)}.setting-row{border-top:1px solid var(--line);margin-top:17px;padding-top:14px;display:flex;justify-content:space-between;align-items:center}.setting-row b,.setting-row small{display:block}.setting-row b{font-size:12px}.setting-row small{font-size:9px;color:var(--muted);margin-top:3px}.setting-row>span{font-size:9px;color:var(--muted);background:#f1f3f0;border-radius:99px;padding:6px 8px}
 @media(min-width:720px){.topbar{padding-left:28px;padding-right:28px}.page{padding-left:28px;padding-right:28px}.account-layout{grid-template-columns:1fr 1fr}.privacy-card{grid-column:1/-1}}
 @media(min-width:980px){.topbar{min-height:92px}.header-logo{display:none}.desktop-page-title{display:block;font-size:26px}.top-title small{order:0}.header-account{display:none}.page{padding-top:18px}.account-layout{grid-template-columns:1.05fr 1.25fr}.privacy-card{grid-column:1/-1}.composer{bottom:12px}.bottomnav{display:none}}
+
+/* NARA v4 — non-blocking first-run */
+.profile-prompt{display:grid;grid-template-columns:auto 1fr;gap:12px;background:#eaf8ee;border:1px solid #dcefe1;border-radius:22px;padding:15px;margin:4px 0 12px;animation:v2Bubble .35s cubic-bezier(.2,.8,.2,1) both}
+.profile-prompt[hidden]{display:none}
+.profile-prompt-icon{width:42px;height:42px;border-radius:14px;background:#173f24;color:#b9f7ca;display:grid;place-items:center}
+.profile-prompt-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.profile-prompt-copy{min-width:0}.profile-prompt-copy h3{margin:4px 0 3px;font-size:15px;letter-spacing:-.02em}.profile-prompt-copy p{margin:0;color:#607167;font-size:11px;line-height:1.45}
+.profile-prompt-input{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;gap:8px}.profile-prompt-input input{min-width:0;border:1px solid #d8e5db;background:#fff;border-radius:14px;padding:11px 12px;outline:0;font-size:13px}.profile-prompt-input input:focus{border-color:#8fba9b;box-shadow:0 0 0 4px rgba(79,139,96,.08)}.profile-prompt-input button{border:0;border-radius:14px;background:#173f24;color:#fff;padding:0 14px;font-size:11px;font-weight:850}
+.profile-prompt-skip{grid-column:1/-1;justify-self:start;border:0;background:transparent;padding:2px 0;color:#697970;font-size:10px;text-decoration:underline;text-underline-offset:3px}
+.onboarding{display:none!important}
+@media(min-width:720px){.profile-prompt{max-width:540px}}
