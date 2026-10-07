@@ -6,14 +6,14 @@ const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(Number(n)||0);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const fmtDate=s=>new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short",year:"numeric"}).format(new Date(s+"T12:00:00"));
-const state=load();
+const state=load();\nlet recognition=null,voiceSession=false,voiceFinal="";
 
 function fresh(){
-  return {messages:[{id:uid(),role:"assistant",text:"Ceritakan apa yang perlu dicatat. Contoh: “makan 25 ribu”, “besok jam 10 meeting”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],reminders:[],notes:[],habits:[],goals:[]};
+  return {profile:{name:"",onboarded:false},messages:[{id:uid(),role:"assistant",text:"Ceritakan apa yang perlu dicatat. Contoh: “makan 25 ribu”, “besok jam 10 meeting”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],reminders:[],notes:[],habits:[],goals:[]};
 }
 function load(){try{return {...fresh(),...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
-function msg(role,text,result=""){state.messages.push({id:uid(),role,text,result,at:new Date().toISOString()})}
+function msg(role,text,result=""){state.messages.push({id:uid(),role,text,result,at:new Date().toISOString()})}\nfunction firstName(){return (state.profile?.name||"").trim().split(/\\s+/)[0]||""}\nfunction greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
 
 function parseAmount(t){
   const s=t.toLowerCase().replace(/rp\.?\s?/g,"").replace(/(\d)\.(?=\d{3}\b)/g,"$1").replace(/(\d),(?=\d{3}\b)/g,"$1");
@@ -165,17 +165,14 @@ function process(text){
   return results;
 }
 
+function speak(text){if(!voiceSession)return;const clean=text.replace(/✓/g,"").replace(/Rp\\s?/g,"rupiah ");try{if(window.NaraAndroid?.speak){window.NaraAndroid.speak(clean);return}}catch{}if("speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(clean);u.lang="id-ID";u.rate=.98;speechSynthesis.speak(u)}}
 function sendText(text){
   const t=text.trim();if(!t)return;
-  msg("user",t);
-  const results=process(t);
-  msg("assistant",results.join("\n"),results.length>1?`${results.length} data diproses`:"");
-  save();
-  requestAnimationFrame(()=>{const s=$("#chatStream");s.scrollTop=s.scrollHeight});
+  msg("user",t);renderChat(true);
+  setTimeout(()=>{const results=process(t);const reply=results.join("\n");msg("assistant",reply,results.length>1?`${results.length} data diproses`:"");save();speak(reply);requestAnimationFrame(()=>{const s=$("#chatStream");s.scrollTop=s.scrollHeight})},voiceSession?420:180);
 }
-
-function renderChat(){
-  const s=$("#chatStream");s.innerHTML=state.messages.map(m=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}</div>`).join("");
+function renderChat(showTyping=false){
+  const s=$("#chatStream");s.innerHTML=state.messages.map(m=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing"><i></i><i></i><i></i></span></div>`:"");
 }
 function txTotals(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>{a[t.type]+=t.amount;return a},{income:0,expense:0})}
 function renderToday(){
@@ -230,12 +227,12 @@ function renderGoals(){
 function renderSummary(){
   $("#sideTasks").textContent=state.reminders.filter(r=>!r.done).length;$("#sideHabits").textContent=state.habits.length;$("#sideNotes").textContent=state.notes.length;
 }
-function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary()}
+function renderProfile(){const name=firstName();if($("#profileName"))$("#profileName").textContent=state.profile?.name||"User";if($("#profileAvatar"))$("#profileAvatar").textContent=(name[0]||"N").toUpperCase();if($("#welcomeTitle"))$("#welcomeTitle").textContent=name?`${greeting()}, ${name}.`:"Hai. Ada yang bisa NARA bantu?";if($("#todayHeading"))$("#todayHeading").textContent=name?`Hari ini, ${name}`:"Hari ini"}\nfunction renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile()}
 
 function go(page){
   $$(".page").forEach(x=>x.classList.toggle("active",x.id===`page-${page}`));$$(".navbtn[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
   $("#pageTitle").textContent=page==="chat"?"NARA":page[0].toUpperCase()+page.slice(1);
-  window.scrollTo({top:0,behavior:"smooth"});
+  const main=$(".main");if(main&&innerWidth>=980)main.scrollTo({top:0,behavior:"smooth"});else window.scrollTo({top:0,behavior:"smooth"});
 }
 function openQuick(type){
   if(type)$("#quickType").value=type;
@@ -254,7 +251,16 @@ function quickSubmit(e){
   $("#quickForm").reset();$("#quickDate").value=localISO();$("#quickDialog").close();save();
 }
 
-document.addEventListener("click",e=>{
+
+function setVoiceUI(active,transcript=""){if($("#micButton"))$("#micButton").classList.toggle("active",active);if($("#listeningPanel"))$("#listeningPanel").hidden=!active;if($("#voiceStatus")){$("#voiceStatus").classList.toggle("listening",active);$("#voiceStatus span").textContent=active?"Listening…":"Voice ready"}if(transcript&&$("#voiceTranscript"))$("#voiceTranscript").textContent=transcript}
+function webSpeechStart(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return false;if(!recognition){recognition=new SR();recognition.lang="id-ID";recognition.interimResults=true;recognition.continuous=false;recognition.maxAlternatives=1;recognition.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript;if(e.results[i].isFinal)voiceFinal+=txt;else interim+=txt}const shown=(voiceFinal||interim).trim();setVoiceUI(true,shown||"Silakan bicara.");$("#chatInput").value=shown};recognition.onerror=e=>{setVoiceUI(false);voiceSession=false;if($("#voiceTranscript"))$("#voiceTranscript").textContent=e.error==="not-allowed"?"Izin mikrofon diperlukan.":"Voice input tidak tersedia."};recognition.onend=()=>{setVoiceUI(false);const txt=voiceFinal.trim();voiceFinal="";if(txt){voiceSession=true;sendText(txt);$("#chatInput").value=""}else voiceSession=false}}try{voiceFinal="";voiceSession=true;recognition.start();setVoiceUI(true);return true}catch{return false}}
+function startVoice(){try{if(window.NaraAndroid?.startVoiceInput){voiceSession=true;setVoiceUI(true);window.NaraAndroid.startVoiceInput();return}}catch{}if(!webSpeechStart()){setVoiceUI(false);voiceSession=false;msg("assistant","Voice input belum didukung browser ini. Kamu tetap bisa mengetik seperti biasa.");save()}}
+function stopVoice(){try{recognition?.stop()}catch{}setVoiceUI(false)}
+window.NaraVoiceResult=function(text){setVoiceUI(false);if(text){voiceSession=true;sendText(String(text));$("#chatInput").value=""}else voiceSession=false};
+window.NaraVoiceError=function(message){setVoiceUI(false);voiceSession=false;msg("assistant",message||"Voice input tidak tersedia.");save()};
+function finishOnboarding(name){state.profile={name:name.trim(),onboarded:true};msg("assistant",`Senang bertemu denganmu, ${firstName()}. Mulai sekarang kamu bisa mengetik atau bicara ke NARA seperti ngobrol biasa.`);save();$("#onboarding").hidden=true;setTimeout(()=>$("#chatInput").focus(),350)}
+function boot(){const splash=$("#splash");setTimeout(()=>{splash?.classList.add("hide");setTimeout(()=>splash?.remove(),700);if(!state.profile?.onboarded)$("#onboarding").hidden=false},1250)}
+\ndocument.addEventListener("click",e=>{
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}
   const act=e.target.closest("[data-action]");if(act){const map={quick:"expense",transaction:"expense",note:"note",habit:"habit"};openQuick(map[act.dataset.action])}
@@ -265,12 +271,12 @@ document.addEventListener("click",e=>{
   const delHabit=e.target.closest(".delete-habit");if(delHabit){const h=state.habits.find(x=>x.id===delHabit.dataset.id);if(h){state.habits=state.habits.filter(x=>x.id!==h.id);state.goals=state.goals.filter(g=>g.habitName!==h.name);save()}}
   const dot=e.target.closest(".daydot");if(dot){const h=state.habits.find(x=>x.id===dot.dataset.habit),d=dot.dataset.date;if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
 });
-$("#chatForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#chatInput");sendText(i.value);i.value="";i.style.height="auto"});
+$("#chatForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#chatInput");voiceSession=false;sendText(i.value);i.value="";i.style.height="auto"});
 $("#chatInput").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,112)+"px"});
 $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#chatForm").requestSubmit()}});
 $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
-$("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);
+$("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",stopVoice);$("#onboardingForm").addEventListener("submit",e=>{e.preventDefault();finishOnboarding($("#userName").value)});$("#resetProfile").addEventListener("click",()=>{state.profile={name:"",onboarded:false};save();$("#onboarding").hidden=false;$("#userName").value="";setTimeout(()=>$("#userName").focus(),100)});
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
 $("#quickDate").value=localISO();renderAll();
 if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));

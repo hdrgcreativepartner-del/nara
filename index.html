@@ -3,17 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
-  <meta name="description" content="NARA — personal daily assistant untuk reminder, notes, finance, goals, dan habits.">
+  <meta name="theme-color" content="#101214">
+  <meta name="description" content="NARA — Notes, Assistant, Reminder & Accounting. Personal daily assistant berbasis percakapan.">
   <title>NARA — Personal Daily Assistant</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-<div class="app">
+<svg class="svg-defs" aria-hidden="true" width="0" height="0"><symbol id="naraWordmark" viewBox="0 0 748 260"><path fill="currentColor" d="M381 12 382 248 424 249 426 134 530 258 540 259 553 245 463 138 531 137 542 115 532 11ZM508 44 508 105 425 100 425 50 427 47 502 42ZM691 9 626 16 567 241 617 251 638 159 695 156 716 246 746 239ZM668 35 686 114 649 116 665 40ZM310 9 245 16 186 241 236 251 257 159 314 156 335 246 365 239ZM287 35 305 114 268 116 284 40ZM171 0 139 0 139 209 68 1 0 2 2 253 56 251 56 88 110 251 171 251Z"/></symbol></svg>
+<div id="splash" class="splash"><div class="splash-grid"></div><div class="splash-orb orb-a"></div><div class="splash-orb orb-b"></div><div class="splash-brand"><svg class="splash-logo" viewBox="0 0 748 260"><use href="#naraWordmark"/></svg><div class="brand-expansion">Notes, Assistant, Reminder <span>&amp;</span> Accounting</div></div><div class="splash-foot"><i></i><span>Your personal daily assistant</span></div></div>
+<section id="onboarding" class="onboarding" hidden><div class="onboarding-glow"></div><div class="onboarding-card"><div class="onboarding-brand"><svg viewBox="0 0 748 260"><use href="#naraWordmark"/></svg><small>Notes, Assistant, Reminder &amp; Accounting</small></div><div class="onboarding-copy"><span class="eyebrow">HELLO, I'M NARA</span><h1>Aku akan bantu kamu <em>ingat, catat, dan tetap terarah.</em></h1><p>Kamu cukup bicara atau mengetik seperti biasa. NARA akan menaruhnya ke tempat yang tepat.</p></div><form id="onboardingForm" class="name-form"><label for="userName">Sebelum mulai, siapa namamu?</label><div class="name-input"><input id="userName" autocomplete="name" maxlength="40" placeholder="Tulis nama atau panggilan…" required><button type="submit" aria-label="Lanjut">→</button></div><small>Nama hanya disimpan di perangkat ini pada versi MVP.</small></form></div></section>
+<div class="app" id="appRoot">
   <aside class="sidebar">
-    <div class="brand"><span class="brandmark">N</span><div><b>NARA</b><small>Personal Daily Assistant</small></div></div>
+    <div class="brand"><svg class="brand-logo" viewBox="0 0 748 260"><use href="#naraWordmark"/></svg><small>Personal Daily Assistant</small></div>
     <nav class="nav">
       <button class="navbtn active" data-page="chat"><span>✦</span>Chat</button>
       <button class="navbtn" data-page="today"><span>◷</span>Today</button>
@@ -21,19 +24,18 @@
       <button class="navbtn" data-page="notes"><span>▤</span>Notes</button>
       <button class="navbtn" data-page="goals"><span>◎</span>Goals</button>
     </nav>
-    <div class="sidebar-foot"><i></i> Local-first MVP</div>
+    <div class="profile-mini"><span class="profile-avatar" id="profileAvatar">N</span><div><b id="profileName">User</b><small>Local profile</small></div><button id="resetProfile" title="Ganti nama">⋯</button></div>
   </aside>
 
   <main class="main">
     <header class="topbar">
-      <div><small id="dateLabel"></small><h1 id="pageTitle">NARA</h1></div>
-      <button class="square" id="quickAdd" aria-label="Tambah cepat">＋</button>
+      <div class="top-title"><small id="dateLabel"></small><h1 id="pageTitle">NARA</h1></div><div class="top-actions"><button class="status-pill" id="voiceStatus" type="button"><i></i><span>Voice ready</span></button><button class="square" id="quickAdd" aria-label="Tambah cepat">＋</button></div>
     </header>
 
     <section class="page active" id="page-chat">
       <div class="chatgrid">
         <div class="chatcol">
-          <div class="intro"><span class="avatar">N</span><div><h2>Hai, aku NARA.</h2><p>Ceritakan seperti ngobrol. Aku bantu mencatat dan merapikannya.</p></div></div>
+          <div class="welcome-panel"><div class="nara-badge">N</div><div><span class="eyebrow">PERSONAL ASSISTANT</span><h2 id="welcomeTitle">Hai. Ada yang bisa NARA bantu?</h2><p id="welcomeText">Ketik atau bicara secara natural. NARA akan memahami konteks dasar dan mencatatnya.</p></div></div>
           <div class="chips">
             <button data-prompt="Makan siang 25 ribu">Makan 25 ribu</button>
             <button data-prompt="Besok jam 10 meeting dengan Pak Budi">Meeting besok</button>
@@ -41,10 +43,7 @@
             <button data-prompt="Bulan ini olahraga 3 kali seminggu">Buat target</button>
           </div>
           <div id="chatStream" class="chatstream" aria-live="polite"></div>
-          <form id="chatForm" class="composer">
-            <textarea id="chatInput" rows="1" placeholder="Tulis seperti ngobrol…" aria-label="Pesan untuk NARA"></textarea>
-            <button class="send" type="submit" aria-label="Kirim">➤</button>
-          </form>
+          <form id="chatForm" class="composer"><button class="mic" id="micButton" type="button" aria-label="Bicara dengan NARA"><span class="mic-icon">●</span><span class="mic-wave"><i></i><i></i><i></i></span></button><textarea id="chatInput" rows="1" placeholder="Tulis atau bicara dengan NARA…" aria-label="Pesan untuk NARA"></textarea><button class="send" type="submit" aria-label="Kirim">↑</button></form><div id="listeningPanel" class="listening-panel" hidden><div class="voice-orb"><span></span><i></i><i></i></div><div><b>NARA sedang mendengarkan…</b><small id="voiceTranscript">Silakan bicara.</small></div><button id="stopVoice" type="button">Selesai</button></div>
         </div>
         <aside class="summary">
           <article class="card">
@@ -52,13 +51,13 @@
             <small>Saldo tercatat</small><strong id="sideBalance">Rp0</strong>
             <div class="ministats"><div><b id="sideTasks">0</b><span>Agenda</span></div><div><b id="sideHabits">0</b><span>Habit</span></div><div><b id="sideNotes">0</b><span>Notes</span></div></div>
           </article>
-          <article class="card soft"><label>Contoh</label><p>“Hari ini bensin 50 ribu, besok jam 9 meeting, catat ide fitur baru.”</p></article>
+          <article class="card soft insight-card"><span class="eyebrow">TRY SAYING</span><p>“Hari ini bensin 50 ribu, besok jam 9 meeting, catat ide fitur baru.”</p><button id="tryVoice" type="button">🎙 Coba dengan suara</button></article>
         </aside>
       </div>
     </section>
 
     <section class="page" id="page-today">
-      <div class="sectionhead"><div><small>Daily overview</small><h2>Hari ini</h2></div><button data-action="quick">+ Tambah</button></div>
+      <div class="sectionhead"><div><small>Daily overview</small><h2 id="todayHeading">Hari ini</h2></div><button data-action="quick">+ Tambah</button></div>
       <article class="hero"><div><label>Fokus hari ini</label><h3 id="focusText">Belum ada agenda mendesak.</h3></div><div id="dateBadge" class="datebadge"></div></article>
       <div class="twocol">
         <article class="card"><div class="cardhead"><h3>Agenda</h3><span id="agendaCount">0</span></div><div id="todayAgenda" class="list empty">Belum ada reminder hari ini.</div></article>
