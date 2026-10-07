@@ -66,7 +66,8 @@ function cleanTitle(t){
 function splitClauses(text){
   return text
     .replace(/\s+dan\s+(?=(?:besok|lusa|hari ini|tadi|catat|ingatkan|meeting|rapat|bayar|terima|dapat)\b)/gi,", ")
-    .split(/[;\n]+|,\s+(?=\S)/).map(x=>x.trim()).filter(Boolean);
+    .replace(/\s+dan\s+(?=[^,;.!?]{0,36}\b\d+(?:[.,]\d+)?\s*(?:juta|jt|ribu|rb|k)\b)/gi,", ")
+    .split(/[;\n]+|[.!?]\s+|,\s+(?=\S)/).map(x=>x.trim()).filter(Boolean);
 }
 function financeType(t){
   const s=t.toLowerCase();
