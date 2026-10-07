@@ -4,7 +4,7 @@ const pad=n=>String(n).padStart(2,"0");
 const localISO=(d=new Date())=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(Number(n)||0);
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const fmtDate=s=>new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short",year:"numeric"}).format(new Date(s+"T12:00:00"));
 const state=load();
 let recognition=null,voiceSession=false,voiceFinal="";
@@ -15,7 +15,7 @@ function fresh(){
 function load(){try{return {...fresh(),...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
 function msg(role,text,result=""){state.messages.push({id:uid(),role,text,result,at:new Date().toISOString()})}
-function firstName(){return (state.profile?.name||"").trim().split(/\s+/)[0]||""}
+function firstName(){return ((state.profile&&state.profile.name)||"").trim().split(/\s+/)[0]||""}
 function greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
 
 function parseAmount(t){
@@ -168,7 +168,7 @@ function process(text){
   return results;
 }
 
-function speak(text){if(!voiceSession)return;const clean=text.replace(/✓/g,"").replace(/Rp\s?/g,"rupiah ");try{if(window.NaraAndroid?.speak){window.NaraAndroid.speak(clean);return}}catch{}if("speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(clean);u.lang="id-ID";u.rate=.98;speechSynthesis.speak(u)}}
+function speak(text){if(!voiceSession)return;const clean=text.replace(/✓/g,"").replace(/Rp\s?/g,"rupiah ");try{if(window.NaraAndroid&&window.NaraAndroid.speak){window.NaraAndroid.speak(clean);return}}catch{}if("speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(clean);u.lang="id-ID";u.rate=.98;speechSynthesis.speak(u)}}
 function sendText(text){
   const t=text.trim();if(!t)return;
   msg("user",t);renderChat(true);
@@ -181,7 +181,7 @@ function txTotals(filter=()=>true){return state.transactions.filter(filter).redu
 function renderToday(){
   const today=localISO(),agenda=[...state.reminders].filter(r=>!r.done).sort((a,b)=>(a.date+(a.time||"99:99")).localeCompare(b.date+(b.time||"99:99"))).slice(0,8),habits=state.habits;
   $("#agendaCount").textContent=agenda.length;$("#habitCount").textContent=habits.length;
-  $("#focusText").textContent=agenda[0]?.title||(habits.length?"Jaga konsistensi habit hari ini.":"Belum ada agenda mendesak.");
+  $("#focusText").textContent=(agenda[0]&&agenda[0].title)||(habits.length?"Jaga konsistensi habit hari ini.":"Belum ada agenda mendesak.");
   const d=new Date();$("#dateBadge").innerHTML=`<b>${d.getDate()}</b><br>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d)}`;
   $("#todayAgenda").classList.toggle("empty",!agenda.length);
   $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row"><button class="rowicon reminder-done" data-id="${r.id}" aria-label="Tandai reminder selesai">○</button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}${r.amount?" · "+rupiah(r.amount):""}</span></div></div>`).join(""):"Belum ada agenda mendatang.";
@@ -200,7 +200,7 @@ function renderFinance(){
   $("#categoryBreakdown").classList.toggle("empty",!entries.length);$("#categoryBreakdown").innerHTML=entries.length?entries.map(([k,v])=>`<div class="cat"><span>${esc(k)}</span><b>${rupiah(v)}</b><div class="bar"><i style="width:${Math.round(v/max*100)}%"></i></div></div>`).join(""):"Belum ada data.";
 }
 function renderNotes(){
-  const q=($("#noteSearch")?.value||"").toLowerCase(),notes=[...state.notes].filter(n=>(n.title+" "+n.body).toLowerCase().includes(q)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  const q=(($("#noteSearch")&&$("#noteSearch").value)||"").toLowerCase(),notes=[...state.notes].filter(n=>(n.title+" "+n.body).toLowerCase().includes(q)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   $("#notesGrid").innerHTML=notes.length?notes.map(n=>`<article class="note"><button class="cardaction delete-note" data-id="${n.id}" aria-label="Hapus note">×</button><h3>${esc(n.title)}</h3><p>${esc(n.body)}</p><div class="notemeta">${fmtDate(n.date)}</div></article>`).join(""):`<div class="empty">Belum ada note.</div>`;
 }
 function weeklyDone(h){
@@ -230,7 +230,7 @@ function renderGoals(){
 function renderSummary(){
   $("#sideTasks").textContent=state.reminders.filter(r=>!r.done).length;$("#sideHabits").textContent=state.habits.length;$("#sideNotes").textContent=state.notes.length;
 }
-function renderProfile(){const name=firstName();if($("#profileName"))$("#profileName").textContent=state.profile?.name||"User";if($("#profileAvatar"))$("#profileAvatar").textContent=(name[0]||"N").toUpperCase();if($("#welcomeTitle"))$("#welcomeTitle").textContent=name?`${greeting()}, ${name}.`:"Hai. Ada yang bisa NARA bantu?";if($("#todayHeading"))$("#todayHeading").textContent=name?`Hari ini, ${name}`:"Hari ini"}
+function renderProfile(){const name=firstName();if($("#profileName"))$("#profileName").textContent=(state.profile&&state.profile.name)||"User";if($("#profileAvatar"))$("#profileAvatar").textContent=(name[0]||"N").toUpperCase();if($("#welcomeTitle"))$("#welcomeTitle").textContent=name?`${greeting()}, ${name}.`:"Hai. Ada yang bisa NARA bantu?";if($("#todayHeading"))$("#todayHeading").textContent=name?`Hari ini, ${name}`:"Hari ini"}
 function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile()}
 
 function go(page){
@@ -258,12 +258,12 @@ function quickSubmit(e){
 
 function setVoiceUI(active,transcript=""){if($("#micButton"))$("#micButton").classList.toggle("active",active);if($("#listeningPanel"))$("#listeningPanel").hidden=!active;if($("#voiceStatus")){$("#voiceStatus").classList.toggle("listening",active);$("#voiceStatus span").textContent=active?"Listening…":"Voice ready"}if(transcript&&$("#voiceTranscript"))$("#voiceTranscript").textContent=transcript}
 function webSpeechStart(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return false;if(!recognition){recognition=new SR();recognition.lang="id-ID";recognition.interimResults=true;recognition.continuous=false;recognition.maxAlternatives=1;recognition.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript;if(e.results[i].isFinal)voiceFinal+=txt;else interim+=txt}const shown=(voiceFinal||interim).trim();setVoiceUI(true,shown||"Silakan bicara.");$("#chatInput").value=shown};recognition.onerror=e=>{setVoiceUI(false);voiceSession=false;if($("#voiceTranscript"))$("#voiceTranscript").textContent=e.error==="not-allowed"?"Izin mikrofon diperlukan.":"Voice input tidak tersedia."};recognition.onend=()=>{setVoiceUI(false);const txt=voiceFinal.trim();voiceFinal="";if(txt){voiceSession=true;sendText(txt);$("#chatInput").value=""}else voiceSession=false}}try{voiceFinal="";voiceSession=true;recognition.start();setVoiceUI(true);return true}catch{return false}}
-function startVoice(){try{if(window.NaraAndroid?.startVoiceInput){voiceSession=true;setVoiceUI(true);window.NaraAndroid.startVoiceInput();return}}catch{}if(!webSpeechStart()){setVoiceUI(false);voiceSession=false;msg("assistant","Voice input belum didukung browser ini. Kamu tetap bisa mengetik seperti biasa.");save()}}
-function stopVoice(){try{recognition?.stop()}catch{}setVoiceUI(false)}
+function startVoice(){try{if(window.NaraAndroid&&window.NaraAndroid.startVoiceInput){voiceSession=true;setVoiceUI(true);window.NaraAndroid.startVoiceInput();return}}catch{}if(!webSpeechStart()){setVoiceUI(false);voiceSession=false;msg("assistant","Voice input belum didukung browser ini. Kamu tetap bisa mengetik seperti biasa.");save()}}
+function stopVoice(){try{if(recognition)recognition.stop()}catch{}setVoiceUI(false)}
 window.NaraVoiceResult=function(text){setVoiceUI(false);if(text){voiceSession=true;sendText(String(text));$("#chatInput").value=""}else voiceSession=false};
 window.NaraVoiceError=function(message){setVoiceUI(false);voiceSession=false;msg("assistant",message||"Voice input tidak tersedia.");save()};
 function finishOnboarding(name){state.profile={name:name.trim(),onboarded:true};msg("assistant",`Senang bertemu denganmu, ${firstName()}. Mulai sekarang kamu bisa mengetik atau bicara ke NARA seperti ngobrol biasa.`);save();$("#onboarding").hidden=true;setTimeout(()=>$("#chatInput").focus(),350)}
-function boot(){const splash=$("#splash");setTimeout(()=>{splash?.classList.add("hide");setTimeout(()=>{if(splash?.remove)splash.remove()},700);if(!state.profile?.onboarded)$("#onboarding").hidden=false},1250)}
+function boot(){window.__NARA_BOOTED__=true;const splash=$("#splash");setTimeout(()=>{if(splash)splash.classList.add("hide");setTimeout(()=>{if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},700);if(!(state.profile&&state.profile.onboarded))$("#onboarding").hidden=false},1250)}
 
 document.addEventListener("click",e=>{
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);

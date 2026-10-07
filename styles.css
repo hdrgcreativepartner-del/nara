@@ -49,3 +49,8 @@ body{background:var(--bg);color:var(--ink)}.topbar{background:rgba(243,244,243,.
 @media(min-width:720px){.status-pill{display:flex}.onboarding-card{padding:42px}}
 @media(min-width:980px){.listening-panel{position:sticky;left:auto;right:auto;bottom:82px;margin-bottom:8px}.chatstream{max-height:calc(100dvh - 385px)}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Runtime-safe splash fallback: prevents a permanent splash even if JS is interrupted */
+.splash{animation:v2SplashFailSafe .01s linear 4.5s forwards}
+.splash-brand{animation:v2Splash .95s cubic-bezier(.2,.75,.2,1) both}
+@keyframes v2SplashFailSafe{to{opacity:0;visibility:hidden;pointer-events:none}}

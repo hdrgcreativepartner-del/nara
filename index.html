@@ -110,5 +110,16 @@
 </dialog>
 
 <script src="./app.js"></script>
+<script>
+setTimeout(function(){
+  var splash=document.getElementById("splash");
+  if(splash&&!window.__NARA_BOOTED__){
+    splash.classList.add("hide");
+    setTimeout(function(){if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},700);
+    var app=document.getElementById("appRoot");
+    if(app) app.setAttribute("data-runtime-fallback","true");
+  }
+},3000);
+</script>
 </body>
 </html>
