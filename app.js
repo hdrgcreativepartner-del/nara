@@ -29,7 +29,9 @@ function parseAmount(t){
   return Number.isFinite(n)?Math.round(n):null;
 }
 function parseTime(t){
-  const m=t.toLowerCase().match(/(?:jam|pukul)\s*(\d{1,2})(?:[.:](\d{2}))?/);
+  const s=t.toLowerCase();
+  let m=s.match(/(?:jam|pukul)\s*(\d{1,2})(?:[.:](\d{2}))?/);
+  if(!m)m=s.match(/\b(\d{1,2})[.:](\d{2})\s*(?:wib|wita|wit)?\b/);
   if(!m)return "";
   return `${pad(Math.min(23,+m[1]))}:${pad(+m[2]||0)}`;
 }
@@ -71,6 +73,7 @@ function splitClauses(text){
   return text
     .replace(/\s+dan\s+(?=(?:besok|lusa|hari ini|tadi|catat|ingatkan|meeting|rapat|bayar|terima|dapat)\b)/gi,", ")
     .replace(/\s+dan\s+(?=[^,;.!?]{0,36}\b\d+(?:[.,]\d+)?\s*(?:juta|jt|ribu|rb|k)\b)/gi,", ")
+    .replace(/\s+(?:kemudian|lalu)\s+(?=(?:pukul|jam|\d{1,2}[.:]\d{2}))/gi,", ")
     .split(/[;\n]+|[.!?]\s+|,\s+(?=\S)/).map(x=>x.trim()).filter(Boolean);
 }
 function financeType(t){
@@ -131,7 +134,7 @@ function process(text){
   const completed=markHabitFromText(text);
   if(completed)return [`Bagus, “${completed.name}” sudah aku tandai selesai untuk hari ini.`];
 
-  const results=[];
+  const results=[],contextDate=parseDate(text),hasFutureContext=/\b(besok|lusa|tanggal\s+\d+)\b/i.test(text);
   for(const clause of splitClauses(text)){
     const lower=clause.toLowerCase();
     if(/\b(besok|lusa|nanti)\b/.test(lower)&&!reminderIntent(clause)&&clause.trim().split(/\s+/).length<6){
@@ -156,7 +159,7 @@ function process(text){
       continue;
     }
     if(reminderIntent(clause)){
-      const date=parseDate(clause),time=parseTime(clause),title=cleanTitle(clause)||"Pengingat";
+      const ownDate=/\b(hari ini|tadi|barusan|besok|lusa|tanggal\s+\d+|20\d{2}-\d{1,2}-\d{1,2})\b/i.test(clause),date=!ownDate&&hasFutureContext?contextDate:parseDate(clause),time=parseTime(clause),title=cleanTitle(clause)||"Pengingat";
       state.reminders.push({id:uid(),title,date,time,done:false,leadMinutes:state.settings.reminderLead||30,notified:false});
       results.push(`Siap, aku ingatkan “${title}” pada ${fmtDate(date)}${time?" pukul "+time:""}.`);
       continue;
@@ -316,7 +319,7 @@ function saveEditor(e){e.preventDefault();if(!editContext)return;const {kind,id}
 function restoreBackupFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const parsed=JSON.parse(reader.result),data=parsed.data||parsed;if(!data||!Array.isArray(data.notes)||!Array.isArray(data.transactions))throw new Error("Format tidak cocok");if(!confirm("Pulihkan backup ini? Data NARA saat ini akan diganti."))return;localStorage.setItem(KEY,JSON.stringify(data));location.reload()}catch(e){alert("File backup tidak valid.")}};reader.readAsText(file)}
 function resetAllData(){if(!confirm("Reset semua data NARA di perangkat ini?"))return;if(!confirm("Yakin? Catatan, transaksi, pengingat, dan target akan dihapus."))return;localStorage.removeItem(KEY);location.reload()}
 function showReminder(r,minutes){$("#reminderToastTitle").textContent=r.title;$("#reminderToastTime").textContent=minutes<=1?"Agenda segera dimulai":`${minutes} menit lagi · ${r.time||""}`;$("#reminderToast").hidden=false;
-  if(Notification&&Notification.permission==="granted"){try{new Notification("NARA · Pengingat",{body:`${r.title} — ${minutes} menit lagi`})}catch(e){}}
+  if("Notification"in window&&Notification.permission==="granted"){try{new Notification("NARA · Pengingat",{body:`${r.title} — ${minutes} menit lagi`})}catch(e){}}
 }
 function checkReminders(){
   const now=Date.now();if(now-lastReminderCheck<30000)return;lastReminderCheck=now;

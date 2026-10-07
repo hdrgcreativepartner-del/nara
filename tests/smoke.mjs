@@ -104,4 +104,15 @@ assert.equal(get("state.transactions.length"),1);
 assert.equal(get("state.transactions[0].type"),"income");
 assert.equal(get("state.transactions[0].amount"),2000000);
 
-console.log("NARA smoke tests passed: finance, bills, income context, reminder, notes, habits/goals, mixed chat, multi-expense, sentence splitting, upcoming agenda.");
+reset();
+run("besok aku");
+assert.equal(get("state.reminders.length"),0);
+
+reset();
+run("Ingatkan aku besok sore harus ke Jember, review buku dummy 18.00 WIB kemudian pukul 20.00 aku loading LED");
+assert.ok(get("state.reminders.length")>=2);
+assert.ok(get("state.reminders.every(r=>r.date===state.reminders[0].date)"));
+assert.ok(get("state.reminders.some(r=>r.time==='18:00')"));
+assert.ok(get("state.reminders.some(r=>r.time==='20:00')"));
+
+console.log("NARA smoke tests passed: finance, bills, context reminders, incomplete prompt guard, notes, habits/goals, mixed chat and agenda.");
