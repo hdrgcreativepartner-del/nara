@@ -39,7 +39,15 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                view.postDelayed(() -> view.evaluateJavascript(
+                    "(function(){var s=document.getElementById('splash');if(s){s.classList.add('hide');setTimeout(function(){if(s&&s.parentNode)s.parentNode.removeChild(s)},700)}})();",
+                    null
+                ), 5000);
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new NaraBridge(), "NaraAndroid");
         webView.loadUrl("file:///android_asset/www/index.html");
