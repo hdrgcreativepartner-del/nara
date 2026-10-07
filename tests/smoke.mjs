@@ -29,7 +29,7 @@ const code=fs.readFileSync(new URL("../app.js",import.meta.url),"utf8");
 vm.runInContext(code,context,{filename:"app.js"});
 
 function reset(){
-  vm.runInContext(`state.transactions.length=0;state.reminders.length=0;state.notes.length=0;state.habits.length=0;state.goals.length=0;state.pending=null;state.lastCreated=null;`,context);
+  vm.runInContext(`state.transactions.length=0;state.liabilities.length=0;state.receivables.length=0;state.reminders.length=0;state.notes.length=0;state.habits.length=0;state.goals.length=0;state.pending=null;state.lastCreated=null;`,context);
 }
 function run(input){return vm.runInContext(`smartResponse(${JSON.stringify(input)})`,context)}
 function get(expr){return vm.runInContext(expr,context)}
@@ -189,3 +189,33 @@ assert.match(get("state.goals[0].title"),/Portofolio HDRG Creative Partner/i);
 assert.equal(get("state.goals[0].period"),"monthly");
 assert.equal(get("state.notes.length"),0);
 assert.equal(get("state.reminders.length"),0);
+
+reset();
+let debt=run("aku tadi berhutang 15 ribu");
+assert.equal(get("state.liabilities.length"),0);
+assert.equal(get("state.pending.kind"),"debt-kind");
+run("Pinjaman masuk kas");
+assert.equal(get("state.liabilities.length"),1);
+assert.equal(get("state.liabilities[0].amount"),15000);
+assert.equal(get("state.transactions[0].type"),"financing_in");
+assert.equal(get("cashBalance()"),15000);
+assert.equal(get("txTotals().income"),0);
+
+reset();
+run("aku berhutang 25 ribu untuk makan");
+run("Hutang pembelian");
+assert.equal(get("state.liabilities.length"),1);
+assert.equal(get("state.transactions[0].type"),"expense");
+assert.equal(get("state.transactions[0].cashImpact"),0);
+assert.equal(get("cashBalance()"),0);
+assert.equal(get("txTotals().expense"),25000);
+
+reset();
+run("aku meminjamkan Andi 50 ribu");
+assert.equal(get("state.receivables.length"),1);
+assert.equal(get("cashBalance()"),-50000);
+
+reset();
+run("Target bulan ini, menyelesaikan Portofolio HDRG Creative Partner");
+assert.equal(get("state.goals[0].steps.length"),7);
+assert.equal(get("state.goals[0].title"),"Menyelesaikan Portofolio HDRG Creative Partner");
