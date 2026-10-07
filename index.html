@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=3.1.2">
+  <link rel="manifest" href="./manifest.webmanifest?v=4.0.0">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=3.1.2">
+  <link rel="stylesheet" href="./styles.css?v=4.0.0">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -28,7 +28,6 @@
 <symbol id="ico-data" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></symbol>
 </svg>
 <div id="splash" class="splash"><div class="splash-grid"></div><div class="splash-orb orb-a"></div><div class="splash-orb orb-b"></div><div class="splash-brand"><div class="logo-lockup splash-logo" role="img" aria-label="NARA"></div></div><div class="splash-foot"><i></i><span>Teman kecil untuk menemani harimu</span></div></div>
-<section id="onboarding" class="onboarding" hidden><div class="onboarding-glow"></div><div class="onboarding-card"><div class="onboarding-brand"><div class="logo-lockup onboarding-logo" role="img" aria-label="NARA"></div></div><div class="onboarding-copy"><span class="eyebrow">HALO, AKU NARA</span><h1>Aku bantu kamu <em>mengingat, mencatat, dan menjalani hari dengan lebih tenang.</em></h1><p>Ceritakan saja apa yang perlu kamu ingat. NARA akan bantu merapikannya, pelan-pelan.</p></div><form id="onboardingForm" class="name-form"><label for="userName">Biar lebih akrab, aku boleh panggil kamu siapa?</label><div class="name-input"><input id="userName" autocomplete="name" maxlength="40" placeholder="Nama atau panggilanmu…" required><button id="onboardingNext" type="submit" aria-label="Lanjut">→</button></div><small>Tenang, nama ini hanya disimpan di perangkatmu.</small></form></div></section>
 <div class="app" id="appRoot">
   <aside class="sidebar">
     <div class="brand"><div class="logo-lockup brand-logo" role="img" aria-label="NARA"></div><small>Asisten harian pribadimu</small></div>
@@ -56,6 +55,19 @@
       <div class="chatgrid">
         <div class="chatcol">
           <div class="welcome-panel"><div class="nara-badge">N</div><div><span class="eyebrow">ASISTEN HARIAN</span><h2 id="welcomeTitle">Hai. Ada yang ingin kamu ceritakan?</h2><p id="welcomeText">Tulis atau ucapkan saja dengan caramu sendiri. NARA bantu merapikan dan mencatatnya.</p></div></div>
+<form id="profilePromptForm" class="profile-prompt" hidden>
+  <div class="profile-prompt-icon"><svg><use href="#ico-user"/></svg></div>
+  <div class="profile-prompt-copy">
+    <span class="eyebrow">BIAR LEBIH AKRAB</span>
+    <h3>Aku boleh panggil kamu siapa?</h3>
+    <p>Kamu tetap bisa memakai NARA tanpa mengisi ini.</p>
+  </div>
+  <div class="profile-prompt-input">
+    <input id="profilePromptName" maxlength="40" autocomplete="name" placeholder="Nama atau panggilanmu…">
+    <button type="submit">Simpan</button>
+  </div>
+  <button id="profilePromptSkip" class="profile-prompt-skip" type="button">Nanti saja</button>
+</form>
           <div class="chips">
             <button data-prompt="Makan siang 25 ribu">Makan 25 ribu</button>
             <button data-prompt="Besok jam 10 meeting dengan Pak Budi">Rapat besok</button>
@@ -163,55 +175,12 @@
 </form>
 </dialog>
 
-<script src="./app.js?v=3.1.2"></script>
+<script src="./app.js?v=4.0.0"></script>
 <script>
-(function(){
-  var form=document.getElementById("onboardingForm");
-  var input=document.getElementById("userName");
-  if(!form||!input)return;
-  form.addEventListener("submit",function(e){
-    e.preventDefault();
-    e.stopPropagation();
-    var name=(input.value||"").trim();
-    if(!name)return false;
-    if(typeof window.finishOnboarding==="function"){
-      window.finishOnboarding(name);
-      return false;
-    }
-    try{
-      var key="nara-mvp-v1";
-      var data=JSON.parse(localStorage.getItem(key)||"{}")||{};
-      data.profile={name:name,onboarded:true};
-      localStorage.setItem(key,JSON.stringify(data));
-    }catch(err){}
-    var ob=document.getElementById("onboarding");
-    if(ob){ob.hidden=true;ob.style.display="none";}
-    return false;
-  },false);
-})();
-</script>
-<script>
-(function(){
-  function forcePastSplash(){
-    var splash=document.getElementById("splash");
-    if(!splash) return;
-    splash.classList.add("hide");
-    splash.style.pointerEvents="none";
-    setTimeout(function(){
-      if(splash && splash.parentNode) splash.parentNode.removeChild(splash);
-      var onboarding=document.getElementById("onboarding");
-      try{
-        var raw=localStorage.getItem("nara-mvp-v1");
-        var saved=raw?JSON.parse(raw):null;
-        if(onboarding && !(saved && saved.profile && saved.profile.onboarded)) onboarding.hidden=false;
-      }catch(e){
-        if(onboarding) onboarding.hidden=false;
-      }
-    },450);
-  }
-  setTimeout(forcePastSplash,1800);
-  window.addEventListener("pageshow",function(){setTimeout(forcePastSplash,1800)});
-})();
+setTimeout(function(){
+  var s=document.getElementById("splash");
+  if(s){s.classList.add("hide");s.style.pointerEvents="none";setTimeout(function(){if(s&&s.parentNode)s.parentNode.removeChild(s)},450)}
+},1600);
 </script>
 </body>
 </html>

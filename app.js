@@ -10,7 +10,7 @@ const state=load();
 let recognition=null,voiceSession=false,voiceFinal="";
 
 function fresh(){
-  return {profile:{name:"",onboarded:false},messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],reminders:[],notes:[],habits:[],goals:[]};
+  return {profile:{name:""},messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],reminders:[],notes:[],habits:[],goals:[]};
 }
 function load(){try{return {...fresh(),...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
@@ -231,7 +231,15 @@ function renderGoals(){
 function renderSummary(){
   $("#sideTasks").textContent=state.reminders.filter(r=>!r.done).length;$("#sideHabits").textContent=state.habits.length;$("#sideNotes").textContent=state.notes.length;
 }
-function renderProfile(){const name=firstName();if($("#profileName"))$("#profileName").textContent=(state.profile&&state.profile.name)||"User";if($("#profileAvatar"))$("#profileAvatar").textContent=(name[0]||"N").toUpperCase();if($("#welcomeTitle"))$("#welcomeTitle").textContent=name?`${greeting()}, ${name}.`:"Hai. Ada yang ingin kamu ceritakan?";if($("#todayHeading"))$("#todayHeading").textContent=name?`Hari ini, ${name}`:"Hari ini"}
+function renderProfile(){
+  const full=(state.profile&&state.profile.name)||"",name=firstName(),initial=(name[0]||"N").toUpperCase();
+  if($("#profileName"))$("#profileName").textContent=full||"Kamu";
+  if($("#profileAvatar"))$("#profileAvatar").textContent=initial;
+  if($("#welcomeTitle"))$("#welcomeTitle").textContent=name?`${greeting()}, ${name}.`:"Hai. Ada yang ingin kamu ceritakan?";
+  if($("#todayHeading"))$("#todayHeading").textContent=name?`Hari ini, ${name}`:"Hari ini";
+  if($("#profilePromptForm"))$("#profilePromptForm").hidden=!!full;
+  if($("#profilePromptName")&&!full)$("#profilePromptName").value="";
+}
 function renderAccount(){
   const name=(state.profile&&state.profile.name)||"Kamu",initial=(name.trim()[0]||"N").toUpperCase();
   if($("#accountDisplayName"))$("#accountDisplayName").textContent=name;
@@ -280,7 +288,7 @@ function downloadBackup(){
 }
 function updateAccountName(name){
   const clean=String(name||"").trim();if(!clean)return;
-  state.profile={...(state.profile||{}),name:clean,onboarded:true};
+  state.profile={...(state.profile||{}),name:clean};
   try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
   renderAll();
   if($("#accountSaveStatus")){$("#accountSaveStatus").textContent="Nama sudah diperbarui.";setTimeout(()=>{$("#accountSaveStatus").textContent="Perubahan tersimpan di perangkat ini."},1800)}
@@ -292,24 +300,13 @@ function startVoice(){try{if(window.NaraAndroid&&window.NaraAndroid.startVoiceIn
 function stopVoice(){try{if(recognition)recognition.stop()}catch{}setVoiceUI(false)}
 window.NaraVoiceResult=function(text){setVoiceUI(false);if(text){voiceSession=true;sendText(String(text));$("#chatInput").value=""}else voiceSession=false};
 window.NaraVoiceError=function(message){setVoiceUI(false);voiceSession=false;msg("assistant",message||"Maaf, fitur suara sedang tidak tersedia.");save()};
-function finishOnboarding(name){
-  const clean=String(name||"").trim();if(!clean)return;
-  const onboarding=$("#onboarding");if(onboarding)onboarding.hidden=true;
-  state.profile={name:clean,onboarded:true};
-  msg("assistant",`Senang kenal kamu, ${firstName()}. Mulai sekarang cerita saja ke NARA seperti biasa—aku bantu catatkan.`);
-  try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
-  try{renderAll()}catch(e){console.error("NARA render",e)}
-  setTimeout(()=>{const input=$("#chatInput");if(input)input.focus()},350)
-}
 function boot(){
   window.__NARA_BOOTED__=true;
   const splash=$("#splash");
   setTimeout(()=>{
     if(splash){splash.classList.add("hide");splash.style.pointerEvents="none"}
-    setTimeout(()=>{if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},450);
-    const onboarding=$("#onboarding");
-    if(onboarding){if(state.profile&&state.profile.onboarded){onboarding.hidden=true;onboarding.style.display="none"}else{onboarding.hidden=false;onboarding.style.display=""}}
-  },900)
+    setTimeout(()=>{if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},450)
+  },850)
 }
 
 document.addEventListener("click",e=>{
@@ -330,6 +327,11 @@ $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
 $("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",stopVoice);$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});
 $("#downloadBackup").addEventListener("click",downloadBackup);
+$("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});
+$("#profilePromptSkip").addEventListener("click",()=>{$("#profilePromptForm").hidden=true});
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
 $("#quickDate").value=localISO();renderAll();
-if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+window.addEventListener("load",()=>{
+  if("serviceWorker"in navigator)navigator.serviceWorker.getRegistrations().then(list=>list.forEach(reg=>reg.unregister())).catch(()=>{});
+  if("caches"in window)caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key)))).catch(()=>{});
+});
