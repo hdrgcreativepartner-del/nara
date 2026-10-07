@@ -145,3 +145,16 @@ body{background:var(--bg)}
 
 @media(max-width:979px){#page-chat .composer{position:fixed!important;left:14px;right:14px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:80}}
 .note-actions{position:absolute;right:9px;top:9px;display:flex;gap:2px}.note-actions .cardaction{position:static!important}.note{padding-right:72px}
+
+/* v5.0.1 — keep newest chat reply fully above the composer */
+.chatstream{scroll-padding-bottom:180px}
+.chatstream>.bubble:last-child{scroll-margin-bottom:180px}
+@media(max-width:979px){
+  #page-chat .chatstream{
+    padding-bottom:var(--chat-safe-bottom,180px)!important;
+    scroll-padding-bottom:var(--chat-safe-bottom,180px);
+  }
+  #page-chat .chatstream>.bubble:last-child{
+    scroll-margin-bottom:var(--chat-safe-bottom,180px);
+  }
+}

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 const js=fs.readFileSync(new URL("../app.js",import.meta.url),"utf8");
+const css=fs.readFileSync(new URL("../styles.css",import.meta.url),"utf8");
 const sw=fs.readFileSync(new URL("../sw.js",import.meta.url),"utf8");
 
 assert.ok(!html.includes('id="onboarding"'),"Blocking onboarding must not exist");
@@ -16,4 +17,6 @@ assert.ok(html.includes('id="voiceMode"'),"Voice assistant mode must exist");
 assert.ok(html.includes('id="editDialog"'),"Edit dialog must exist");
 assert.ok(html.includes('id="cashflowChart"')&&html.includes('id="spendingDonut"'),"Finance infographics must exist");
 assert.ok(html.includes('id="resetNara"'),"Reset control must exist");
-console.log("NARA UI contract passed: app-first, voice mode, finance charts, editable data, reset.");
+assert.ok(js.includes("scrollChatToBottom"),"Chat must keep the newest reply above the composer");
+assert.ok(css.includes("--chat-safe-bottom")||css.includes("scroll-padding-bottom"),"Chat must reserve a safe area above composer");
+console.log("NARA UI contract passed: app-first, fixed composer, safe reply scroll, voice mode, finance charts, editable data, reset.");
