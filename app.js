@@ -70,11 +70,19 @@ function parseTime(t){
   return "";
 }
 function addDays(n){const d=new Date();d.setDate(d.getDate()+n);return localISO(d)}
+function nextWeekdayDate(name,forceNext=false){
+  const days={minggu:0,senin:1,selasa:2,rabu:3,kamis:4,jumat:5,"jum'at":5,sabtu:6},target=days[name],now=new Date(),today=now.getDay();
+  let delta=(target-today+7)%7;
+  if(delta===0||forceNext&&delta===0)delta=7;
+  const d=new Date(now);d.setDate(now.getDate()+delta);return localISO(d);
+}
 function parseDate(t){
   const s=t.toLowerCase();
   if(/\bhari ini\b|\btadi\b|\bbarusan\b/.test(s))return localISO();
   if(/\blusa\b/.test(s))return addDays(2);
   if(/\bbesok\b/.test(s))return addDays(1);
+  const wd=s.match(/\b(senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)(?:\s+depan)?\b/);
+  if(wd)return nextWeekdayDate(wd[1],/\sdepan\b/.test(wd[0]));
   const iso=s.match(/\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/); if(iso)return `${iso[1]}-${pad(iso[2])}-${pad(iso[3])}`;
   const dm=s.match(/\btanggal\s+(\d{1,2})(?:\s+(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember))?/);
   if(dm){
@@ -227,7 +235,7 @@ function normalizeTimeForDaypart(time,part){
 function smartTitle(text){
   let s=String(text||"").trim()
     .replace(/\b(tolong|nara|aku|saya|harus|mau|akan|ingin|ingatkan|catat(?:kan)?|note|reminder)\b/gi," ")
-    .replace(/\b(hari ini|besok|lusa|nanti|pagi|siang|sore|malam)\b/gi," ")
+    .replace(/\b(hari ini|besok|lusa|nanti|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)(?:\s+depan)?\b/gi," ").replace(/\b(pagi|siang|sore|malam)\b/gi," ")
     .replace(/\b(?:(?:jam|pukul)\s+)?setengah\s+(?:\d{1,2}|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas)\s*(?:pagi|siang|sore|malam)?\b/gi," ")
     .replace(/\b(?:jam|pukul)\s*(?:\d{1,2}|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas)(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/gi," ")
     .replace(/\b\d{1,2}(?:[.:]\d{2})?\s*(?:pagi|siang|sore|malam)\b/gi," ")
@@ -235,10 +243,21 @@ function smartTitle(text){
   s=s.replace(/^(kemudian|terus|habis itu|lalu)\s+/i,"").replace(/\bnemuin\b/gi,"temui").replace(/\bnemui\b/gi,"temui").replace(/\bketemu\b/gi,"bertemu dengan").replace(/\bphoto\b/gi,"Foto");
   if(/^ke\s+/i.test(s))s="Pergi "+s;
   s=s.replace(/\bke\s+([a-z])/g,(m,c)=>"ke "+c.toUpperCase()).replace(/\bmas\s+([a-z])/g,(m,c)=>"Mas "+c.toUpperCase());
-  return sentenceCase(s||"Agenda");
+  s=s.replace(/\buntuk\s+(?=review|membahas|meeting|rapat|foto|loading|pemasangan)/gi,"untuk ");
+  return sentenceCase(naturalizeText(s)||"Agenda");
+}
+function naturalizeText(text){
+  return String(text||"")
+    .replace(/\baku tuh\b|\bsaya tuh\b/gi,"")
+    .replace(/\baku pengen\b|\baku pingin\b|\bsaya pengen\b/gi,"ingin")
+    .replace(/\bnggak\b|\bgak\b|\bga\b/gi,"tidak")
+    .replace(/\bnemuin\b|\bnemui\b/gi,"temui")
+    .replace(/\bketemuan\b/gi,"bertemu")
+    .replace(/\bphoto\b/gi,"foto")
+    .replace(/\s+/g," ").trim();
 }
 function paraphraseNote(text){
-  let s=String(text||"").trim()
+  let s=naturalizeText(text).trim()
     .replace(/^.*?(?:tolong\s+)?(?:catat(?:kan)?|note|ide)\s*:?[\s-]*/i,"")
     .replace(/\bjangan lupa bahwa\b/gi,"")
     .replace(/\baku\s+(?:harus|mau|akan|ingin)\b/gi,"")
@@ -328,22 +347,22 @@ function targetPeriod(t){const s=String(t).toLowerCase();if(/minggu ini|pekan in
 function targetTitle(t){
   let s=String(t)
     .replace(/\b(target|sasaran|tujuan|goal)\b/gi," ")
-    .replace(/\b(di\s+)?bulan ini|\bminggu ini|\bpekan ini/gi," ")
+    .replace(/\b(di\s*)?bulan ini|\bdibulan ini|\bminggu ini|\bpekan ini/gi," ")
     .replace(/\baku punya\b|\bsaya punya\b|\baku ingin\b|\bsaya ingin\b|\baku mau\b|\bsaya mau\b/gi," ")
     .replace(/\buntuk\s+(?=menyelesaikan|membuat|mengerjakan|belajar|mencapai)/gi," ")
     .replace(/^[,.:;\-\s]+|[,.:;\-\s]+$/g," ").replace(/\s+/g," ").trim();
   return sentenceCase(s||"Target baru");
 }
-function defaultTargetSteps(){return Array.from({length:7},(_,i)=>({id:uid(),title:`Langkah ${i+1}`,done:false}))}
+function defaultTargetSteps(){return []}
 function addTargetFromText(t){
   const period=targetPeriod(t),title=targetTitle(t),month=localISO().slice(0,7),id=uid();
-  const goal={id,title,target:7,progress:0,kind:"manual",period,month,completed:false,steps:defaultTargetSteps(),createdAt:new Date().toISOString(),sourceText:t};
+  const goal={id,title,target:0,progress:0,kind:"manual",period,month,completed:false,steps:[],createdAt:new Date().toISOString(),sourceText:t};
   state.goals.push(goal);state.lastCreated={type:"target",ids:[id],at:Date.now()};return goal;
 }
 function explicitNoteIntent(t){return /\b(catat|catatkan|note|jadikan catatan|simpan catatan|ide|gagasan|jangan lupa bahwa)\b/i.test(t)}
 function explicitAgendaIntent(t){return /\b(ingatkan|pengingat|reminder|jadwal|agenda|deadline|janji)\b/i.test(t)}
 function activityIntent(t){return /\b(ke|pergi|berangkat|temui|nemui|nemuin|ketemu|bertemu|meeting|rapat|review|loading|pasang|pemasangan|acara|jemput|antar|kirim|bayar|ambil|datang|kerja|kontrol|periksa)\b/i.test(t)}
-function hasDateContext(t){return /\b(hari ini|besok|lusa|nanti|tanggal\s+\d+|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)\b/i.test(t)}
+function hasDateContext(t){return /\b(hari ini|besok|lusa|nanti|tanggal\s+\d+|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)(?:\s+depan)?\b/i.test(t)}
 function hasTimeContext(t){return !!parseTime(t)||/\b(pagi|siang|sore|malam|habis magrib|setelah magrib|sehabis magrib)\b/i.test(t)}
 function classifyIntent(text){
   const debt=debtIntent(text),rawAmount=parseAmount(text),ft=financeType(text),amount=ft?rawAmount:null;
@@ -544,11 +563,11 @@ function goalProgress(g){
     return Math.min(100,Math.round(days/Math.max(1,g.target)*100));
   }
   if(Array.isArray(g.steps)&&g.steps.length){const done=g.steps.filter(s=>s.done).length;return Math.round(done/g.steps.length*100)}
-  return g.progress||0;
+  return g.completed?100:0;
 }
 function renderGoals(){
   const month=localISO().slice(0,7),goals=state.goals.filter(g=>g.month===month);$("#goalMonth").textContent=new Intl.DateTimeFormat("id-ID",{month:"long"}).format(new Date());
-  $("#goalsList").classList.toggle("empty",!goals.length);$("#goalsList").innerHTML=goals.length?goals.map(g=>{if(!Array.isArray(g.steps)&&g.kind==="manual")g.steps=defaultTargetSteps();const p=g.completed?100:goalProgress(g),steps=(g.steps||[]).map((s,i)=>`<button class="target-step ${s.done?"done":""}" data-goal="${g.id}" data-step="${s.id}"><span>${s.done?"✓":i+1}</span><b>${esc(s.title||("Langkah "+(i+1)))}</b></button>`).join("");return `<div class="goal target-card ${g.completed?"done":""}"><div class="target-card-head"><div class="target-main"><div class="goaltop"><strong>${esc(g.title)}</strong><span>${p}%</span></div><small>${g.period==="weekly"?"Minggu ini":"Bulan ini"}</small></div><button class="rowaction delete-target" data-id="${g.id}" aria-label="Hapus target">×</button></div><div class="progress"><i style="width:${p}%"></i></div>${steps?`<div class="target-steps">${steps}</div>`:""}<button class="target-done-button ${g.completed?"done":""}" data-target-done="${g.id}">${g.completed?"Selesai ✓":"Done"}</button></div>`}).join(""):"Belum ada target bulan ini.";
+  $("#goalsList").classList.toggle("empty",!goals.length);$("#goalsList").innerHTML=goals.length?goals.map(g=>{if(!Array.isArray(g.steps))g.steps=[];const p=g.completed?100:goalProgress(g),steps=g.steps.map((s,i)=>`<div class="target-step-row ${s.done?"done":""}"><button class="target-step-check" data-goal="${g.id}" data-step="${s.id}" aria-label="Tandai langkah"><span>${s.done?"✓":i+1}</span></button><div class="target-step-copy">${esc(s.title)}</div><button class="target-step-delete" data-goal="${g.id}" data-step-delete="${s.id}" aria-label="Hapus langkah">×</button></div>`).join("");return `<div class="goal target-card ${g.completed?"done":""}"><div class="target-card-head"><div class="target-main"><div class="goaltop"><strong>${esc(g.title)}</strong><span>${p}%</span></div><small>${g.period==="weekly"?"Minggu ini":"Bulan ini"}</small></div><button class="edit-action edit-target" data-id="${g.id}" aria-label="Edit target"><svg><use href="#ico-edit"/></svg></button><button class="rowaction delete-target" data-id="${g.id}" aria-label="Hapus target">×</button></div><div class="progress"><i style="width:${p}%"></i></div><div class="target-steps">${steps||'<div class="target-empty-steps">Belum ada langkah. Tambahkan sesuai kebutuhanmu.</div>'}</div><form class="target-add-step" data-goal-form="${g.id}"><input data-goal-input="${g.id}" placeholder="Tambah langkah…"><button type="submit">+ Tambah</button></form><button class="target-done-button ${g.completed?"done":""}" data-target-done="${g.id}">${g.completed?"Selesai ✓":"Done"}</button></div>`}).join(""):"Belum ada target bulan ini.";
   const days=["S","S","R","K","J","S","M"];$("#habitWeek").textContent="Minggu ini";
   $("#habitTracker").classList.toggle("empty",!state.habits.length);
   $("#habitTracker").innerHTML=state.habits.length?state.habits.map(h=>{
@@ -601,7 +620,7 @@ function quickSubmit(e){
   if(["expense","income"].includes(type)){const amount=Number($("#quickAmount").value.replace(/\D/g,""));if(!amount)return alert("Masukkan nominal.");state.transactions.push({id:uid(),type,amount,category:categoryFor(title),title,date:$("#quickDate").value||localISO(),createdAt:new Date().toISOString()})}
   if(type==="reminder")state.reminders.push({id:uid(),title,date:$("#quickDate").value||localISO(),time:$("#quickTime").value,done:false,leadMinutes:Number($("#quickReminderLead").value)||state.settings.reminderLead||30,notified:false});
   if(type==="note")state.notes.push({id:uid(),title:title.slice(0,48),body:title,date:localISO(),createdAt:new Date().toISOString()});
-  if(type==="target")state.goals.push({id:uid(),title:targetTitle(title),target:7,progress:0,kind:"manual",period:$("#quickTargetPeriod").value||"monthly",month:localISO().slice(0,7),completed:false,steps:defaultTargetSteps(),createdAt:new Date().toISOString()});
+  if(type==="target")state.goals.push({id:uid(),title:targetTitle(title),target:0,progress:0,kind:"manual",period:$("#quickTargetPeriod").value||"monthly",month:localISO().slice(0,7),completed:false,steps:[],createdAt:new Date().toISOString()});
   if(type==="habit"){const f=$("#quickFrequency").value,spec={name:title,period:f==="daily"?"daily":"weekly",target:f==="3-week"?3:1};addHabit(spec,true)}
   $("#quickForm").reset();$("#quickDate").value=localISO();$("#quickDialog").close();save();
 }
@@ -627,17 +646,19 @@ function openEditor(kind,id){
   if(kind==="tx")item=state.transactions.find(x=>x.id===id);
   if(kind==="reminder")item=state.reminders.find(x=>x.id===id);
   if(kind==="habit")item=state.habits.find(x=>x.id===id);
+  if(kind==="target")item=state.goals.find(x=>x.id===id);
   if(!item)return;editContext={kind,id};
   $("#editKind").value=kind;$("#editId").value=id;$("#editTitle").value=item.title||item.name||"";$("#editBody").value=item.body||"";
-  $("#editAmount").value=item.amount||"";$("#editDate").value=item.date||localISO();$("#editTime").value=item.time||"";$("#editLead").value=String(item.leadMinutes||state.settings.reminderLead||30);
-  $("#editBodyWrap").classList.toggle("hidden",kind!=="note");$("#editAmountWrap").classList.toggle("hidden",kind!=="tx");$("#editDateWrap").classList.toggle("hidden",!["tx","reminder"].includes(kind));$("#editTimeWrap").classList.toggle("hidden",kind!=="reminder");$("#editLeadWrap").classList.toggle("hidden",kind!=="reminder");
-  $("#editHeading").textContent={note:"Edit catatan",tx:"Edit transaksi",reminder:"Edit pengingat",habit:"Edit kebiasaan"}[kind];$("#editDialog").showModal();
+  $("#editAmount").value=item.amount||"";$("#editDate").value=item.date||localISO();$("#editTime").value=item.time||"";$("#editLead").value=String(item.leadMinutes||state.settings.reminderLead||30);if($("#editTargetPeriod"))$("#editTargetPeriod").value=item.period||"monthly";
+  $("#editBodyWrap").classList.toggle("hidden",kind!=="note");$("#editAmountWrap").classList.toggle("hidden",kind!=="tx");$("#editDateWrap").classList.toggle("hidden",!["tx","reminder"].includes(kind));$("#editTimeWrap").classList.toggle("hidden",kind!=="reminder");$("#editLeadWrap").classList.toggle("hidden",kind!=="reminder");$("#editTargetPeriodWrap").classList.toggle("hidden",kind!=="target");
+  $("#editHeading").textContent={note:"Edit catatan",tx:"Edit transaksi",reminder:"Edit pengingat",habit:"Edit kebiasaan",target:"Edit target"}[kind];$("#editDialog").showModal();
 }
 function saveEditor(e){e.preventDefault();if(!editContext)return;const {kind,id}=editContext,title=$("#editTitle").value.trim();if(!title)return;
   if(kind==="note"){const x=state.notes.find(x=>x.id===id);if(x){x.title=title;x.body=$("#editBody").value.trim()||title}}
   if(kind==="tx"){const x=state.transactions.find(x=>x.id===id);if(x){x.title=title;x.amount=Number($("#editAmount").value.replace(/\D/g,""))||x.amount;x.date=$("#editDate").value||x.date;x.category=categoryFor(title)}}
   if(kind==="reminder"){const x=state.reminders.find(x=>x.id===id);if(x){x.title=title;x.date=$("#editDate").value||x.date;x.time=$("#editTime").value;x.leadMinutes=Number($("#editLead").value)||30;x.notified=false}}
   if(kind==="habit"){const x=state.habits.find(x=>x.id===id);if(x){const old=x.name;x.name=title;state.goals.filter(g=>g.habitName===old).forEach(g=>{g.habitName=title;g.title=title})}}
+  if(kind==="target"){const x=state.goals.find(x=>x.id===id);if(x){x.title=targetTitle(title);x.period=$("#editTargetPeriod").value||x.period}}
   $("#editDialog").close();editContext=null;save();
 }
 function restoreBackupFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const parsed=JSON.parse(reader.result),data=parsed.data||parsed;if(!data||!Array.isArray(data.notes)||!Array.isArray(data.transactions))throw new Error("Format tidak cocok");if(!confirm("Pulihkan backup ini? Data NARA saat ini akan diganti."))return;localStorage.setItem(KEY,JSON.stringify(data));location.reload()}catch(e){alert("File backup tidak valid.")}};reader.readAsText(file)}
@@ -689,19 +710,21 @@ document.addEventListener("click",e=>{
   if(trigger){e.stopPropagation();openAgendaSheet(trigger.dataset.id);return}
   const sheetAction=e.target.closest("[data-sheet-action]");
   if(sheetAction){runAgendaSheetAction(sheetAction.dataset.sheetAction);return}
-  const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);const en=e.target.closest(".edit-note");if(en)openEditor("note",en.dataset.id);const et=e.target.closest(".edit-tx");if(et)openEditor("tx",et.dataset.id);const er=e.target.closest(".edit-reminder");if(er)openEditor("reminder",er.dataset.id);const eh=e.target.closest(".edit-habit");if(eh)openEditor("habit",eh.dataset.id);
+  const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);const en=e.target.closest(".edit-note");if(en)openEditor("note",en.dataset.id);const et=e.target.closest(".edit-tx");if(et)openEditor("tx",et.dataset.id);const er=e.target.closest(".edit-reminder");if(er)openEditor("reminder",er.dataset.id);const eh=e.target.closest(".edit-habit");if(eh)openEditor("habit",eh.dataset.id);const eg=e.target.closest(".edit-target");if(eg)openEditor("target",eg.dataset.id);
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}const choice=e.target.closest("[data-chat-choice]");if(choice)sendText(choice.dataset.chatChoice);
   const act=e.target.closest("[data-action]");if(act){const map={quick:"expense",transaction:"expense",note:"note",target:"target",habit:"habit"};openQuick(map[act.dataset.action])}
   const ht=e.target.closest(".habit-toggle");if(ht){const h=state.habits.find(x=>x.id===ht.dataset.id),d=localISO();if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
   const done=e.target.closest(".reminder-done");if(done){const r=state.reminders.find(x=>x.id===done.dataset.id);if(r){r.done=!r.done;r.completedAt=r.done?new Date().toISOString():null;save()}}
   const delTx=e.target.closest(".delete-tx");if(delTx){state.transactions=state.transactions.filter(x=>x.id!==delTx.dataset.id);save()}
   const delNote=e.target.closest(".delete-note");if(delNote){state.notes=state.notes.filter(x=>x.id!==delNote.dataset.id);save()}
-  const targetStep=e.target.closest(".target-step");if(targetStep){const g=state.goals.find(x=>x.id===targetStep.dataset.goal),s=g&&g.steps&&g.steps.find(x=>x.id===targetStep.dataset.step);if(s){s.done=!s.done;g.completed=g.steps.every(x=>x.done);g.progress=goalProgress(g);save()}}
+  const targetStep=e.target.closest(".target-step-check");if(targetStep){const g=state.goals.find(x=>x.id===targetStep.dataset.goal),s=g&&g.steps&&g.steps.find(x=>x.id===targetStep.dataset.step);if(s){s.done=!s.done;g.completed=g.steps.length>0&&g.steps.every(x=>x.done);g.progress=goalProgress(g);save()}}
+  const targetStepDelete=e.target.closest("[data-step-delete]");if(targetStepDelete){const g=state.goals.find(x=>x.id===targetStepDelete.dataset.goal);if(g){g.steps=(g.steps||[]).filter(x=>x.id!==targetStepDelete.dataset.stepDelete);g.completed=g.steps.length>0&&g.steps.every(x=>x.done);g.progress=goalProgress(g);save()}}
   const targetDone=e.target.closest("[data-target-done]");if(targetDone){const g=state.goals.find(x=>x.id===targetDone.dataset.targetDone);if(g){g.completed=!g.completed;if(Array.isArray(g.steps))g.steps.forEach(s=>s.done=g.completed);g.progress=g.completed?100:0;save()}}
   const delTarget=e.target.closest(".delete-target");if(delTarget&&confirm("Hapus target ini?")){state.goals=state.goals.filter(x=>x.id!==delTarget.dataset.id);save()}
   const delHabit=e.target.closest(".delete-habit");if(delHabit){const h=state.habits.find(x=>x.id===delHabit.dataset.id);if(h){state.habits=state.habits.filter(x=>x.id!==h.id);state.goals=state.goals.filter(g=>g.habitName!==h.name);save()}}
   const dot=e.target.closest(".daydot");if(dot){const h=state.habits.find(x=>x.id===dot.dataset.habit),d=dot.dataset.date;if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
 });
+document.addEventListener("submit",e=>{const f=e.target.closest("[data-goal-form]");if(!f)return;e.preventDefault();const id=f.dataset.goalForm,g=state.goals.find(x=>x.id===id),input=f.querySelector("[data-goal-input]"),title=(input&&input.value||"").trim();if(g&&title){g.steps=g.steps||[];g.steps.push({id:uid(),title:sentenceCase(naturalizeText(title)),done:false});g.completed=false;g.progress=goalProgress(g);save()}})
 $("#chatForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#chatInput");voiceSession=false;sendText(i.value);i.value="";i.style.height="auto"});
 $("#chatInput").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,112)+"px";syncChatSafeArea();scrollChatToBottom(false)});
 $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#chatForm").requestSubmit()}});

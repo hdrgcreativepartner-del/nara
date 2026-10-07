@@ -34,4 +34,7 @@ assert.ok(js.includes("explicitTargetIntent"),"Target must be a first-class inte
 assert.ok(html.includes('id="liabilityTotal"')&&html.includes('id="receivableTotal"'),"Finance page must expose debt and receivable summaries");
 assert.ok(js.includes("defaultTargetSteps")&&css.includes(".target-steps"),"Targets must support a 7-step checklist");
 assert.ok(css.includes(".agenda-row.done"),"Completed agendas must stay visible with a completed state");
-console.log("NARA UI contract passed: smart accounting, target checklist, persistent completed agenda, responsive action sheet.");
+assert.ok(css.includes(".target-add-step"),"Target page must let users add their own steps");
+assert.ok(js.includes('openEditor("target"'),"Targets must be editable");
+assert.ok(js.includes("nextWeekdayDate"),"Natural weekday dates must be supported");
+console.log("NARA UI contract passed: user-defined target steps, editable targets, natural weekday dates, persistent completed agenda.");
