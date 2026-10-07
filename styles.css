@@ -456,3 +456,62 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .target-add-step input:focus{border-color:#9eb9f3;box-shadow:0 0 0 3px rgba(37,99,235,.08)}
 .target-add-step button{border:0;border-radius:11px;background:#eef3ff;color:#2454b8;font-size:10px;font-weight:850;padding:0 12px;white-space:nowrap}
 @media(max-width:420px){.target-add-step{grid-template-columns:minmax(0,1fr)}.target-add-step button{height:38px}}
+
+/* NARA v5.7 — production hardening */
+.center-dialog{
+  width:min(92vw,480px)!important;
+  max-width:480px!important;
+  height:auto!important;
+  max-height:calc(100dvh - 40px)!important;
+  margin:auto!important;
+  inset:0!important;
+  overflow:visible;
+  color-scheme:light;
+}
+.center-dialog::backdrop{
+  background:rgba(12,16,24,.80)!important;
+  backdrop-filter:blur(8px)!important;
+}
+.center-dialog .modal,.confirm-card{
+  background:rgba(255,255,255,.98)!important;
+  color:#111827!important;
+  border:1px solid rgba(255,255,255,.7);
+  box-shadow:0 26px 90px rgba(0,0,0,.34);
+}
+.center-dialog .modal{max-height:calc(100dvh - 48px);overflow-y:auto}
+.confirm-card{border-radius:24px;padding:20px}.confirm-card>small{font-size:9px;letter-spacing:.14em;color:#7b837f;font-weight:900}.confirm-card h3{margin:6px 0 8px;font-size:20px}.confirm-card p{margin:0;color:#5f6763;font-size:12px;line-height:1.55}.confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px}.confirm-actions button{height:44px;border-radius:13px;border:1px solid #dfe3e1;background:#f5f7f6;color:#202622;font-weight:850}.confirm-actions button.danger{background:#c43d3d;border-color:#c43d3d;color:#fff}
+.median-app dialog,.median-app .modal,.median-app .confirm-card,.median-app .action-sheet{
+  color-scheme:light!important;
+}
+.median-app .modal,.median-app .confirm-card,.median-app .action-sheet{
+  background:#fff!important;color:#111827!important;
+}
+.median-app .modal input,.median-app .modal select,.median-app .modal textarea{
+  background:#f8fafc!important;color:#111827!important;border-color:#d8dee6!important;
+}
+.median-app .modal label,.median-app .modalhead small,.median-app .sheet-head small{color:#66706b!important}
+.median-app .sheet-head h3,.median-app .action-sheet button span{color:#111827!important}
+
+.target-collapse{width:34px;height:34px;flex:0 0 34px;border:0;background:#f1f4f8;border-radius:10px;display:grid;place-items:center;color:#66706b}
+.target-collapse svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.target-card.collapsed{padding:10px 0!important}
+.target-card.collapsed .target-card-head{align-items:center}
+.target-card.collapsed .target-main small{margin-bottom:0}
+.target-card.collapsed .goaltop strong{font-size:12px}
+.target-card.collapsed .goaltop span{font-size:11px}
+@media(max-width:520px){
+  .center-dialog{width:calc(100vw - 28px)!important;max-height:calc(100dvh - 28px)!important}
+  .confirm-card{border-radius:20px;padding:18px}
+  .target-card.collapsed .edit-action,.target-card.collapsed .rowaction{width:30px;height:30px;padding:5px}
+}
+
+/* v5.7.1 — Median readability */
+.median-app .reminder-toast{
+  background:#ffffff!important;
+  color:#111827!important;
+  border-color:#dbe3ee!important;
+}
+.median-app .reminder-toast small{color:#2563eb!important}
+.median-app .reminder-toast strong{color:#111827!important}
+.median-app .reminder-toast span{color:#66706b!important}
+.median-app .reminder-toast>button{color:#66706b!important}
