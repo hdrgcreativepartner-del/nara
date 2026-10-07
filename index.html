@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=5.0.1">
+  <link rel="manifest" href="./manifest.webmanifest?v=5.1.0">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=5.0.1">
+  <link rel="stylesheet" href="./styles.css?v=5.1.0">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -57,6 +57,7 @@
     <section class="page active" id="page-chat">
       <div class="chatgrid">
         <div class="chatcol">
+          <div class="conversation-scroll" id="conversationScroll">
           <div class="welcome-panel"><div class="nara-badge">N</div><div><span class="eyebrow">ASISTEN HARIAN</span><h2 id="welcomeTitle">Hai. Ada yang ingin kamu ceritakan?</h2><p id="welcomeText">Tulis atau ucapkan saja dengan caramu sendiri. NARA bantu merapikan dan mencatatnya.</p></div></div>
 <form id="profilePromptForm" class="profile-prompt" hidden>
   <div class="profile-prompt-icon"><svg><use href="#ico-user"/></svg></div>
@@ -78,6 +79,7 @@
             <button data-prompt="Bulan ini olahraga 3 kali seminggu">Buat target</button>
           </div>
           <div id="chatStream" class="chatstream" aria-live="polite"></div>
+          </div>
           <form id="chatForm" class="composer"><button class="mic" id="micButton" type="button" aria-label="Bicara dengan NARA"><svg class="mic-svg"><use href="#ico-mic"/></svg><span class="mic-wave"><i></i><i></i><i></i></span></button><textarea id="chatInput" rows="1" placeholder="Tulis atau bicara dengan NARA…" aria-label="Pesan untuk NARA"></textarea><button class="send" type="submit" aria-label="Kirim"><svg><use href="#ico-send"/></svg></button></form><div id="listeningPanel" class="listening-panel" hidden><div class="voice-orb"><span></span><i></i><i></i></div><div><b>NARA sedang mendengarkan…</b><small id="voiceTranscript">Silakan bicara.</small></div><button id="stopVoice" type="button">Selesai</button></div>
         </div>
         <aside class="summary">
@@ -177,9 +179,10 @@
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 5.0</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 5.1</small></div><span>Beta</span></div>
     </article>
   </div>
+  <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
 </section>
   </main>
 
@@ -240,7 +243,7 @@
 </form>
 </dialog>
 
-<script src="./app.js?v=5.0.1"></script>
+<script src="./app.js?v=5.1.0"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");
