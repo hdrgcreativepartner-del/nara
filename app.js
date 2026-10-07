@@ -58,7 +58,7 @@ function categoryFor(t){
   return"Other";
 }
 function cleanTitle(t){
-  return t.replace(/\b(hari ini|tadi|barusan|besok|lusa|pengeluaran|pemasukan|sebesar|senilai|catat(?:kan)?|ingatkan(?: saya)?|tolong|aku|saya)\b/gi," ")
+  return t.replace(/\b(hari ini|tadi|barusan|besok|lusa|pengeluaran|pemasukan|sebesar|senilai|catat(?:kan)?|ingatkan(?: saya)?|tolong|aku|saya|bayar|tanggal)\b/gi," ")
     .replace(/\b(?:rp\.?\s?)?\d[\d.,]*\s*(?:juta|jt|ribu|rb|k)?\b/gi," ")
     .replace(/\b(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?\b/gi," ")
     .replace(/\s+/g," ").replace(/^[:\-\s]+|[:\-\s]+$/g,"").trim();
@@ -71,8 +71,10 @@ function splitClauses(text){
 }
 function financeType(t){
   const s=t.toLowerCase();
+  if(/(?:client|klien|customer|pelanggan).{0,24}(?:bayar|transfer)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
   if(/pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|gajian|fee masuk/.test(s))return"income";
   if(/pengeluaran|expense|keluar|bayar|beli|makan|bensin|belanja|parkir|kopi/.test(s))return"expense";
+  if(/\bfee\b|\bhonor\b/.test(s))return"income";
   return null;
 }
 function reminderIntent(t){return /meeting|rapat|jadwal|deadline|ingatkan|janji|jemput|berangkat|telepon|hubungi|kirim|bayar.+(?:besok|tanggal)|besok|lusa/.test(t.toLowerCase())}
@@ -104,8 +106,20 @@ function markHabitFromText(t){
   if(!h.doneDates.includes(localISO()))h.doneDates.push(localISO());
   return h;
 }
+function markPaidBillFromText(t){
+  const s=t.toLowerCase();
+  if(!/(?:sudah|udah).{0,10}(?:dibayar|bayar|lunas)|(?:dibayar|lunas).{0,10}(?:sudah|udah)/.test(s))return null;
+  const bills=state.reminders.filter(r=>!r.done&&r.kind==="bill");
+  const bill=bills.find(r=>r.title.toLowerCase().split(/\s+/).some(w=>w.length>3&&s.includes(w)));
+  if(!bill)return null;
+  bill.done=true;
+  state.transactions.push({id:uid(),type:"expense",amount:bill.amount,category:bill.category||"Bills",title:bill.title,date:localISO(),createdAt:new Date().toISOString()});
+  return bill;
+}
 function process(text){
   const monthly=/bulan ini|target bulan/.test(text.toLowerCase());
+  const paidBill=markPaidBillFromText(text);
+  if(paidBill)return [`✓ Tagihan “${paidBill.title}” ditandai lunas dan ${rupiah(paidBill.amount)} dicatat sebagai pengeluaran.`];
   const completed=markHabitFromText(text);
   if(completed)return [`✓ Habit “${completed.name}” ditandai selesai hari ini.`];
 
@@ -114,12 +128,14 @@ function process(text){
     const ft=financeType(clause),amount=ft?parseAmount(clause):null;
     if(ft&&amount){
       const category=categoryFor(clause),date=parseDate(clause),title=cleanTitle(clause)||category;
+      const futureBill=ft==="expense"&&/(bayar|tagihan)/i.test(clause)&&/(besok|lusa|tanggal)/i.test(clause)&&date!==localISO();
+      if(futureBill){
+        state.reminders.push({id:uid(),title:title||"Tagihan",date,time:parseTime(clause),done:false,kind:"bill",amount,category});
+        results.push(`✓ Tagihan “${title||"Tagihan"}” ${rupiah(amount)} · jatuh tempo ${fmtDate(date)}`);
+        continue;
+      }
       state.transactions.push({id:uid(),type:ft,amount,category,title,date,createdAt:new Date().toISOString()});
       results.push(`✓ ${ft==="income"?"Pemasukan":"Pengeluaran"} ${rupiah(amount)} · ${category}`);
-      if(reminderIntent(clause)&&/(besok|lusa|tanggal)/i.test(clause)){
-        state.reminders.push({id:uid(),title:title||"Pembayaran",date,time:parseTime(clause),done:false});
-        results.push(`✓ Reminder dibuat untuk ${fmtDate(date)}`);
-      }
       continue;
     }
     if(habitIntent(clause)){
@@ -168,7 +184,7 @@ function renderToday(){
   $("#focusText").textContent=agenda[0]?.title||(habits.length?"Jaga konsistensi habit hari ini.":"Belum ada agenda mendesak.");
   const d=new Date();$("#dateBadge").innerHTML=`<b>${d.getDate()}</b><br>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d)}`;
   $("#todayAgenda").classList.toggle("empty",!agenda.length);
-  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row"><button class="rowicon reminder-done" data-id="${r.id}" aria-label="Tandai reminder selesai">○</button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}</span></div></div>`).join(""):"Belum ada agenda mendatang.";
+  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row"><button class="rowicon reminder-done" data-id="${r.id}" aria-label="Tandai reminder selesai">○</button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}${r.amount?" · "+rupiah(r.amount):""}</span></div></div>`).join(""):"Belum ada agenda mendatang.";
   $("#todayHabits").classList.toggle("empty",!habits.length);
   $("#todayHabits").innerHTML=habits.length?habits.map(h=>{const done=h.doneDates.includes(today);return `<div class="row"><button class="rowicon habit-toggle" data-id="${h.id}" aria-label="Tandai habit">${done?"✓":"○"}</button><div class="rowmain"><strong>${esc(h.name)}</strong><span>${h.period==="weekly"?h.target+"× per minggu":"Setiap hari"}</span></div><span class="rowvalue">${done?"Done":""}</span></div>`}).join(""):"Belum ada habit aktif.";
   const total=txTotals(t=>t.date===today);$("#todayIncome").textContent=rupiah(total.income);$("#todayExpense").textContent=rupiah(total.expense);$("#todayNet").textContent=rupiah(total.income-total.expense);
