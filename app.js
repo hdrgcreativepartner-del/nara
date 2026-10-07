@@ -232,11 +232,22 @@ function renderSummary(){
   $("#sideTasks").textContent=state.reminders.filter(r=>!r.done).length;$("#sideHabits").textContent=state.habits.length;$("#sideNotes").textContent=state.notes.length;
 }
 function renderProfile(){const name=firstName();if($("#profileName"))$("#profileName").textContent=(state.profile&&state.profile.name)||"User";if($("#profileAvatar"))$("#profileAvatar").textContent=(name[0]||"N").toUpperCase();if($("#welcomeTitle"))$("#welcomeTitle").textContent=name?`${greeting()}, ${name}.`:"Hai. Ada yang ingin kamu ceritakan?";if($("#todayHeading"))$("#todayHeading").textContent=name?`Hari ini, ${name}`:"Hari ini"}
-function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile()}
+function renderAccount(){
+  const name=(state.profile&&state.profile.name)||"Kamu",initial=(name.trim()[0]||"N").toUpperCase();
+  if($("#accountDisplayName"))$("#accountDisplayName").textContent=name;
+  if($("#accountAvatar"))$("#accountAvatar").textContent=initial;
+  if($("#accountName"))$("#accountName").value=name==="Kamu"?"":name;
+  if($("#topAvatar"))$("#topAvatar").textContent=initial;
+  if($("#backupTxCount"))$("#backupTxCount").textContent=state.transactions.length;
+  if($("#backupNoteCount"))$("#backupNoteCount").textContent=state.notes.length;
+  if($("#backupReminderCount"))$("#backupReminderCount").textContent=state.reminders.length;
+  if($("#backupHabitCount"))$("#backupHabitCount").textContent=state.habits.length;
+}
+function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile();renderAccount()}
 
 function go(page){
   $$(".page").forEach(x=>x.classList.toggle("active",x.id===`page-${page}`));$$(".navbtn[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
-  const pageNames={chat:"NARA",today:"Hari ini",finance:"Keuangan",notes:"Catatan",goals:"Target"};$("#pageTitle").textContent=pageNames[page]||"NARA";
+  const pageNames={chat:"NARA",today:"Hari ini",finance:"Keuangan",notes:"Catatan",goals:"Target",account:"Akun"};$("#pageTitle").textContent=pageNames[page]||"NARA";
   const main=$(".main");if(main&&innerWidth>=980)main.scrollTo({top:0,behavior:"smooth"});else window.scrollTo({top:0,behavior:"smooth"});
 }
 function openQuick(type){
@@ -257,14 +268,49 @@ function quickSubmit(e){
 }
 
 
+
+function downloadBackup(){
+  const payload={app:"NARA",version:"3.1",exportedAt:new Date().toISOString(),data:state};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="NARA-backup-"+localISO()+".json";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  if($("#accountSaveStatus"))$("#accountSaveStatus").textContent="Backup berhasil disiapkan.";
+}
+function updateAccountName(name){
+  const clean=String(name||"").trim();if(!clean)return;
+  state.profile={...(state.profile||{}),name:clean,onboarded:true};
+  try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
+  renderAll();
+  if($("#accountSaveStatus")){$("#accountSaveStatus").textContent="Nama sudah diperbarui.";setTimeout(()=>{$("#accountSaveStatus").textContent="Perubahan tersimpan di perangkat ini."},1800)}
+}
+
 function setVoiceUI(active,transcript=""){if($("#micButton"))$("#micButton").classList.toggle("active",active);if($("#listeningPanel"))$("#listeningPanel").hidden=!active;if($("#voiceStatus")){$("#voiceStatus").classList.toggle("listening",active);$("#voiceStatus span").textContent=active?"Mendengarkan…":"Suara siap"}if(transcript&&$("#voiceTranscript"))$("#voiceTranscript").textContent=transcript}
 function webSpeechStart(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return false;if(!recognition){recognition=new SR();recognition.lang="id-ID";recognition.interimResults=true;recognition.continuous=false;recognition.maxAlternatives=1;recognition.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript;if(e.results[i].isFinal)voiceFinal+=txt;else interim+=txt}const shown=(voiceFinal||interim).trim();setVoiceUI(true,shown||"Silakan bicara.");$("#chatInput").value=shown};recognition.onerror=e=>{setVoiceUI(false);voiceSession=false;if($("#voiceTranscript"))$("#voiceTranscript").textContent=e.error==="not-allowed"?"Izin mikrofon diperlukan.":"Fitur suara tidak tersedia."};recognition.onend=()=>{setVoiceUI(false);const txt=voiceFinal.trim();voiceFinal="";if(txt){voiceSession=true;sendText(txt);$("#chatInput").value=""}else voiceSession=false}}try{voiceFinal="";voiceSession=true;recognition.start();setVoiceUI(true);return true}catch{return false}}
 function startVoice(){try{if(window.NaraAndroid&&window.NaraAndroid.startVoiceInput){voiceSession=true;setVoiceUI(true);window.NaraAndroid.startVoiceInput();return}}catch{}if(!webSpeechStart()){setVoiceUI(false);voiceSession=false;msg("assistant","Maaf, fitur suara belum didukung di browser ini. Kamu tetap bisa mengetik seperti biasa.");save()}}
 function stopVoice(){try{if(recognition)recognition.stop()}catch{}setVoiceUI(false)}
 window.NaraVoiceResult=function(text){setVoiceUI(false);if(text){voiceSession=true;sendText(String(text));$("#chatInput").value=""}else voiceSession=false};
 window.NaraVoiceError=function(message){setVoiceUI(false);voiceSession=false;msg("assistant",message||"Maaf, fitur suara sedang tidak tersedia.");save()};
-function finishOnboarding(name){state.profile={name:name.trim(),onboarded:true};msg("assistant",`Senang kenal kamu, ${firstName()}. Mulai sekarang cerita saja ke NARA seperti biasa—aku bantu catatkan.`);save();$("#onboarding").hidden=true;setTimeout(()=>$("#chatInput").focus(),350)}
-function boot(){window.__NARA_BOOTED__=true;const splash=$("#splash");setTimeout(()=>{if(splash)splash.classList.add("hide");setTimeout(()=>{if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},700);if(!(state.profile&&state.profile.onboarded))$("#onboarding").hidden=false},1250)}
+function finishOnboarding(name){
+  const clean=String(name||"").trim();if(!clean)return;
+  const onboarding=$("#onboarding");if(onboarding)onboarding.hidden=true;
+  state.profile={name:clean,onboarded:true};
+  msg("assistant",`Senang kenal kamu, ${firstName()}. Mulai sekarang cerita saja ke NARA seperti biasa—aku bantu catatkan.`);
+  try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
+  try{renderAll()}catch(e){console.error("NARA render",e)}
+  setTimeout(()=>{const input=$("#chatInput");if(input)input.focus()},350)
+}
+function boot(){
+  window.__NARA_BOOTED__=true;
+  const splash=$("#splash");
+  setTimeout(()=>{
+    if(splash){splash.classList.add("hide");splash.style.pointerEvents="none"}
+    setTimeout(()=>{if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},450);
+    const onboarding=$("#onboarding");
+    if(onboarding&&!(state.profile&&state.profile.onboarded))onboarding.hidden=false
+  },900)
+}
 
 document.addEventListener("click",e=>{
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);
@@ -282,7 +328,8 @@ $("#chatInput").addEventListener("input",e=>{e.target.style.height="auto";e.targ
 $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#chatForm").requestSubmit()}});
 $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
-$("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",stopVoice);$("#onboardingForm").addEventListener("submit",e=>{e.preventDefault();finishOnboarding($("#userName").value)});$("#onboardingNext").addEventListener("click",()=>{const n=$("#userName").value.trim();if(n)finishOnboarding(n)});$("#resetProfile").addEventListener("click",()=>{state.profile={name:"",onboarded:false};save();$("#onboarding").hidden=false;$("#userName").value="";setTimeout(()=>$("#userName").focus(),100)});
+$("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",stopVoice);$("#onboardingForm").addEventListener("submit",e=>{e.preventDefault();finishOnboarding($("#userName").value)});$("#onboardingNext").addEventListener("click",()=>{const n=$("#userName").value.trim();if(n)finishOnboarding(n)});$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});
+$("#downloadBackup").addEventListener("click",downloadBackup);
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
 $("#quickDate").value=localISO();renderAll();
 if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));

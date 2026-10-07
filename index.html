@@ -6,29 +6,50 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="manifest" href="./manifest.webmanifest?v=3.1.0">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=3.1.0">
 </head>
 <body>
+<svg class="icon-sprite" aria-hidden="true" width="0" height="0">
+<symbol id="ico-chat" viewBox="0 0 24 24"><path d="M5 17.5 3.5 21l4.1-1.8A9 9 0 1 0 5 17.5Z"/><path d="M8 10h8M8 14h5"/></symbol>
+<symbol id="ico-today" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 10h18"/><circle cx="8" cy="14" r=".8" fill="currentColor" stroke="none"/><circle cx="12" cy="14" r=".8" fill="currentColor" stroke="none"/><circle cx="16" cy="14" r=".8" fill="currentColor" stroke="none"/></symbol>
+<symbol id="ico-wallet" viewBox="0 0 24 24"><path d="M4 7.5A3.5 3.5 0 0 1 7.5 4H18a2 2 0 0 1 2 2v2"/><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M16 11h5v5h-5a2.5 2.5 0 0 1 0-5Z"/></symbol>
+<symbol id="ico-note" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M8 12h7M8 16h7"/></symbol>
+<symbol id="ico-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></symbol>
+<symbol id="ico-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+<symbol id="ico-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="ico-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"/></symbol>
+<symbol id="ico-send" viewBox="0 0 24 24"><path d="m5 12 14-7-5 14-2.5-5.5Z"/><path d="m11.5 13.5 4-4"/></symbol>
+<symbol id="ico-download" viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 19h14"/></symbol>
+<symbol id="ico-edit" viewBox="0 0 24 24"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10Z"/><path d="m14.5 7 3 3"/></symbol>
+<symbol id="ico-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></symbol>
+<symbol id="ico-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+<symbol id="ico-data" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></symbol>
+</svg>
 <div id="splash" class="splash"><div class="splash-grid"></div><div class="splash-orb orb-a"></div><div class="splash-orb orb-b"></div><div class="splash-brand"><div class="logo-lockup splash-logo" role="img" aria-label="NARA"></div></div><div class="splash-foot"><i></i><span>Teman kecil untuk menemani harimu</span></div></div>
 <section id="onboarding" class="onboarding" hidden><div class="onboarding-glow"></div><div class="onboarding-card"><div class="onboarding-brand"><div class="logo-lockup onboarding-logo" role="img" aria-label="NARA"></div></div><div class="onboarding-copy"><span class="eyebrow">HALO, AKU NARA</span><h1>Aku bantu kamu <em>mengingat, mencatat, dan menjalani hari dengan lebih tenang.</em></h1><p>Ceritakan saja apa yang perlu kamu ingat. NARA akan bantu merapikannya, pelan-pelan.</p></div><form id="onboardingForm" class="name-form"><label for="userName">Biar lebih akrab, aku boleh panggil kamu siapa?</label><div class="name-input"><input id="userName" autocomplete="name" maxlength="40" placeholder="Nama atau panggilanmu…" required><button id="onboardingNext" type="submit" aria-label="Lanjut">→</button></div><small>Tenang, nama ini hanya disimpan di perangkatmu.</small></form></div></section>
 <div class="app" id="appRoot">
   <aside class="sidebar">
     <div class="brand"><div class="logo-lockup brand-logo" role="img" aria-label="NARA"></div><small>Asisten harian pribadimu</small></div>
     <nav class="nav">
-      <button class="navbtn active" data-page="chat"><span>✦</span>Obrolan</button>
-      <button class="navbtn" data-page="today"><span>◷</span>Hari ini</button>
-      <button class="navbtn" data-page="finance"><span>Rp</span>Keuangan</button>
-      <button class="navbtn" data-page="notes"><span>▤</span>Catatan</button>
-      <button class="navbtn" data-page="goals"><span>◎</span>Target</button>
-    </nav>
-    <div class="profile-mini"><span class="profile-avatar" id="profileAvatar">N</span><div><b id="profileName">User</b><small>Profil lokal</small></div><button id="resetProfile" title="Ganti nama">⋯</button></div>
+  <button class="navbtn active" data-page="chat"><svg><use href="#ico-chat"/></svg><b>Obrolan</b></button>
+  <button class="navbtn" data-page="today"><svg><use href="#ico-today"/></svg><b>Hari ini</b></button>
+  <button class="navbtn" data-page="finance"><svg><use href="#ico-wallet"/></svg><b>Keuangan</b></button>
+  <button class="navbtn" data-page="notes"><svg><use href="#ico-note"/></svg><b>Catatan</b></button>
+  <button class="navbtn" data-page="goals"><svg><use href="#ico-target"/></svg><b>Target</b></button>
+</nav>
+<div class="profile-mini" data-page="account"><span class="profile-avatar" id="profileAvatar">N</span><div><b id="profileName">Kamu</b><small>Akun & setelan</small></div><svg class="mini-chevron"><use href="#ico-chevron"/></svg></div>
   </aside>
 
   <main class="main">
     <header class="topbar">
-      <div class="top-title"><small id="dateLabel"></small><h1 id="pageTitle">NARA</h1></div><div class="top-actions"><button class="status-pill" id="voiceStatus" type="button"><i></i><span>Suara siap</span></button><button class="square" id="quickAdd" aria-label="Tambah cepat">＋</button></div>
+      <div class="top-title"><div class="logo-lockup header-logo" aria-label="NARA"></div><small id="dateLabel"></small><h1 id="pageTitle" class="desktop-page-title">NARA</h1></div>
+<div class="top-actions">
+  <button class="status-pill" id="voiceStatus" type="button"><i></i><span>Suara siap</span></button>
+  <button class="header-account" data-page="account" aria-label="Buka akun"><span id="topAvatar">N</span></button>
+  <button class="square" id="quickAdd" aria-label="Tambah cepat"><svg><use href="#ico-plus"/></svg></button>
+</div>
     </header>
 
     <section class="page active" id="page-chat">
@@ -42,7 +63,7 @@
             <button data-prompt="Bulan ini olahraga 3 kali seminggu">Buat target</button>
           </div>
           <div id="chatStream" class="chatstream" aria-live="polite"></div>
-          <form id="chatForm" class="composer"><button class="mic" id="micButton" type="button" aria-label="Bicara dengan NARA"><span class="mic-icon">●</span><span class="mic-wave"><i></i><i></i><i></i></span></button><textarea id="chatInput" rows="1" placeholder="Tulis atau bicara dengan NARA…" aria-label="Pesan untuk NARA"></textarea><button class="send" type="submit" aria-label="Kirim">↑</button></form><div id="listeningPanel" class="listening-panel" hidden><div class="voice-orb"><span></span><i></i><i></i></div><div><b>NARA sedang mendengarkan…</b><small id="voiceTranscript">Silakan bicara.</small></div><button id="stopVoice" type="button">Selesai</button></div>
+          <form id="chatForm" class="composer"><button class="mic" id="micButton" type="button" aria-label="Bicara dengan NARA"><svg class="mic-svg"><use href="#ico-mic"/></svg><span class="mic-wave"><i></i><i></i><i></i></span></button><textarea id="chatInput" rows="1" placeholder="Tulis atau bicara dengan NARA…" aria-label="Pesan untuk NARA"></textarea><button class="send" type="submit" aria-label="Kirim"><svg><use href="#ico-send"/></svg></button></form><div id="listeningPanel" class="listening-panel" hidden><div class="voice-orb"><span></span><i></i><i></i></div><div><b>NARA sedang mendengarkan…</b><small id="voiceTranscript">Silakan bicara.</small></div><button id="stopVoice" type="button">Selesai</button></div>
         </div>
         <aside class="summary">
           <article class="card">
@@ -85,15 +106,49 @@
       <article class="card"><div class="cardhead"><h3>Target bulan ini</h3><span id="goalMonth"></span></div><div id="goalsList" class="goals empty">Belum ada target bulan ini.</div></article>
       <article class="card"><div class="cardhead"><h3>Pelacak kebiasaan</h3><span id="habitWeek"></span></div><div id="habitTracker" class="habits empty">Tambahkan kebiasaan lewat obrolan atau tombol + Kebiasaan.</div></article>
     </section>
+<section class="page" id="page-account">
+  <div class="sectionhead account-heading"><div><small>AKUN &amp; SETELAN</small><h2>Ruangmu di NARA</h2><p>Atur nama dan simpan salinan datamu kapan saja.</p></div></div>
+  <div class="account-layout">
+    <article class="card account-profile-card">
+      <div class="account-identity">
+        <span class="account-avatar" id="accountAvatar">N</span>
+        <div><small>PROFIL</small><h3 id="accountDisplayName">Kamu</h3><p>Nama ini dipakai NARA saat menyapamu.</p></div>
+      </div>
+      <form id="accountNameForm" class="account-form">
+        <label for="accountName">Nama atau panggilan</label>
+        <div class="account-input-row"><input id="accountName" maxlength="40" autocomplete="name"><button class="icon-primary" type="submit" aria-label="Simpan nama"><svg><use href="#ico-check"/></svg></button></div>
+        <small id="accountSaveStatus">Perubahan tersimpan di perangkat ini.</small>
+      </form>
+    </article>
+
+    <article class="card backup-card">
+      <div class="backup-icon"><svg><use href="#ico-data"/></svg></div>
+      <div class="backup-copy"><small>DATA NARA</small><h3>Backup datamu</h3><p>Unduh salinan catatan, transaksi, pengingat, target, kebiasaan, dan profilmu dalam satu file JSON.</p></div>
+      <div class="backup-stats">
+        <div><b id="backupTxCount">0</b><span>Transaksi</span></div>
+        <div><b id="backupNoteCount">0</b><span>Catatan</span></div>
+        <div><b id="backupReminderCount">0</b><span>Pengingat</span></div>
+        <div><b id="backupHabitCount">0</b><span>Kebiasaan</span></div>
+      </div>
+      <button id="downloadBackup" class="download-button" type="button"><svg><use href="#ico-download"/></svg><span>Unduh backup</span></button>
+      <small class="backup-note">File hanya diunduh ke perangkatmu. NARA tidak mengirim data ini ke server.</small>
+    </article>
+
+    <article class="card privacy-card">
+      <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 3.1</small></div><span>Beta</span></div>
+    </article>
+  </div>
+</section>
   </main>
 
   <nav class="bottomnav">
-    <button class="navbtn active" data-page="chat"><span>✦</span>Obrolan</button>
-    <button class="navbtn" data-page="today"><span>◷</span>Hari ini</button>
-    <button class="navbtn" data-page="finance"><span>Rp</span>Keuangan</button>
-    <button class="navbtn" data-page="notes"><span>▤</span>Catatan</button>
-    <button class="navbtn" data-page="goals"><span>◎</span>Target</button>
-  </nav>
+  <button class="navbtn active" data-page="chat"><svg><use href="#ico-chat"/></svg><b>Obrolan</b></button>
+  <button class="navbtn" data-page="today"><svg><use href="#ico-today"/></svg><b>Hari ini</b></button>
+  <button class="navbtn" data-page="finance"><svg><use href="#ico-wallet"/></svg><b>Keuangan</b></button>
+  <button class="navbtn" data-page="notes"><svg><use href="#ico-note"/></svg><b>Catatan</b></button>
+  <button class="navbtn" data-page="goals"><svg><use href="#ico-target"/></svg><b>Target</b></button>
+</nav>
 </div>
 
 <dialog id="quickDialog">
@@ -108,17 +163,29 @@
 </form>
 </dialog>
 
-<script src="./app.js"></script>
+<script src="./app.js?v=3.1.0"></script>
 <script>
-setTimeout(function(){
-  var splash=document.getElementById("splash");
-  if(splash&&!window.__NARA_BOOTED__){
+(function(){
+  function forcePastSplash(){
+    var splash=document.getElementById("splash");
+    if(!splash) return;
     splash.classList.add("hide");
-    setTimeout(function(){if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},700);
-    var app=document.getElementById("appRoot");
-    if(app) app.setAttribute("data-runtime-fallback","true");
+    splash.style.pointerEvents="none";
+    setTimeout(function(){
+      if(splash && splash.parentNode) splash.parentNode.removeChild(splash);
+      var onboarding=document.getElementById("onboarding");
+      try{
+        var raw=localStorage.getItem("nara-mvp-v1");
+        var saved=raw?JSON.parse(raw):null;
+        if(onboarding && !(saved && saved.profile && saved.profile.onboarded)) onboarding.hidden=false;
+      }catch(e){
+        if(onboarding) onboarding.hidden=false;
+      }
+    },450);
   }
-},3000);
+  setTimeout(forcePastSplash,1800);
+  window.addEventListener("pageshow",function(){setTimeout(forcePastSplash,1800)});
+})();
 </script>
 </body>
 </html>
