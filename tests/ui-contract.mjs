@@ -54,4 +54,7 @@ assert.ok(css.includes(".agenda-time-block"),"Agenda date and time must have a c
 assert.ok(css.includes("bottom:calc(92px + env(safe-area-inset-bottom))"),"Chat composer must keep breathing room above bottom navigation");
 assert.ok(html.includes("voice-examples")&&html.includes("voice-level"),"Voice mode must expose examples and a listening indicator");
 assert.ok(js.includes("showVoiceReview")&&js.includes("submitVoice"),"Voice capture must support transcript review before processing");
-console.log("NARA UI contract passed: composer spacing, reviewed voice capture, commercial agenda filters, centered modals, Median contrast.");
+assert.ok(html.includes("median-bridge.js"),"Median bridge must load before the main app");
+assert.ok(js.includes("voiceListening")&&js.includes("if(voiceListening&&recognition)"),"Voice review must process immediately after recognition has ended");
+assert.ok(js.includes("initMedianNotifications")&&js.includes("queueReminderForPush"),"App must initialize Median push and sync reminders");
+console.log("NARA UI contract passed: fixed voice review processing, Median OneSignal bridge, reminder sync hook, composer spacing.");
