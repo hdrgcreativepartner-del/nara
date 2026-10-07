@@ -70,3 +70,36 @@ body{background:var(--bg);color:var(--ink)}.topbar{background:rgba(243,244,243,.
   .onboarding-logo{width:165px}
   .splash-logo{width:86vw}
 }
+
+/* === NARA Web v3.1 visual system === */
+:root{
+  --bg:#f6f7f5;--surface:#ffffff;--soft:#f1f3f0;--ink:#111512;--muted:#7a817c;
+  --line:#e7e9e6;--accent:#87eea3;--accent-deep:#184d2a;--radius:26px;
+  --shadow:0 16px 44px rgba(15,20,17,.055);--safe:max(12px,env(safe-area-inset-bottom))
+}
+.icon-sprite{position:absolute;pointer-events:none}
+.navbtn svg,.square svg,.send svg,.mic svg,.download-button svg,.backup-icon svg,.mini-chevron,.icon-primary svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+body{background:var(--bg)}
+.topbar{min-height:86px;padding:18px 18px 12px;background:rgba(246,247,245,.92);border-bottom:0}
+.top-title{display:flex;flex-direction:column;gap:5px}.header-logo{width:92px;color:var(--ink)}.top-title small{order:2;font-size:9px;letter-spacing:.12em}.desktop-page-title{display:none}
+.top-actions{gap:8px}.square,.header-account{width:43px;height:43px;border:1px solid var(--line);background:#fff;border-radius:15px;display:grid;place-items:center;color:var(--ink);box-shadow:0 4px 16px rgba(15,20,17,.035)}
+.header-account span{width:30px;height:30px;border-radius:10px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:900}
+.status-pill{border:0;background:#eef1ee;padding:8px 10px}
+.page{padding:8px 18px 30px}
+.welcome-panel{padding:10px 2px 8px}.welcome-panel .nara-badge{display:none}.welcome-panel h2{font-size:22px;margin-top:5px}.welcome-panel p{font-size:13px;max-width:520px}
+.chips{padding:6px 0 10px}.chips button{background:#fff;border-color:var(--line);padding:9px 12px;border-radius:14px}
+.chatstream{gap:11px;padding:8px 0 142px}.bubble{font-size:14px;line-height:1.55;box-shadow:none;padding:12px 15px}.bubble.user{background:#171c1a;border-radius:22px 22px 7px 22px}.bubble.assistant{background:#fff;border:1px solid var(--line);border-radius:22px 22px 22px 7px}.bubble .result{font-size:10px;margin-top:8px}
+.composer{left:14px;right:14px;bottom:calc(76px + var(--safe));border:1px solid var(--line);border-radius:24px;padding:7px 7px 7px 8px;box-shadow:0 18px 50px rgba(15,20,17,.12)}
+.mic,.send{width:45px;height:45px;border-radius:16px}.mic{background:#f0f2ef}.send{background:#171c1a}.send svg{width:19px;height:19px}.composer textarea{font-size:14px;padding:11px 5px}
+.bottomnav{padding:8px 8px var(--safe);background:rgba(255,255,255,.96);border-top:1px solid #eceeeb;box-shadow:0 -10px 30px rgba(15,20,17,.035)}
+.bottomnav .navbtn{gap:4px;padding:5px 2px;color:#9aa09c}.bottomnav .navbtn svg{width:19px;height:19px}.bottomnav .navbtn b{font-size:9px;font-weight:650}.bottomnav .navbtn.active{color:var(--ink)}.bottomnav .navbtn.active svg{stroke-width:2.2}
+.card,.hero,.financehero{border:1px solid var(--line);box-shadow:var(--shadow)}
+.hero,.financehero{background:linear-gradient(145deg,#151a17,#0f1210)}
+.sectionhead{margin-top:6px}.sectionhead h2{font-size:28px}.sectionhead p{margin:7px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+.profile-mini{cursor:pointer;border-radius:16px;padding:12px 8px;margin-top:auto}.profile-mini:hover{background:#f4f5f3}.mini-chevron{width:15px;height:15px;color:#a2a7a4}
+.account-layout{display:grid;gap:14px}.account-profile-card,.backup-card,.privacy-card{padding:20px}.account-identity{display:flex;gap:14px;align-items:center}.account-avatar{width:58px;height:58px;border-radius:20px;background:#171c1a;color:#fff;display:grid;place-items:center;font-size:20px;font-weight:900}.account-identity small,.backup-copy small,.privacy-row small{font-size:9px;letter-spacing:.12em;color:var(--muted);font-weight:900}.account-identity h3,.backup-copy h3,.privacy-row h3{margin:4px 0 3px;font-size:19px}.account-identity p,.backup-copy p,.privacy-row p{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+.account-form{margin-top:20px}.account-form>label{font-size:11px;font-weight:800;display:block;margin-bottom:7px}.account-input-row{display:grid;grid-template-columns:1fr 46px;gap:8px}.account-input-row input{min-width:0;border:1px solid var(--line);background:#fafbfa;border-radius:15px;padding:12px 13px;outline:0}.account-input-row input:focus{border-color:#b8bdb9;box-shadow:0 0 0 4px rgba(17,21,18,.045)}.icon-primary{border:0;border-radius:15px;background:#171c1a;color:#fff;display:grid;place-items:center}.account-form>small{display:block;margin-top:8px;color:#9aa09c;font-size:9px}
+.backup-card{position:relative;overflow:hidden}.backup-icon{width:46px;height:46px;border-radius:16px;background:#e9f8ed;color:#1e6d37;display:grid;place-items:center;margin-bottom:14px}.backup-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:17px 0}.backup-stats div{background:#f5f6f4;border-radius:14px;padding:10px}.backup-stats b,.backup-stats span{display:block}.backup-stats b{font-size:15px}.backup-stats span{font-size:8px;color:var(--muted);margin-top:2px}.download-button{width:100%;border:0;border-radius:16px;background:#171c1a;color:#fff;padding:13px 15px;display:flex;align-items:center;justify-content:center;gap:9px;font-weight:850;font-size:12px}.backup-note{display:block;color:#9aa09c;font-size:9px;line-height:1.5;margin-top:9px;text-align:center}
+.privacy-row{display:flex;justify-content:space-between;gap:18px;align-items:center}.privacy-dot{width:10px;height:10px;border-radius:50%;background:#35b967;box-shadow:0 0 0 5px rgba(53,185,103,.11)}.setting-row{border-top:1px solid var(--line);margin-top:17px;padding-top:14px;display:flex;justify-content:space-between;align-items:center}.setting-row b,.setting-row small{display:block}.setting-row b{font-size:12px}.setting-row small{font-size:9px;color:var(--muted);margin-top:3px}.setting-row>span{font-size:9px;color:var(--muted);background:#f1f3f0;border-radius:99px;padding:6px 8px}
+@media(min-width:720px){.topbar{padding-left:28px;padding-right:28px}.page{padding-left:28px;padding-right:28px}.account-layout{grid-template-columns:1fr 1fr}.privacy-card{grid-column:1/-1}}
+@media(min-width:980px){.topbar{min-height:92px}.header-logo{display:none}.desktop-page-title{display:block;font-size:26px}.top-title small{order:0}.header-account{display:none}.page{padding-top:18px}.account-layout{grid-template-columns:1.05fr 1.25fr}.privacy-card{grid-column:1/-1}.composer{bottom:12px}.bottomnav{display:none}}
