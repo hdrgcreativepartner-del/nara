@@ -26,4 +26,7 @@ assert.ok(css.includes("overflow-x:hidden"),"Mobile pages must not overflow hori
 assert.ok(css.includes("#page-chat .profile-prompt")&&css.includes("display:grid!important"),"Profile prompt must remain a grid on mobile");
 assert.ok(css.includes("#page-chat .chips")&&css.includes("flex-wrap:nowrap!important"),"Prompt chips must stay single-row horizontal scroll");
 assert.ok(css.includes(".chat-actions"),"Assistant clarification choices must wrap responsively");
-console.log("NARA UI contract passed: smart choices, responsive wrap, scrollable intro, fixed composer, account footer and editable data.");
+assert.ok(html.includes('id="ico-more"'),"Agenda must use a three-dot options icon");
+assert.ok(css.includes(".agenda-menu"),"Agenda options popup must exist");
+assert.ok(js.includes("data-agenda-action"),"Agenda menu actions must be wired");
+console.log("NARA UI contract passed: agenda menu, intent-first assistant, smart choices, responsive layout and fixed composer.");
