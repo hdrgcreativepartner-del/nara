@@ -1,0 +1,22 @@
+plugins { id "com.android.application" }
+
+android {
+    namespace "com.hdrg.nara"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.hdrg.nara"
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName "1.0.0"
+    }
+}
+
+tasks.register("syncWebAssets", Copy) {
+    from(rootProject.projectDir.parentFile) {
+        include "index.html", "styles.css", "app.js", "manifest.webmanifest", "icon.svg"
+    }
+    into layout.projectDirectory.dir("src/main/assets/www")
+}
+tasks.named("preBuild").configure { dependsOn("syncWebAssets") }
