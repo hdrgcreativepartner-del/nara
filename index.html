@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=5.9.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=6.0.0">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=5.9.0">
+  <link rel="stylesheet" href="./styles.css?v=6.0.0">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -196,7 +196,7 @@
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 5.9</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.0</small></div><span>Beta</span></div>
     </article>
   </div>
   <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
@@ -215,10 +215,18 @@
 <div id="voiceMode" class="voice-mode" hidden>
   <div class="voice-mode-top"><img src="./assets/nara-header.webp" alt="NARA"><button id="closeVoiceMode" type="button" aria-label="Tutup"><svg><use href="#ico-close"/></svg></button></div>
   <div class="voice-stage">
-    <div class="assistant-orb"><i></i><i></i><i></i><span></span></div>
+    <div class="voice-orb-wrap">
+      <div class="assistant-orb"><i></i><i></i><i></i><span></span></div>
+      <div class="voice-level" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
     <small id="voiceModeState">MENDENGARKAN</small>
     <h2 id="voiceModeTranscript">Silakan bicara…</h2>
-    <p>NARA akan mengubah ucapanmu menjadi catatan, agenda, atau transaksi.</p>
+    <p id="voiceModeHint">Bicara seperti biasa. NARA akan memahami dulu sebelum mencatat.</p>
+    <div class="voice-examples" aria-label="Contoh ucapan">
+      <span>“Besok jam 9 meeting”</span>
+      <span>“Makan 25 ribu”</span>
+      <span>“Target bulan ini…”</span>
+    </div>
   </div>
   <div class="voice-mode-actions"><button id="voiceCancel" type="button">Batal</button><button id="voiceDone" class="voice-done" type="button">Selesai</button></div>
 </div>
@@ -280,7 +288,7 @@
 </form>
 </dialog>
 
-<script src="./app.js?v=5.9.0"></script>
+<script src="./app.js?v=6.0.0"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");
