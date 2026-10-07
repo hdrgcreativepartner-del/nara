@@ -181,13 +181,29 @@ function process(text){
 }
 
 function speak(text){if(!voiceSession)return;const clean=text.replace(/✓/g,"").replace(/Rp\s?/g,"rupiah ");try{if(window.NaraAndroid&&window.NaraAndroid.speak){window.NaraAndroid.speak(clean);return}}catch{}if("speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(clean);u.lang="id-ID";u.rate=.98;speechSynthesis.speak(u)}}
+function syncChatSafeArea(){
+  const composer=$("#chatForm"),nav=$(".bottomnav"),stream=$("#chatStream");
+  if(!stream)return;
+  const composerH=composer&&typeof composer.getBoundingClientRect==="function"?composer.getBoundingClientRect().height:64;
+  const navH=typeof innerWidth!=="undefined"&&innerWidth<980&&nav&&typeof nav.getBoundingClientRect==="function"?nav.getBoundingClientRect().height:0;
+  const safe=Math.ceil(composerH+navH+28);
+  if(stream.style&&typeof stream.style.setProperty==="function")stream.style.setProperty("--chat-safe-bottom",safe+"px");
+}
+function scrollChatToBottom(smooth=false){
+  const s=$("#chatStream");if(!s)return;
+  syncChatSafeArea();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(typeof s.scrollTo==="function")s.scrollTo({top:s.scrollHeight,behavior:smooth?"smooth":"auto"});else s.scrollTop=s.scrollHeight;
+  }));
+}
 function sendText(text){
   const t=text.trim();if(!t)return;
-  msg("user",t);renderChat(true);
-  setTimeout(()=>{const results=process(t);const reply=results.join("\n");msg("assistant",reply,results.length>1?`${results.length} data diproses`:"");save();speak(reply);requestAnimationFrame(()=>{const s=$("#chatStream");s.scrollTop=s.scrollHeight})},voiceSession?420:180);
+  msg("user",t);renderChat(true);scrollChatToBottom(true);
+  setTimeout(()=>{const results=process(t);const reply=results.join("\n");msg("assistant",reply,results.length>1?`${results.length} data diproses`:"");save();speak(reply);renderChat(false);scrollChatToBottom(true)},voiceSession?420:180);
 }
 function renderChat(showTyping=false){
   const s=$("#chatStream");s.innerHTML=state.messages.map(m=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing"><i></i><i></i><i></i></span></div>`:"");
+  syncChatSafeArea();
 }
 function txTotals(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>{a[t.type]+=t.amount;return a},{income:0,expense:0})}
 function renderToday(){
@@ -372,7 +388,7 @@ document.addEventListener("click",e=>{
   const dot=e.target.closest(".daydot");if(dot){const h=state.habits.find(x=>x.id===dot.dataset.habit),d=dot.dataset.date;if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
 });
 $("#chatForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#chatInput");voiceSession=false;sendText(i.value);i.value="";i.style.height="auto"});
-$("#chatInput").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,112)+"px"});
+$("#chatInput").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,112)+"px";syncChatSafeArea();scrollChatToBottom(false)});
 $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#chatForm").requestSubmit()}});
 $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
