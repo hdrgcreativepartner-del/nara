@@ -163,12 +163,12 @@ function renderChat(){
 }
 function txTotals(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>{a[t.type]+=t.amount;return a},{income:0,expense:0})}
 function renderToday(){
-  const today=localISO(),agenda=state.reminders.filter(r=>r.date===today&&!r.done),habits=state.habits;
+  const today=localISO(),agenda=[...state.reminders].filter(r=>!r.done).sort((a,b)=>(a.date+(a.time||"99:99")).localeCompare(b.date+(b.time||"99:99"))).slice(0,8),habits=state.habits;
   $("#agendaCount").textContent=agenda.length;$("#habitCount").textContent=habits.length;
   $("#focusText").textContent=agenda[0]?.title||(habits.length?"Jaga konsistensi habit hari ini.":"Belum ada agenda mendesak.");
   const d=new Date();$("#dateBadge").innerHTML=`<b>${d.getDate()}</b><br>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d)}`;
   $("#todayAgenda").classList.toggle("empty",!agenda.length);
-  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>row("◷",r.title,`${r.time||"Tanpa jam"} · ${fmtDate(r.date)}`,"")).join(""):"Belum ada reminder hari ini.";
+  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row"><button class="rowicon reminder-done" data-id="${r.id}" aria-label="Tandai reminder selesai">○</button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}</span></div></div>`).join(""):"Belum ada agenda mendatang.";
   $("#todayHabits").classList.toggle("empty",!habits.length);
   $("#todayHabits").innerHTML=habits.length?habits.map(h=>{const done=h.doneDates.includes(today);return `<div class="row"><button class="rowicon habit-toggle" data-id="${h.id}" aria-label="Tandai habit">${done?"✓":"○"}</button><div class="rowmain"><strong>${esc(h.name)}</strong><span>${h.period==="weekly"?h.target+"× per minggu":"Setiap hari"}</span></div><span class="rowvalue">${done?"Done":""}</span></div>`}).join(""):"Belum ada habit aktif.";
   const total=txTotals(t=>t.date===today);$("#todayIncome").textContent=rupiah(total.income);$("#todayExpense").textContent=rupiah(total.expense);$("#todayNet").textContent=rupiah(total.income-total.expense);
@@ -178,14 +178,14 @@ function renderFinance(){
   const total=txTotals(),month=localISO().slice(0,7),mt=txTotals(t=>t.date.startsWith(month));
   $("#balanceTotal").textContent=rupiah(total.income-total.expense);$("#monthIncome").textContent=rupiah(mt.income);$("#monthExpense").textContent=rupiah(mt.expense);$("#sideBalance").textContent=rupiah(total.income-total.expense);
   const recent=[...state.transactions].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,12);
-  $("#transactionList").classList.toggle("empty",!recent.length);$("#transactionList").innerHTML=recent.length?recent.map(t=>row(t.type==="income"?"+":"−",t.title,`${t.category} · ${fmtDate(t.date)}`,`${t.type==="income"?"+":"−"} ${rupiah(t.amount)}`,t.type==="income"?"good":"bad")).join(""):"Belum ada transaksi.";
+  $("#transactionList").classList.toggle("empty",!recent.length);$("#transactionList").innerHTML=recent.length?recent.map(t=>`<div class="row"><div class="rowicon">${t.type==="income"?"+":"−"}</div><div class="rowmain"><strong>${esc(t.title)}</strong><span>${esc(t.category)} · ${fmtDate(t.date)}</span></div><div class="rowvalue ${t.type==="income"?"good":"bad"}">${t.type==="income"?"+":"−"} ${rupiah(t.amount)}</div><button class="rowaction delete-tx" data-id="${t.id}" aria-label="Hapus transaksi">×</button></div>`).join(""):"Belum ada transaksi.";
   const cats={};state.transactions.filter(t=>t.type==="expense"&&t.date.startsWith(month)).forEach(t=>cats[t.category]=(cats[t.category]||0)+t.amount);
   const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...entries.map(x=>x[1]));
   $("#categoryBreakdown").classList.toggle("empty",!entries.length);$("#categoryBreakdown").innerHTML=entries.length?entries.map(([k,v])=>`<div class="cat"><span>${esc(k)}</span><b>${rupiah(v)}</b><div class="bar"><i style="width:${Math.round(v/max*100)}%"></i></div></div>`).join(""):"Belum ada data.";
 }
 function renderNotes(){
   const q=($("#noteSearch")?.value||"").toLowerCase(),notes=[...state.notes].filter(n=>(n.title+" "+n.body).toLowerCase().includes(q)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
-  $("#notesGrid").innerHTML=notes.length?notes.map(n=>`<article class="note"><h3>${esc(n.title)}</h3><p>${esc(n.body)}</p><div class="notemeta">${fmtDate(n.date)}</div></article>`).join(""):`<div class="empty">Belum ada note.</div>`;
+  $("#notesGrid").innerHTML=notes.length?notes.map(n=>`<article class="note"><button class="cardaction delete-note" data-id="${n.id}" aria-label="Hapus note">×</button><h3>${esc(n.title)}</h3><p>${esc(n.body)}</p><div class="notemeta">${fmtDate(n.date)}</div></article>`).join(""):`<div class="empty">Belum ada note.</div>`;
 }
 function weeklyDone(h){
   const d=new Date(),day=(d.getDay()+6)%7,monday=new Date(d);monday.setDate(d.getDate()-day);monday.setHours(0,0,0,0);
@@ -208,11 +208,11 @@ function renderGoals(){
     const d=new Date(),dow=(d.getDay()+6)%7,monday=new Date(d);monday.setDate(d.getDate()-dow);
     const dots=days.map((x,i)=>{const dd=new Date(monday);dd.setDate(monday.getDate()+i);const date=localISO(dd),done=h.doneDates.includes(date);return `<button class="daydot ${done?"done":""}" data-habit="${h.id}" data-date="${date}">${x}</button>`}).join("");
     const count=weeklyDone(h),target=h.period==="weekly"?h.target:7;
-    return `<div class="habit"><div class="habithead"><strong>${esc(h.name)}</strong><small>${count}/${target}</small></div><div class="weekdots">${dots}</div></div>`
+    return `<div class="habit"><div class="habithead"><strong>${esc(h.name)}</strong><span><small>${count}/${target}</small><button class="rowaction delete-habit" data-id="${h.id}" aria-label="Hapus habit">×</button></span></div><div class="weekdots">${dots}</div></div>`
   }).join(""):"Tambahkan habit lewat chat atau tombol + Habit.";
 }
 function renderSummary(){
-  $("#sideTasks").textContent=state.reminders.filter(r=>r.date===localISO()&&!r.done).length;$("#sideHabits").textContent=state.habits.length;$("#sideNotes").textContent=state.notes.length;
+  $("#sideTasks").textContent=state.reminders.filter(r=>!r.done).length;$("#sideHabits").textContent=state.habits.length;$("#sideNotes").textContent=state.notes.length;
 }
 function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary()}
 
@@ -243,6 +243,10 @@ document.addEventListener("click",e=>{
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}
   const act=e.target.closest("[data-action]");if(act){const map={quick:"expense",transaction:"expense",note:"note",habit:"habit"};openQuick(map[act.dataset.action])}
   const ht=e.target.closest(".habit-toggle");if(ht){const h=state.habits.find(x=>x.id===ht.dataset.id),d=localISO();if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
+  const done=e.target.closest(".reminder-done");if(done){const r=state.reminders.find(x=>x.id===done.dataset.id);if(r){r.done=true;save()}}
+  const delTx=e.target.closest(".delete-tx");if(delTx){state.transactions=state.transactions.filter(x=>x.id!==delTx.dataset.id);save()}
+  const delNote=e.target.closest(".delete-note");if(delNote){state.notes=state.notes.filter(x=>x.id!==delNote.dataset.id);save()}
+  const delHabit=e.target.closest(".delete-habit");if(delHabit){const h=state.habits.find(x=>x.id===delHabit.dataset.id);if(h){state.habits=state.habits.filter(x=>x.id!==h.id);state.goals=state.goals.filter(g=>g.habitName!==h.name);save()}}
   const dot=e.target.closest(".daydot");if(dot){const h=state.habits.find(x=>x.id===dot.dataset.habit),d=dot.dataset.date;if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
 });
 $("#chatForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#chatInput");sendText(i.value);i.value="";i.style.height="auto"});
