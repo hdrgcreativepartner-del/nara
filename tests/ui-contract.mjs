@@ -42,4 +42,8 @@ assert.ok(html.includes('id="confirmDialog"')&&css.includes(".center-dialog"),"C
 assert.ok(css.includes(".median-app .modal"),"Median dialogs must force readable light contrast");
 assert.ok(css.includes(".median-app .reminder-toast"),"Median reminder popups must force readable contrast");
 assert.ok(!js.includes('confirm("Pulihkan backup')&&!js.includes('confirm("Reset semua data'),"Critical app actions must not use native confirm dialogs");
-console.log("NARA UI contract passed: minimized targets, centered high-contrast dialogs, Median contrast, smart reasoning regressions.");
+assert.ok(css.includes("dialog.action-sheet-dialog")&&css.includes("margin:auto!important"),"Agenda actions must float in the center");
+assert.ok(css.includes("rgba(10,15,24,.80)"),"Modal backdrop must use an 80% dim layer");
+assert.ok(css.includes("@media(prefers-reduced-motion:reduce)"),"Motion must respect reduced-motion preference");
+assert.ok(css.includes("--tap:44px"),"Core controls must preserve comfortable touch targets");
+console.log("NARA UI contract passed: centered floating modals, 80% backdrop, accessible motion, touch targets, minimized targets, Median contrast.");
