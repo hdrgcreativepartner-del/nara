@@ -6,14 +6,17 @@ const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(Number(n)||0);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const fmtDate=s=>new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short",year:"numeric"}).format(new Date(s+"T12:00:00"));
-const state=load();\nlet recognition=null,voiceSession=false,voiceFinal="";
+const state=load();
+let recognition=null,voiceSession=false,voiceFinal="";
 
 function fresh(){
   return {profile:{name:"",onboarded:false},messages:[{id:uid(),role:"assistant",text:"Ceritakan apa yang perlu dicatat. Contoh: “makan 25 ribu”, “besok jam 10 meeting”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],reminders:[],notes:[],habits:[],goals:[]};
 }
 function load(){try{return {...fresh(),...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
-function msg(role,text,result=""){state.messages.push({id:uid(),role,text,result,at:new Date().toISOString()})}\nfunction firstName(){return (state.profile?.name||"").trim().split(/\\s+/)[0]||""}\nfunction greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
+function msg(role,text,result=""){state.messages.push({id:uid(),role,text,result,at:new Date().toISOString()})}
+function firstName(){return (state.profile?.name||"").trim().split(/\s+/)[0]||""}
+function greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
 
 function parseAmount(t){
   const s=t.toLowerCase().replace(/rp\.?\s?/g,"").replace(/(\d)\.(?=\d{3}\b)/g,"$1").replace(/(\d),(?=\d{3}\b)/g,"$1");
@@ -165,7 +168,7 @@ function process(text){
   return results;
 }
 
-function speak(text){if(!voiceSession)return;const clean=text.replace(/✓/g,"").replace(/Rp\\s?/g,"rupiah ");try{if(window.NaraAndroid?.speak){window.NaraAndroid.speak(clean);return}}catch{}if("speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(clean);u.lang="id-ID";u.rate=.98;speechSynthesis.speak(u)}}
+function speak(text){if(!voiceSession)return;const clean=text.replace(/✓/g,"").replace(/Rp\s?/g,"rupiah ");try{if(window.NaraAndroid?.speak){window.NaraAndroid.speak(clean);return}}catch{}if("speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(clean);u.lang="id-ID";u.rate=.98;speechSynthesis.speak(u)}}
 function sendText(text){
   const t=text.trim();if(!t)return;
   msg("user",t);renderChat(true);
@@ -227,7 +230,8 @@ function renderGoals(){
 function renderSummary(){
   $("#sideTasks").textContent=state.reminders.filter(r=>!r.done).length;$("#sideHabits").textContent=state.habits.length;$("#sideNotes").textContent=state.notes.length;
 }
-function renderProfile(){const name=firstName();if($("#profileName"))$("#profileName").textContent=state.profile?.name||"User";if($("#profileAvatar"))$("#profileAvatar").textContent=(name[0]||"N").toUpperCase();if($("#welcomeTitle"))$("#welcomeTitle").textContent=name?`${greeting()}, ${name}.`:"Hai. Ada yang bisa NARA bantu?";if($("#todayHeading"))$("#todayHeading").textContent=name?`Hari ini, ${name}`:"Hari ini"}\nfunction renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile()}
+function renderProfile(){const name=firstName();if($("#profileName"))$("#profileName").textContent=state.profile?.name||"User";if($("#profileAvatar"))$("#profileAvatar").textContent=(name[0]||"N").toUpperCase();if($("#welcomeTitle"))$("#welcomeTitle").textContent=name?`${greeting()}, ${name}.`:"Hai. Ada yang bisa NARA bantu?";if($("#todayHeading"))$("#todayHeading").textContent=name?`Hari ini, ${name}`:"Hari ini"}
+function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile()}
 
 function go(page){
   $$(".page").forEach(x=>x.classList.toggle("active",x.id===`page-${page}`));$$(".navbtn[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
@@ -260,7 +264,8 @@ window.NaraVoiceResult=function(text){setVoiceUI(false);if(text){voiceSession=tr
 window.NaraVoiceError=function(message){setVoiceUI(false);voiceSession=false;msg("assistant",message||"Voice input tidak tersedia.");save()};
 function finishOnboarding(name){state.profile={name:name.trim(),onboarded:true};msg("assistant",`Senang bertemu denganmu, ${firstName()}. Mulai sekarang kamu bisa mengetik atau bicara ke NARA seperti ngobrol biasa.`);save();$("#onboarding").hidden=true;setTimeout(()=>$("#chatInput").focus(),350)}
 function boot(){const splash=$("#splash");setTimeout(()=>{splash?.classList.add("hide");setTimeout(()=>{if(splash?.remove)splash.remove()},700);if(!state.profile?.onboarded)$("#onboarding").hidden=false},1250)}
-\ndocument.addEventListener("click",e=>{
+
+document.addEventListener("click",e=>{
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}
   const act=e.target.closest("[data-action]");if(act){const map={quick:"expense",transaction:"expense",note:"note",habit:"habit"};openQuick(map[act.dataset.action])}
