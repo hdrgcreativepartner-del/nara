@@ -87,4 +87,21 @@ vm.runInContext("renderToday()",context);
 assert.match(elements.get("#todayAgenda").innerHTML,/Pak Budi/i);
 assert.match(elements.get("#todayAgenda").innerHTML,/reminder-done/);
 
-console.log("NARA smoke tests passed: finance, reminder, notes, habits/goals, mixed chat, multi-expense, sentence splitting, upcoming agenda.");
+reset();
+run("Besok bayar internet 350 ribu");
+assert.equal(get("state.transactions.length"),0);
+assert.equal(get("state.reminders.length"),1);
+assert.equal(get("state.reminders[0].kind"),"bill");
+assert.equal(get("state.reminders[0].amount"),350000);
+run("Internet sudah dibayar");
+assert.equal(get("state.reminders[0].done"),true);
+assert.equal(get("state.transactions.length"),1);
+assert.equal(get("state.transactions[0].amount"),350000);
+
+reset();
+run("Client bayar 2 juta untuk desain");
+assert.equal(get("state.transactions.length"),1);
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),2000000);
+
+console.log("NARA smoke tests passed: finance, bills, income context, reminder, notes, habits/goals, mixed chat, multi-expense, sentence splitting, upcoming agenda.");
