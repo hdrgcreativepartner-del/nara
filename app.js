@@ -184,8 +184,8 @@ function speak(text){if(!voiceSession)return;const clean=text.replace(/✓/g,"")
 function syncChatSafeArea(){
   const composer=$("#chatForm"),nav=$(".bottomnav"),stream=$("#chatStream");
   if(!stream)return;
-  const composerH=composer?composer.getBoundingClientRect().height:64;
-  const navH=innerWidth<980&&nav?nav.getBoundingClientRect().height:0;
+  const composerH=composer&&typeof composer.getBoundingClientRect==="function"?composer.getBoundingClientRect().height:64;
+  const navH=typeof innerWidth!=="undefined"&&innerWidth<980&&nav&&typeof nav.getBoundingClientRect==="function"?nav.getBoundingClientRect().height:0;
   const safe=Math.ceil(composerH+navH+28);
   stream.style.setProperty("--chat-safe-bottom",safe+"px");
 }
@@ -193,7 +193,7 @@ function scrollChatToBottom(smooth=false){
   const s=$("#chatStream");if(!s)return;
   syncChatSafeArea();
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    s.scrollTo({top:s.scrollHeight,behavior:smooth?"smooth":"auto"});
+    if(typeof s.scrollTo==="function")s.scrollTo({top:s.scrollHeight,behavior:smooth?"smooth":"auto"});else s.scrollTop=s.scrollHeight;
   }));
 }
 function sendText(text){
