@@ -30,12 +30,38 @@ function parseAmount(t){
   if(["ribu","rb","k"].includes(unit))n*=1e3;
   return Number.isFinite(n)?Math.round(n):null;
 }
+function timeWordToNumber(s){
+  const words={satu:1,dua:2,tiga:3,empat:4,lima:5,enam:6,tujuh:7,delapan:8,sembilan:9,sepuluh:10,sebelas:11,"dua belas":12};
+  let out=String(s||"").toLowerCase();
+  Object.entries(words).sort((a,b)=>b[0].length-a[0].length).forEach(([w,n])=>{out=out.replace(new RegExp("\\b"+w+"\\b","g"),String(n))});
+  return out;
+}
+function normalizeClock(hour,minute,part){
+  let h=Number(hour),m=Number(minute||0);part=part||"";
+  if(part==="malam"){
+    if(h===12)h=0;else if(h<12)h+=12;
+  }else if(part==="sore"){
+    if(h<12)h+=12;
+  }else if(part==="siang"){
+    if(h>=1&&h<=6)h+=12;
+  }else if(part==="pagi"){
+    if(h===12)h=0;
+  }
+  return `${pad(Math.max(0,Math.min(23,h)))}:${pad(Math.max(0,Math.min(59,m)))}`;
+}
 function parseTime(t){
-  const s=t.toLowerCase();
-  let m=s.match(/(?:jam|pukul)\s*(\d{1,2})(?:[.:](\d{2}))?/);
-  if(!m)m=s.match(/\b(\d{1,2})[.:](\d{2})\s*(?:wib|wita|wit)?\b/);
-  if(!m)return "";
-  return `${pad(Math.min(23,+m[1]))}:${pad(+m[2]||0)}`;
+  let s=timeWordToNumber(t);
+  const part=(s.match(/\b(pagi|siang|sore|malam)\b/)||[])[1]||"";
+  let m=s.match(/(?:jam|pukul)\s+setengah\s+(\d{1,2})/);
+  if(m){
+    let target=Number(m[1]),hour=(target+23)%24;
+    return normalizeClock(hour,30,part);
+  }
+  m=s.match(/(?:jam|pukul)\s*(\d{1,2})(?:[.:](\d{2}))?\s*(?:wib|wita|wit)?\s*(pagi|siang|sore|malam)?/);
+  if(m)return normalizeClock(m[1],m[2]||0,m[3]||part);
+  m=s.match(/\b(\d{1,2})[.:](\d{2})\s*(?:wib|wita|wit)?\s*(pagi|siang|sore|malam)?\b/);
+  if(m)return normalizeClock(m[1],m[2],m[3]||part);
+  return "";
 }
 function addDays(n){const d=new Date();d.setDate(d.getDate()+n);return localISO(d)}
 function parseDate(t){
@@ -68,7 +94,7 @@ function categoryFor(t){
 function cleanTitle(t){
   return t.replace(/\b(hari ini|tadi|barusan|besok|lusa|pengeluaran|pemasukan|sebesar|senilai|catat(?:kan)?|ingatkan(?: saya)?|tolong|aku|saya|bayar|tanggal)\b/gi," ")
     .replace(/\b(?:rp\.?\s?)?\d[\d.,]*\s*(?:juta|jt|ribu|rb|k)?\b/gi," ")
-    .replace(/\b(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?\b/gi," ")
+    .replace(/\b(?:jam|pukul)\s*(?:setengah\s+)?(?:\d{1,2}|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas)(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/gi," ")
     .replace(/\s+/g," ").replace(/^[:\-\s]+|[:\-\s]+$/g,"").trim();
 }
 function splitClauses(text){
@@ -183,7 +209,32 @@ function clarificationFor(text){
 }
 function resolvePending(text){
   const p=state.pending;if(!p)return null;
-  const raw=String(text||"").trim();
+  const raw=String(text||"").trim(),low=raw.toLowerCase();
+
+  if(p.kind==="intent-choice"){
+    if(/jadikan catatan|catatan|note/.test(low)){const source=p.source;state.pending=null;return saveExplicitNote(source)}
+    if(/buat agenda|agenda|jadwal|ingatkan/.test(low)){const source=p.source;state.pending=null;return beginAgendaClarification(source)||{text:"Kapan agendanya?",actions:agendaDateChoices()}}
+    if(/tidak perlu|ga perlu|gak perlu|nggak perlu|jangan simpan/.test(low)){state.pending=null;return{text:"Oke, tidak aku simpan.",actions:[]}}
+    return{text:"Pilih salah satu ya: jadikan catatan, buat agenda, atau tidak perlu disimpan.",actions:["Jadikan catatan","Buat agenda","Tidak perlu disimpan"]}
+  }
+
+  if(p.kind==="agenda-date"){
+    let date="";
+    if(/hari ini/.test(low))date=localISO();
+    else if(/besok/.test(low))date=addDays(1);
+    else if(/lusa/.test(low))date=addDays(2);
+    else if(/pilih tanggal lain/.test(low)){return{text:"Ketik tanggalnya, misalnya “tanggal 12 Oktober”.",actions:[]}}
+    else if(/tanggal\s+\d+|20\d{2}-\d{1,2}-\d{1,2}/.test(low))date=parseDate(raw);
+    if(!date)return{text:"Kapan agendanya?",actions:agendaDateChoices()};
+    if(p.time){
+      const id=uid();state.reminders.push({id,title:p.title,date,time:normalizeTimeForDaypart(p.time,p.daypart),done:false,leadMinutes:p.leadMinutes,notified:false,sourceText:p.source});
+      state.lastCreated={type:"reminder",ids:[id],at:Date.now()};state.pending=null;
+      return{text:`Siap. “${p.title}” aku jadwalkan ${prettyDate(date)} pukul ${normalizeTimeForDaypart(p.time,p.daypart)}, dan kuingatkan ${p.leadMinutes} menit sebelumnya.`,actions:[]}
+    }
+    state.pending={kind:"reminder-time",title:p.title,date,daypart:p.daypart,source:p.source,leadMinutes:p.leadMinutes};
+    return{text:`${prettyDate(date)} pukul berapa?`,actions:timeChoices(p.daypart)}
+  }
+
   if(p.kind==="reminder-time"){
     if(/pilih jam lain/i.test(raw)){p.custom=true;return{text:"Boleh. Ketik jamnya, misalnya 18.30 atau pukul 7 malam.",actions:[]}}
     let time=parseTime(raw);
@@ -209,10 +260,56 @@ function correctRecent(text){
   if(!changed.length)return{text:"Boleh, bagian mana yang perlu dikoreksi—tanggal, jam, atau keterangannya?",actions:["Hari ini","Besok","Ubah jam"]};
   return{text:`Oke, aku koreksi agenda terakhir: ${changed.join(" dan ")}.`,actions:[]}
 }
+function explicitNoteIntent(t){return /\b(catat|catatkan|note|jadikan catatan|simpan catatan|ide|gagasan|jangan lupa bahwa)\b/i.test(t)}
+function explicitAgendaIntent(t){return /\b(ingatkan|pengingat|reminder|jadwal|agenda|deadline|janji)\b/i.test(t)}
+function activityIntent(t){return /\b(ke|pergi|berangkat|temui|nemui|nemuin|ketemu|bertemu|meeting|rapat|review|loading|pasang|pemasangan|acara|jemput|antar|kirim|bayar|ambil|datang|kerja|kontrol|periksa)\b/i.test(t)}
+function hasDateContext(t){return /\b(hari ini|besok|lusa|nanti|tanggal\s+\d+|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)\b/i.test(t)}
+function hasTimeContext(t){return !!parseTime(t)||/\b(pagi|siang|sore|malam|habis magrib|setelah magrib|sehabis magrib)\b/i.test(t)}
+function classifyIntent(text){
+  const ft=financeType(text),amount=ft?parseAmount(text):null;
+  if(ft&&amount)return{type:"finance",confidence:.98};
+  if(habitIntent(text))return{type:"habit",confidence:.92};
+  if(explicitNoteIntent(text))return{type:"note",confidence:.95};
+  if(explicitAgendaIntent(text)||activityIntent(text)&&(hasDateContext(text)||hasTimeContext(text)))return{type:"agenda",confidence:.9};
+  if(activityIntent(text))return{type:"agenda-incomplete",confidence:.72};
+  return{type:"unknown",confidence:.3};
+}
+function agendaDateChoices(){return["Hari ini","Besok","Lusa","Pilih tanggal lain"]}
+function beginAgendaClarification(text){
+  const dateKnown=hasDateContext(text),time=parseTime(text),part=daypartOf(text),title=smartTitle(text);
+  if(!dateKnown){
+    state.pending={kind:"agenda-date",title,source:text,time,daypart:part,leadMinutes:state.settings.reminderLead||30};
+    return{text:`“${title}” mau dijadwalkan kapan?`,actions:agendaDateChoices()};
+  }
+  const date=parseDate(text);
+  if(!time){
+    state.pending={kind:"reminder-time",title,date,daypart:part,source:text,leadMinutes:state.settings.reminderLead||30};
+    return{text:`${prettyDate(date)} kamu punya agenda “${title}”. Jam berapa? Aku akan mengingatkan ${state.pending.leadMinutes} menit sebelumnya.`,actions:timeChoices(part)};
+  }
+  return null;
+}
+function saveExplicitNote(source){
+  const body=paraphraseNote(source),title=body.replace(/[.!?]$/,"").slice(0,56),id=uid();
+  state.notes.push({id,title,body,sourceText:source,date:localISO(),createdAt:new Date().toISOString()});
+  state.lastCreated={type:"note",ids:[id],at:Date.now()};
+  return{text:`Oke, aku rapikan dan simpan sebagai catatan: “${body}”`,actions:[]};
+}
+function unknownIntentPrompt(text){
+  state.pending={kind:"intent-choice",source:text};
+  return{text:"Aku belum yakin kamu ingin aku melakukan apa dengan kalimat itu. Mau aku jadikan catatan, buat agenda, atau tidak perlu disimpan?",actions:["Jadikan catatan","Buat agenda","Tidak perlu disimpan"]};
+}
+
 function smartResponse(text){
   const pending=resolvePending(text);if(pending)return pending;
   const corrected=correctRecent(text);if(corrected)return corrected;
-  const clarification=clarificationFor(text);if(clarification)return clarification;
+  const intent=classifyIntent(text);
+  if(intent.type==="unknown")return unknownIntentPrompt(text);
+  if(intent.type==="agenda-incomplete"){
+    const q=beginAgendaClarification(text);if(q)return q;
+  }
+  if(intent.type==="agenda"){
+    const q=beginAgendaClarification(text);if(q)return q;
+  }
   const beforeReminderIds=new Set(state.reminders.map(r=>r.id)),beforeNoteIds=new Set(state.notes.map(n=>n.id));
   const lines=process(text);
   const newReminders=state.reminders.filter(r=>!beforeReminderIds.has(r.id));
@@ -269,8 +366,7 @@ function process(text){
       const title=cleanTitle(clause).replace(/\b(bulan ini|target|ingin|mau|harus)\b/gi," ").trim();
       if(title){state.goals.push({id:uid(),title,target:1,progress:0,kind:"manual",month:localISO().slice(0,7)});results.push(`✓ Target bulan ini: “${title}”`);continue}
     }
-    state.notes.push({id:uid(),title:clause.slice(0,48),body:clause,date:localISO(),createdAt:new Date().toISOString()});
-    results.push("Sudah, aku simpan sebagai catatan.");
+    results.push("Aku belum yakin ini perlu disimpan. Coba beri konteks sedikit lagi ya.");
   }
   return results;
 }
@@ -307,7 +403,7 @@ function renderToday(){
   $("#focusText").textContent=(agenda[0]&&agenda[0].title)||(habits.length?"Jaga konsistensi habit hari ini.":"Belum ada agenda mendesak.");
   const d=new Date();$("#dateBadge").innerHTML=`<b>${d.getDate()}</b><br>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d)}`;
   $("#todayAgenda").classList.toggle("empty",!agenda.length);
-  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row"><button class="rowicon reminder-done" data-id="${r.id}" aria-label="Tandai reminder selesai">○</button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}${r.amount?" · "+rupiah(r.amount):""} · ${r.leadMinutes||state.settings.reminderLead||30} mnt sebelumnya</span></div><button class="edit-action edit-reminder" data-id="${r.id}" aria-label="Edit pengingat"><svg><use href="#ico-edit"/></svg></button></div>`).join(""):"Belum ada agenda mendatang.";
+  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row agenda-row" data-agenda-id="${r.id}"><button class="rowicon reminder-done" data-id="${r.id}" aria-label="Tandai agenda selesai">○</button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}${r.amount?" · "+rupiah(r.amount):""} · ingatkan ${r.leadMinutes||state.settings.reminderLead||30} mnt sebelumnya</span></div><div class="agenda-menu-wrap"><button class="agenda-menu-trigger" data-id="${r.id}" aria-label="Opsi agenda" aria-expanded="false"><svg><use href="#ico-more"/></svg></button><div class="agenda-menu" data-menu-for="${r.id}" hidden><button type="button" data-agenda-action="edit" data-id="${r.id}">Edit</button><button type="button" data-agenda-action="done" data-id="${r.id}">Tandai selesai</button><button type="button" class="danger" data-agenda-action="delete" data-id="${r.id}">Hapus</button></div></div></div>`).join(""):"Belum ada agenda mendatang.";
   $("#todayHabits").classList.toggle("empty",!habits.length);
   $("#todayHabits").innerHTML=habits.length?habits.map(h=>{const done=h.doneDates.includes(today);return `<div class="row"><button class="rowicon habit-toggle" data-id="${h.id}" aria-label="Tandai kebiasaan">${done?"✓":"○"}</button><div class="rowmain"><strong>${esc(h.name)}</strong><span>${h.period==="weekly"?h.target+"× per minggu":"Setiap hari"}</span></div><span class="rowvalue">${done?"Selesai":""}</span></div>`}).join(""):"Belum ada kebiasaan yang kamu pantau.";
   const total=txTotals(t=>t.date===today);$("#todayIncome").textContent=rupiah(total.income);$("#todayExpense").textContent=rupiah(total.expense);$("#todayNet").textContent=rupiah(total.income-total.expense);
@@ -472,6 +568,24 @@ function boot(){
 }
 
 document.addEventListener("click",e=>{
+  const trigger=e.target.closest(".agenda-menu-trigger");
+  if(trigger){
+    e.stopPropagation();
+    document.querySelectorAll(".agenda-menu").forEach(m=>{if(m.dataset.menuFor!==trigger.dataset.id)m.hidden=true});
+    const menu=document.querySelector(`.agenda-menu[data-menu-for="${trigger.dataset.id}"]`);
+    if(menu){menu.hidden=!menu.hidden;trigger.setAttribute("aria-expanded",String(!menu.hidden))}
+    return;
+  }
+  const agendaAction=e.target.closest("[data-agenda-action]");
+  if(agendaAction){
+    const id=agendaAction.dataset.id,action=agendaAction.dataset.agendaAction,r=state.reminders.find(x=>x.id===id);
+    if(action==="edit"){openEditor("reminder",id)}
+    if(action==="done"&&r){r.done=true;save()}
+    if(action==="delete"&&r&&confirm("Hapus agenda ini?")){state.reminders=state.reminders.filter(x=>x.id!==id);save()}
+    document.querySelectorAll(".agenda-menu").forEach(m=>m.hidden=true);
+    return;
+  }
+  if(!e.target.closest(".agenda-menu-wrap"))document.querySelectorAll(".agenda-menu").forEach(m=>m.hidden=true);
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);const en=e.target.closest(".edit-note");if(en)openEditor("note",en.dataset.id);const et=e.target.closest(".edit-tx");if(et)openEditor("tx",et.dataset.id);const er=e.target.closest(".edit-reminder");if(er)openEditor("reminder",er.dataset.id);const eh=e.target.closest(".edit-habit");if(eh)openEditor("habit",eh.dataset.id);
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}const choice=e.target.closest("[data-chat-choice]");if(choice)sendText(choice.dataset.chatChoice);
   const act=e.target.closest("[data-action]");if(act){const map={quick:"expense",transaction:"expense",note:"note",habit:"habit"};openQuick(map[act.dataset.action])}

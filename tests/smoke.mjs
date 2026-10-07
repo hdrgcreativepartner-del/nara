@@ -139,3 +139,34 @@ run("salah maksudnya hari ini");
 assert.equal(get("state.reminders[0].date"),get("localISO()"));
 
 console.log("NARA smoke tests passed: finance, contextual clarification, paraphrase, correction, reminders, notes, habits/goals and agenda.");
+
+reset();
+let rTime=run("ingatkan aku rapat jam 9 malam");
+assert.equal(get("state.reminders.length"),1);
+assert.equal(get("state.reminders[0].time"),"21:00");
+
+reset();
+run("ingatkan aku berangkat jam 7 pagi");
+assert.equal(get("state.reminders[0].time"),"07:00");
+
+reset();
+run("ingatkan aku makan siang jam 1 siang");
+assert.equal(get("state.reminders[0].time"),"13:00");
+
+reset();
+run("ingatkan aku meeting setengah 9 malam");
+assert.equal(get("state.reminders[0].time"),"20:30");
+
+reset();
+const unknown=run("aku lagi bingung hari ini");
+assert.equal(get("state.notes.length"),0);
+assert.equal(get("state.reminders.length"),0);
+assert.equal(get("state.pending.kind"),"intent-choice");
+assert.match(unknown.text,/belum yakin/i);
+run("Tidak perlu disimpan");
+assert.equal(get("state.pending"),null);
+
+reset();
+run("aku harus meeting dengan Andi");
+assert.equal(get("state.reminders.length"),0);
+assert.equal(get("state.pending.kind"),"agenda-date");
