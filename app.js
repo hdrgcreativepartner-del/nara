@@ -187,7 +187,7 @@ function syncChatSafeArea(){
   const composerH=composer&&typeof composer.getBoundingClientRect==="function"?composer.getBoundingClientRect().height:64;
   const navH=typeof innerWidth!=="undefined"&&innerWidth<980&&nav&&typeof nav.getBoundingClientRect==="function"?nav.getBoundingClientRect().height:0;
   const safe=Math.ceil(composerH+navH+28);
-  stream.style.setProperty("--chat-safe-bottom",safe+"px");
+  if(stream.style&&typeof stream.style.setProperty==="function")stream.style.setProperty("--chat-safe-bottom",safe+"px");
 }
 function scrollChatToBottom(smooth=false){
   const s=$("#chatStream");if(!s)return;
