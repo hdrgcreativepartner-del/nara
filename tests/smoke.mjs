@@ -29,7 +29,7 @@ const code=fs.readFileSync(new URL("../app.js",import.meta.url),"utf8");
 vm.runInContext(code,context,{filename:"app.js"});
 
 function reset(){
-  vm.runInContext(`state.transactions.length=0;state.reminders.length=0;state.notes.length=0;state.habits.length=0;state.goals.length=0;state.pending=null;state.lastCreated=null;`,context);
+  vm.runInContext(`state.transactions.length=0;state.liabilities.length=0;state.receivables.length=0;state.reminders.length=0;state.notes.length=0;state.habits.length=0;state.goals.length=0;state.pending=null;state.lastCreated=null;`,context);
 }
 function run(input){return vm.runInContext(`smartResponse(${JSON.stringify(input)})`,context)}
 function get(expr){return vm.runInContext(expr,context)}
