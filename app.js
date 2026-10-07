@@ -9,7 +9,7 @@ const fmtDate=s=>new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short",ye
 const state=load();
 const NARA_ENV={isMedian:/median|MedianIOS|MedianAndroid/i.test((navigator&&navigator.userAgent)||"")};
 if(typeof document!=="undefined"&&document.documentElement&&document.documentElement.classList)document.documentElement.classList.toggle("median-app",NARA_ENV.isMedian);
-let recognition=null,voiceSession=false,voiceFinal="",voiceDraft="",voiceSubmitRequested=false;
+let recognition=null,voiceSession=false,voiceFinal="",voiceDraft="",voiceSubmitRequested=false,voiceListening=false;
 
 function fresh(){
   return {profile:{name:""},settings:{reminderLead:30,agendaRange:"today"},pending:null,lastCreated:null,messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],liabilities:[],receivables:[],reminders:[],notes:[],habits:[],goals:[]};
@@ -314,7 +314,7 @@ function resolvePending(text){
     else if(/tanggal\s+\d+|20\d{2}-\d{1,2}-\d{1,2}/.test(low))date=parseDate(raw);
     if(!date)return{text:"Kapan agendanya?",actions:agendaDateChoices()};
     if(p.time){
-      const id=uid();state.reminders.push({id,title:p.title,date,time:normalizeTimeForDaypart(p.time,p.daypart),done:false,leadMinutes:p.leadMinutes,notified:false,sourceText:p.source});
+      const id=uid();{const reminder={id,title:p.title,date,time:normalizeTimeForDaypart(p.time,p.daypart),done:false,leadMinutes:p.leadMinutes,notified:false,sourceText:p.source};state.reminders.push(reminder);queueReminderForPush(reminder);}
       state.lastCreated={type:"reminder",ids:[id],at:Date.now()};state.pending=null;
       return{text:`Siap. “${p.title}” aku jadwalkan ${prettyDate(date)} pukul ${normalizeTimeForDaypart(p.time,p.daypart)}, dan kuingatkan ${p.leadMinutes} menit sebelumnya.`,actions:[]}
     }
@@ -732,7 +732,37 @@ function checkReminders(){
   const now=Date.now();if(now-lastReminderCheck<30000)return;lastReminderCheck=now;
   state.reminders.filter(r=>!r.done&&r.date&&r.time&&!r.notified).forEach(r=>{const when=new Date(`${r.date}T${r.time}:00`).getTime(),lead=(r.leadMinutes||state.settings.reminderLead||30),diff=Math.ceil((when-now)/60000);if(diff<=lead&&diff>=0){r.notified=true;showReminder(r,diff);try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}});
 }
-function requestNotifications(){if(!("Notification"in window)){$("#notificationStatus").textContent="Browser ini belum mendukung notifikasi.";return}Notification.requestPermission().then(p=>{$("#notificationStatus").textContent=p==="granted"?"Notifikasi browser sudah aktif.":"Izin notifikasi belum diberikan.";})}
+async function requestNotifications(){
+  const status=$("#notificationStatus");
+  if(window.NaraMedian&&window.NaraMedian.isAvailable()){
+    if(status)status.textContent="Mengaktifkan notifikasi aplikasi…";
+    const result=await window.NaraMedian.requestPushPermission();
+    if(status)status.textContent=result.ok?"Notifikasi aplikasi sudah aktif.":"Notifikasi aplikasi belum aktif"+(result.message?": "+result.message:"")+".";
+    return;
+  }
+  if(!("Notification"in window)){if(status)status.textContent="Browser ini belum mendukung notifikasi.";return}
+  try{const p=await Notification.requestPermission();if(status)status.textContent=p==="granted"?"Notifikasi browser sudah aktif.":"Izin notifikasi belum diberikan."}catch{if(status)status.textContent="Gagal meminta izin notifikasi."}
+}
+async function initMedianNotifications(){
+  if(!(window.NaraMedian&&window.NaraMedian.isAvailable()))return;
+  try{
+    await window.NaraMedian.init({
+      externalId:window.NaraMedian.getAnonymousExternalId(),
+      onStatus:info=>{
+        state.settings.push={...(state.settings.push||{}),oneSignalId:info.oneSignalId||"",subscriptionId:info.subscription&&info.subscription.id||"",optedIn:!!(info.subscription&&info.subscription.optedIn)};
+        try{localStorage.setItem(KEY,JSON.stringify(state))}catch{}
+        const status=$("#notificationStatus");if(status)status.textContent=state.settings.push.optedIn?"Push Median aktif.":"Push Median siap — aktifkan izin notifikasi.";
+      },
+      onOpen:data=>{
+        const agendaId=data&&data.agendaId;
+        if(agendaId){state.settings.agendaRange="month";go("today");setTimeout(()=>{const el=document.querySelector('[data-agenda-id="'+CSS.escape(String(agendaId))+'"]');if(el)el.scrollIntoView({behavior:"smooth",block:"center"})},120)}
+      }
+    });
+  }catch(e){const status=$("#notificationStatus");if(status)status.textContent="Bridge Median terdeteksi, tetapi OneSignal belum siap."}
+}
+function queueReminderForPush(r){
+  if(window.NaraMedian&&window.NaraMedian.isAvailable())window.NaraMedian.syncReminder(r).catch(()=>{});
+}
 function renderSettings(){if($("#defaultReminderLead"))$("#defaultReminderLead").value=String(state.settings.reminderLead||30)}
 
 function downloadBackup(){
@@ -789,29 +819,31 @@ function webSpeechStart(){
       if($("#voiceModeHint"))$("#voiceModeHint").textContent=e.error==="not-allowed"?"Aktifkan izin mikrofon untuk memakai input suara.":"Pastikan mikrofon aktif dan coba bicara lebih dekat.";
     };
     recognition.onend=()=>{
+      voiceListening=false;
       const txt=(voiceFinal||voiceDraft).trim();voiceFinal="";
       if(voiceSubmitRequested){voiceSubmitRequested=false;if(txt){setVoiceUI(false);voiceSession=true;sendText(txt);$("#chatInput").value="";voiceDraft=""}else setVoiceUI(false)}
       else if(txt)showVoiceReview(txt);else{voiceSession=false;setVoiceUI(false)}
     };
   }
-  try{voiceFinal="";voiceDraft="";voiceSubmitRequested=false;voiceSession=true;recognition.start();setVoiceUI(true,"Silakan bicara…","listening");return true}catch{return false}
+  try{voiceFinal="";voiceDraft="";voiceSubmitRequested=false;voiceSession=true;voiceListening=true;recognition.start();setVoiceUI(true,"Silakan bicara…","listening");return true}catch{voiceListening=false;return false}
 }
 function startVoice(){
   try{if(window.NaraAndroid&&window.NaraAndroid.startVoiceInput){voiceSession=true;voiceDraft="";setVoiceUI(true,"Silakan bicara…","listening");window.NaraAndroid.startVoiceInput();return}}catch{}
   if(!webSpeechStart()){setVoiceUI(false);voiceSession=false;msg("assistant","Maaf, fitur suara belum didukung di browser ini. Kamu tetap bisa mengetik seperti biasa.");save()}
 }
 function cancelVoice(){
-  voiceSubmitRequested=false;voiceDraft="";voiceFinal="";voiceSession=false;
+  voiceSubmitRequested=false;voiceDraft="";voiceFinal="";voiceSession=false;voiceListening=false;
   try{if(recognition)recognition.abort()}catch{}
   setVoiceUI(false);$("#chatInput").value="";
 }
 function submitVoice(){
   const txt=(voiceFinal||voiceDraft||$("#chatInput").value||"").trim();
-  if(recognition){
-    try{voiceSubmitRequested=true;recognition.stop();return}catch{}
+  if(!txt){cancelVoice();return}
+  if(voiceListening&&recognition){
+    try{voiceSubmitRequested=true;recognition.stop();return}catch{voiceListening=false}
   }
-  if(txt){setVoiceUI(false);voiceSession=true;sendText(txt);$("#chatInput").value="";voiceDraft=""}
-  else cancelVoice();
+  voiceSubmitRequested=false;voiceListening=false;setVoiceUI(false);voiceSession=true;
+  sendText(txt);$("#chatInput").value="";voiceDraft="";voiceFinal="";
 }
 window.NaraVoiceResult=function(text){const txt=String(text||"").trim();if(txt){$("#chatInput").value=txt;showVoiceReview(txt)}else cancelVoice()};
 window.NaraVoiceError=function(message){voiceSession=false;voiceDraft="";setVoiceUI(true,message||"Maaf, fitur suara sedang tidak tersedia.","review");if($("#voiceModeHint"))$("#voiceModeHint").textContent="Coba lagi atau gunakan input teks."};
@@ -857,7 +889,7 @@ $("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup"
 $("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});
 $("#profilePromptSkip").addEventListener("click",()=>{$("#profilePromptForm").hidden=true});
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
-$("#quickDate").value=localISO();renderAll();
+$("#quickDate").value=localISO();renderAll();initMedianNotifications();
 window.addEventListener("load",()=>{
   if("serviceWorker"in navigator)navigator.serviceWorker.getRegistrations().then(list=>list.forEach(reg=>reg.unregister())).catch(()=>{});
   if("caches"in window)caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key)))).catch(()=>{});
