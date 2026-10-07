@@ -81,4 +81,10 @@ run("Hari ini pengeluaran 100 ribu untuk bensin dan makan");
 assert.equal(get("state.transactions.length"),1);
 assert.equal(get("state.transactions[0].amount"),100000);
 
-console.log("NARA smoke tests passed: finance, reminder, notes, habits/goals, mixed chat, multi-expense, sentence splitting.");
+reset();
+run("Besok jam 10 meeting dengan Pak Budi");
+vm.runInContext("renderToday()",context);
+assert.match(elements.get("#todayAgenda").innerHTML,/Pak Budi/i);
+assert.match(elements.get("#todayAgenda").innerHTML,/reminder-done/);
+
+console.log("NARA smoke tests passed: finance, reminder, notes, habits/goals, mixed chat, multi-expense, sentence splitting, upcoming agenda.");
