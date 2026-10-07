@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=5.3.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=5.4.0">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=5.3.0">
+  <link rel="stylesheet" href="./styles.css?v=5.4.0">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -30,6 +30,7 @@
 <symbol id="ico-reset" viewBox="0 0 24 24"><path d="M4 4v6h6"/><path d="M5.3 15a8 8 0 1 0 .8-7.8L4 10"/></symbol>
 <symbol id="ico-upload" viewBox="0 0 24 24"><path d="M12 21V9M8 13l4-4 4 4"/><path d="M5 5h14"/></symbol>
 <symbol id="ico-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol><symbol id="ico-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></symbol>
+<symbol id="ico-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.6 2.6L16.5 9"/></symbol>
 </svg>
 <div id="splash" class="splash"><div class="splash-grid"></div><div class="splash-orb orb-a"></div><div class="splash-orb orb-b"></div><div class="splash-brand"><img class="splash-logo-img" src="./assets/nara-splash.webp" alt="NARA — Notes, Assistant, Reminder & Accounting"></div><div class="splash-foot"><i></i><span>Teman kecil untuk menemani harimu</span></div></div>
 <div class="app" id="appRoot">
@@ -131,7 +132,7 @@
     </section>
 
     <section class="page" id="page-goals">
-      <div class="sectionhead"><div><small>PELAN-PELAN, TETAP MAJU</small><h2>Target &amp; Kebiasaan</h2></div><button data-action="habit">+ Kebiasaan</button></div>
+      <div class="sectionhead"><div><small>PELAN-PELAN, TETAP MAJU</small><h2>Target &amp; Kebiasaan</h2></div><div class="section-actions"><button data-action="target">+ Target</button><button data-action="habit">+ Kebiasaan</button></div></div>
       <article class="card"><div class="cardhead"><h3>Target bulan ini</h3><span id="goalMonth"></span></div><div id="goalsList" class="goals empty">Belum ada target bulan ini.</div></article>
       <article class="card"><div class="cardhead"><h3>Pelacak kebiasaan</h3><span id="habitWeek"></span></div><div id="habitTracker" class="habits empty">Tambahkan kebiasaan lewat obrolan atau tombol + Kebiasaan.</div></article>
     </section>
@@ -172,7 +173,7 @@
         <select id="defaultReminderLead"><option value="30">30 menit sebelumnya</option><option value="60">60 menit sebelumnya</option></select>
         <button id="enableNotifications" class="secondary-button" type="button">Aktifkan notifikasi</button>
       </div>
-      <small id="notificationStatus" class="setting-help">Popup NARA tetap aktif saat halaman ini terbuka.</small>
+      <small id="notificationStatus" class="setting-help">Web: popup aktif saat NARA terbuka. Build Median: push background membutuhkan backend scheduler + provider push.</small>
     </article>
     <article class="card reset-card">
       <div class="setting-title"><div class="backup-icon danger"><svg><use href="#ico-reset"/></svg></div><div><small>RESET</small><h3>Mulai dari awal</h3><p>Hapus semua data lokal NARA di browser ini.</p></div></div>
@@ -180,7 +181,7 @@
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 5.3</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 5.4</small></div><span>Beta</span></div>
     </article>
   </div>
   <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
@@ -213,6 +214,16 @@
   <button id="dismissReminderToast" type="button">×</button>
 </div>
 
+<dialog id="agendaSheet" class="action-sheet-dialog">
+  <div class="action-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div><small>AGENDA</small><h3 id="agendaSheetTitle">Pilih tindakan</h3></div><button id="closeAgendaSheet" class="sheet-close" type="button">×</button></div>
+    <button type="button" data-sheet-action="edit"><span>Edit agenda</span><small>Ubah judul, tanggal, jam, atau reminder</small></button>
+    <button type="button" data-sheet-action="done"><span>Tandai selesai</span><small>Pindahkan agenda ke status selesai</small></button>
+    <button type="button" class="danger" data-sheet-action="delete"><span>Hapus agenda</span><small>Hapus permanen dari perangkat ini</small></button>
+  </div>
+</dialog>
+
 <dialog id="editDialog">
 <form id="editForm" class="modal edit-modal">
   <input id="editId" type="hidden"><input id="editKind" type="hidden">
@@ -234,17 +245,17 @@
 <dialog id="quickDialog">
 <form id="quickForm" class="modal">
   <div class="modalhead"><div><small>TAMBAH CEPAT</small><h3>Tambahkan sesuatu</h3></div><button type="button" class="square" id="closeDialog">×</button></div>
-  <label>Jenis<select id="quickType"><option value="expense">Pengeluaran</option><option value="income">Pemasukan</option><option value="reminder">Pengingat</option><option value="note">Catatan</option><option value="habit">Kebiasaan</option></select></label>
+  <label>Jenis<select id="quickType"><option value="expense">Pengeluaran</option><option value="income">Pemasukan</option><option value="reminder">Pengingat</option><option value="note">Catatan</option><option value="target">Target</option><option value="habit">Kebiasaan</option></select></label>
   <label>Judul / keterangan<input id="quickTitle" required placeholder="Contoh: bensin / rapat / ide…"></label>
   <div class="formrow"><label id="amountWrap">Nominal<input id="quickAmount" inputmode="numeric" placeholder="50000"></label><label id="dateWrap">Tanggal<input id="quickDate" type="date"></label></div>
   <label id="timeWrap">Jam<input id="quickTime" type="time"></label>
   <label id="reminderLeadWrap">Ingatkan sebelum agenda<select id="quickReminderLead"><option value="30">30 menit sebelumnya</option><option value="60">60 menit sebelumnya</option></select></label>
-  <label id="freqWrap">Target<select id="quickFrequency"><option value="daily">Setiap hari</option><option value="3-week">3× seminggu</option><option value="weekly">1× seminggu</option></select></label>
+  <label id="targetPeriodWrap">Periode target<select id="quickTargetPeriod"><option value="monthly">Bulan ini</option><option value="weekly">Minggu ini</option></select></label><label id="freqWrap">Target kebiasaan<select id="quickFrequency"><option value="daily">Setiap hari</option><option value="3-week">3× seminggu</option><option value="weekly">1× seminggu</option></select></label>
   <button class="primary" type="submit">Simpan</button>
 </form>
 </dialog>
 
-<script src="./app.js?v=5.3.0"></script>
+<script src="./app.js?v=5.4.0"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");

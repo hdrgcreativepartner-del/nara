@@ -181,3 +181,11 @@ reset();
 run("aku harus meeting dengan Andi");
 assert.equal(get("state.reminders.length"),0);
 assert.equal(get("state.pending.kind"),"agenda-date");
+
+reset();
+let tg=run("Target bulan ini, menyelesaikan Portofolio HDRG Creative Partner");
+assert.equal(get("state.goals.length"),1);
+assert.match(get("state.goals[0].title"),/Portofolio HDRG Creative Partner/i);
+assert.equal(get("state.goals[0].period"),"monthly");
+assert.equal(get("state.notes.length"),0);
+assert.equal(get("state.reminders.length"),0);

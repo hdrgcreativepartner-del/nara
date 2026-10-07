@@ -414,3 +414,20 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .agenda-menu button:hover{background:#f3f6fb}
 .agenda-menu button.danger{color:#c23c3c}
 @media(max-width:520px){.agenda-menu{right:0;min-width:142px}.agenda-menu-trigger{width:32px;height:32px}}
+
+/* NARA v5.4 */
+.section-actions{display:flex;gap:7px;flex:0 0 auto}
+.section-actions button{white-space:nowrap}
+.agenda-check{width:40px;height:40px;border-radius:14px;border:1.5px solid #cbd2ce;background:#fff;color:#9ba29e;display:grid;place-items:center;flex:0 0 40px;transition:.18s ease}
+.agenda-check svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.agenda-check:active{transform:scale(.94);background:#eaf1ff;color:var(--blue);border-color:#a9c2fa}
+.action-sheet-dialog{border:0;padding:0;background:transparent;width:100%;max-width:none;height:100%;max-height:none;margin:0}
+.action-sheet-dialog::backdrop{background:rgba(10,16,27,.38);backdrop-filter:blur(2px)}
+.action-sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:10px 14px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -20px 70px rgba(15,25,45,.18);animation:sheetUp .22s ease both}
+@keyframes sheetUp{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.sheet-handle{width:40px;height:4px;border-radius:99px;background:#d5d9d6;margin:0 auto 12px}
+.sheet-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:2px 2px 10px}.sheet-head small{font-size:8px;letter-spacing:.14em;color:var(--muted);font-weight:900}.sheet-head h3{font-size:16px;margin:4px 0 0;max-width:260px}.sheet-close{width:34px;height:34px;border:0;background:#f1f3f1;border-radius:12px;font-size:20px}
+.action-sheet>button:not(.sheet-close){width:100%;border:0;background:transparent;border-top:1px solid var(--line);padding:13px 5px;text-align:left}.action-sheet>button span,.action-sheet>button small{display:block}.action-sheet>button span{font-size:13px;font-weight:800}.action-sheet>button small{font-size:9px;color:var(--muted);margin-top:3px}.action-sheet>button.danger span{color:#c43d3d}
+.target-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:11px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}.target-card:last-child{border-bottom:0}.target-check{width:38px;height:38px;border:1px solid #cdd4d0;background:#fff;border-radius:13px;display:grid;place-items:center;color:#9ba19e}.target-check svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}.target-card.done .target-check{background:var(--blue);border-color:var(--blue);color:#fff}.target-card.done strong{text-decoration:line-through;color:#8d9490}.target-main{min-width:0}.target-main small{display:block;margin:4px 0 8px;color:var(--muted);font-size:9px}
+@media(min-width:700px){.action-sheet-dialog{display:grid;place-items:center}.action-sheet-dialog[open]{display:grid}.action-sheet{position:relative;left:auto;right:auto;bottom:auto;width:min(420px,calc(100vw - 32px));border-radius:22px;padding:12px 16px 18px}}
+@media(max-width:420px){.section-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.section-actions button{width:100%}}
