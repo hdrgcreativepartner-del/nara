@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="NARA — personal daily assistant untuk reminder, notes, finance, goals, dan habits.">
+  <title>NARA — Personal Daily Assistant</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brandmark">N</span><div><b>NARA</b><small>Personal Daily Assistant</small></div></div>
+    <nav class="nav">
+      <button class="navbtn active" data-page="chat"><span>✦</span>Chat</button>
+      <button class="navbtn" data-page="today"><span>◷</span>Today</button>
+      <button class="navbtn" data-page="finance"><span>Rp</span>Finance</button>
+      <button class="navbtn" data-page="notes"><span>▤</span>Notes</button>
+      <button class="navbtn" data-page="goals"><span>◎</span>Goals</button>
+    </nav>
+    <div class="sidebar-foot"><i></i> Local-first MVP</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><small id="dateLabel"></small><h1 id="pageTitle">NARA</h1></div>
+      <button class="square" id="quickAdd" aria-label="Tambah cepat">＋</button>
+    </header>
+
+    <section class="page active" id="page-chat">
+      <div class="chatgrid">
+        <div class="chatcol">
+          <div class="intro"><span class="avatar">N</span><div><h2>Hai, aku NARA.</h2><p>Ceritakan seperti ngobrol. Aku bantu mencatat dan merapikannya.</p></div></div>
+          <div class="chips">
+            <button data-prompt="Makan siang 25 ribu">Makan 25 ribu</button>
+            <button data-prompt="Besok jam 10 meeting dengan Pak Budi">Meeting besok</button>
+            <button data-prompt="Catat ide: belajar NovaLCT lebih dalam">Catat ide</button>
+            <button data-prompt="Bulan ini olahraga 3 kali seminggu">Buat target</button>
+          </div>
+          <div id="chatStream" class="chatstream" aria-live="polite"></div>
+          <form id="chatForm" class="composer">
+            <textarea id="chatInput" rows="1" placeholder="Tulis seperti ngobrol…" aria-label="Pesan untuk NARA"></textarea>
+            <button class="send" type="submit" aria-label="Kirim">➤</button>
+          </form>
+        </div>
+        <aside class="summary">
+          <article class="card">
+            <label>Ringkasan hari ini</label>
+            <small>Saldo tercatat</small><strong id="sideBalance">Rp0</strong>
+            <div class="ministats"><div><b id="sideTasks">0</b><span>Agenda</span></div><div><b id="sideHabits">0</b><span>Habit</span></div><div><b id="sideNotes">0</b><span>Notes</span></div></div>
+          </article>
+          <article class="card soft"><label>Contoh</label><p>“Hari ini bensin 50 ribu, besok jam 9 meeting, catat ide fitur baru.”</p></article>
+        </aside>
+      </div>
+    </section>
+
+    <section class="page" id="page-today">
+      <div class="sectionhead"><div><small>Daily overview</small><h2>Hari ini</h2></div><button data-action="quick">+ Tambah</button></div>
+      <article class="hero"><div><label>Fokus hari ini</label><h3 id="focusText">Belum ada agenda mendesak.</h3></div><div id="dateBadge" class="datebadge"></div></article>
+      <div class="twocol">
+        <article class="card"><div class="cardhead"><h3>Agenda</h3><span id="agendaCount">0</span></div><div id="todayAgenda" class="list empty">Belum ada reminder hari ini.</div></article>
+        <article class="card"><div class="cardhead"><h3>Habit</h3><span id="habitCount">0</span></div><div id="todayHabits" class="list empty">Belum ada habit aktif.</div></article>
+      </div>
+      <article class="card"><div class="cardhead"><h3>Uang hari ini</h3><span id="todayNet">Rp0</span></div><div class="moneygrid"><div><small>Income</small><strong id="todayIncome">Rp0</strong></div><div><small>Expense</small><strong id="todayExpense">Rp0</strong></div></div></article>
+    </section>
+
+    <section class="page" id="page-finance">
+      <div class="sectionhead"><div><small>Personal finance</small><h2>Finance</h2></div><button data-action="transaction">+ Transaksi</button></div>
+      <article class="financehero"><small>Total saldo tercatat</small><strong id="balanceTotal">Rp0</strong><div><span><small>Income bulan ini</small><b id="monthIncome">Rp0</b></span><span><small>Expense bulan ini</small><b id="monthExpense">Rp0</b></span></div></article>
+      <div class="twocol">
+        <article class="card"><div class="cardhead"><h3>Pengeluaran per kategori</h3></div><div id="categoryBreakdown" class="category empty">Belum ada data.</div></article>
+        <article class="card"><div class="cardhead"><h3>Transaksi terbaru</h3></div><div id="transactionList" class="list empty">Belum ada transaksi.</div></article>
+      </div>
+    </section>
+
+    <section class="page" id="page-notes">
+      <div class="sectionhead"><div><small>Capture ideas</small><h2>Notes</h2></div><button data-action="note">+ Note</button></div>
+      <div class="search"><span>⌕</span><input id="noteSearch" placeholder="Cari catatan…"></div>
+      <div id="notesGrid" class="notes"></div>
+    </section>
+
+    <section class="page" id="page-goals">
+      <div class="sectionhead"><div><small>Progress, not pressure</small><h2>Goals & Habits</h2></div><button data-action="habit">+ Habit</button></div>
+      <article class="card"><div class="cardhead"><h3>Target bulan ini</h3><span id="goalMonth"></span></div><div id="goalsList" class="goals empty">Belum ada target bulan ini.</div></article>
+      <article class="card"><div class="cardhead"><h3>Habit tracker</h3><span id="habitWeek"></span></div><div id="habitTracker" class="habits empty">Tambahkan habit lewat chat atau tombol + Habit.</div></article>
+    </section>
+  </main>
+
+  <nav class="bottomnav">
+    <button class="navbtn active" data-page="chat"><span>✦</span>Chat</button>
+    <button class="navbtn" data-page="today"><span>◷</span>Today</button>
+    <button class="navbtn" data-page="finance"><span>Rp</span>Finance</button>
+    <button class="navbtn" data-page="notes"><span>▤</span>Notes</button>
+    <button class="navbtn" data-page="goals"><span>◎</span>Goals</button>
+  </nav>
+</div>
+
+<dialog id="quickDialog">
+<form id="quickForm" class="modal">
+  <div class="modalhead"><div><small>Quick add</small><h3>Tambah data</h3></div><button type="button" class="square" id="closeDialog">×</button></div>
+  <label>Jenis<select id="quickType"><option value="expense">Pengeluaran</option><option value="income">Pemasukan</option><option value="reminder">Reminder</option><option value="note">Note</option><option value="habit">Habit</option></select></label>
+  <label>Judul / keterangan<input id="quickTitle" required placeholder="Contoh: bensin / meeting / ide…"></label>
+  <div class="formrow"><label id="amountWrap">Nominal<input id="quickAmount" inputmode="numeric" placeholder="50000"></label><label id="dateWrap">Tanggal<input id="quickDate" type="date"></label></div>
+  <label id="timeWrap">Jam<input id="quickTime" type="time"></label>
+  <label id="freqWrap">Target<select id="quickFrequency"><option value="daily">Setiap hari</option><option value="3-week">3× seminggu</option><option value="weekly">1× seminggu</option></select></label>
+  <button class="primary" type="submit">Simpan</button>
+</form>
+</dialog>
+
+<script src="./app.js"></script>
+</body>
+</html>
