@@ -52,7 +52,7 @@ function normalizeClock(hour,minute,part){
 function parseTime(t){
   let s=timeWordToNumber(t);
   const part=(s.match(/\b(pagi|siang|sore|malam)\b/)||[])[1]||"";
-  let m=s.match(/(?:jam|pukul)\s+setengah\s+(\d{1,2})/);
+  let m=s.match(/(?:(?:jam|pukul)\s+)?setengah\s+(\d{1,2})/);
   if(m){
     let target=Number(m[1]),hour=(target+23)%24;
     return normalizeClock(hour,30,part);
@@ -61,6 +61,8 @@ function parseTime(t){
   if(m)return normalizeClock(m[1],m[2]||0,m[3]||part);
   m=s.match(/\b(\d{1,2})[.:](\d{2})\s*(?:wib|wita|wit)?\s*(pagi|siang|sore|malam)?\b/);
   if(m)return normalizeClock(m[1],m[2],m[3]||part);
+  m=s.match(/\b(\d{1,2})\s*(pagi|siang|sore|malam)\b/);
+  if(m)return normalizeClock(m[1],0,m[2]);
   return "";
 }
 function addDays(n){const d=new Date();d.setDate(d.getDate()+n);return localISO(d)}
@@ -173,8 +175,9 @@ function smartTitle(text){
   let s=String(text||"").trim()
     .replace(/\b(tolong|nara|aku|saya|harus|mau|akan|ingin|ingatkan|catat(?:kan)?|note|reminder)\b/gi," ")
     .replace(/\b(hari ini|besok|lusa|nanti|pagi|siang|sore|malam)\b/gi," ")
-    .replace(/\b(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\b/gi," ")
-    .replace(/\b\d{1,2}[.:]\d{2}\s*(?:wib|wita|wit)?\b/gi," ")
+    .replace(/\b(?:(?:jam|pukul)\s+)?setengah\s+(?:\d{1,2}|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas)\s*(?:pagi|siang|sore|malam)?\b/gi," ")
+    .replace(/\b(?:jam|pukul)\s*(?:\d{1,2}|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas)(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/gi," ")
+    .replace(/\b\d{1,2}(?:[.:]\d{2})?\s*(?:pagi|siang|sore|malam)\b/gi," ")
     .replace(/\s+/g," ").replace(/^[,.:;\-\s]+|[,.:;\-\s]+$/g,"").trim();
   s=s.replace(/\bnemuin\b/gi,"temui").replace(/\bnemui\b/gi,"temui").replace(/\bketemu\b/gi,"bertemu dengan");
   if(/^ke\s+/i.test(s))s="Pergi "+s;

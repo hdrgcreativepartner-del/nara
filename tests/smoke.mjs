@@ -142,20 +142,31 @@ console.log("NARA smoke tests passed: finance, contextual clarification, paraphr
 
 reset();
 let rTime=run("ingatkan aku rapat jam 9 malam");
+assert.equal(get("state.reminders.length"),0);
+assert.equal(get("state.pending.kind"),"agenda-date");
+run("Hari ini");
 assert.equal(get("state.reminders.length"),1);
 assert.equal(get("state.reminders[0].time"),"21:00");
 
 reset();
-run("ingatkan aku berangkat jam 7 pagi");
+run("ingatkan aku hari ini berangkat jam 7 pagi");
 assert.equal(get("state.reminders[0].time"),"07:00");
 
 reset();
-run("ingatkan aku makan siang jam 1 siang");
+run("ingatkan aku hari ini makan siang jam 1 siang");
 assert.equal(get("state.reminders[0].time"),"13:00");
 
 reset();
-run("ingatkan aku meeting setengah 9 malam");
+run("ingatkan aku hari ini meeting setengah 9 malam");
 assert.equal(get("state.reminders[0].time"),"20:30");
+
+reset();
+run("ingatkan aku hari ini telepon klien 9 malam");
+assert.equal(get("state.reminders[0].time"),"21:00");
+
+reset();
+run("ingatkan aku hari ini rapat jam sembilan malam");
+assert.equal(get("state.reminders[0].time"),"21:00");
 
 reset();
 const unknown=run("aku lagi bingung hari ini");
