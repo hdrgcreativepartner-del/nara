@@ -263,8 +263,25 @@ function startVoice(){try{if(window.NaraAndroid&&window.NaraAndroid.startVoiceIn
 function stopVoice(){try{if(recognition)recognition.stop()}catch{}setVoiceUI(false)}
 window.NaraVoiceResult=function(text){setVoiceUI(false);if(text){voiceSession=true;sendText(String(text));$("#chatInput").value=""}else voiceSession=false};
 window.NaraVoiceError=function(message){setVoiceUI(false);voiceSession=false;msg("assistant",message||"Maaf, fitur suara sedang tidak tersedia.");save()};
-function finishOnboarding(name){state.profile={name:name.trim(),onboarded:true};msg("assistant",`Senang kenal kamu, ${firstName()}. Mulai sekarang cerita saja ke NARA seperti biasa—aku bantu catatkan.`);save();$("#onboarding").hidden=true;setTimeout(()=>$("#chatInput").focus(),350)}
-function boot(){window.__NARA_BOOTED__=true;const splash=$("#splash");setTimeout(()=>{if(splash)splash.classList.add("hide");setTimeout(()=>{if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},700);if(!(state.profile&&state.profile.onboarded))$("#onboarding").hidden=false},1250)}
+function finishOnboarding(name){
+  const clean=String(name||"").trim();if(!clean)return;
+  const onboarding=$("#onboarding");if(onboarding)onboarding.hidden=true;
+  state.profile={name:clean,onboarded:true};
+  msg("assistant",`Senang kenal kamu, ${firstName()}. Mulai sekarang cerita saja ke NARA seperti biasa—aku bantu catatkan.`);
+  try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
+  try{renderAll()}catch(e){console.error("NARA render",e)}
+  setTimeout(()=>{const input=$("#chatInput");if(input)input.focus()},350)
+}
+function boot(){
+  window.__NARA_BOOTED__=true;
+  const splash=$("#splash");
+  setTimeout(()=>{
+    if(splash){splash.classList.add("hide");splash.style.pointerEvents="none"}
+    setTimeout(()=>{if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},450);
+    const onboarding=$("#onboarding");
+    if(onboarding&&!(state.profile&&state.profile.onboarded))onboarding.hidden=false
+  },900)
+}
 
 document.addEventListener("click",e=>{
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);

@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="manifest" href="./manifest.webmanifest?v=3.0.1">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=3.0.1">
 </head>
 <body>
 <div id="splash" class="splash"><div class="splash-grid"></div><div class="splash-orb orb-a"></div><div class="splash-orb orb-b"></div><div class="splash-brand"><div class="logo-lockup splash-logo" role="img" aria-label="NARA"></div></div><div class="splash-foot"><i></i><span>Teman kecil untuk menemani harimu</span></div></div>
@@ -108,17 +108,29 @@
 </form>
 </dialog>
 
-<script src="./app.js"></script>
+<script src="./app.js?v=3.0.1"></script>
 <script>
-setTimeout(function(){
-  var splash=document.getElementById("splash");
-  if(splash&&!window.__NARA_BOOTED__){
+(function(){
+  function forcePastSplash(){
+    var splash=document.getElementById("splash");
+    if(!splash) return;
     splash.classList.add("hide");
-    setTimeout(function(){if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},700);
-    var app=document.getElementById("appRoot");
-    if(app) app.setAttribute("data-runtime-fallback","true");
+    splash.style.pointerEvents="none";
+    setTimeout(function(){
+      if(splash && splash.parentNode) splash.parentNode.removeChild(splash);
+      var onboarding=document.getElementById("onboarding");
+      try{
+        var raw=localStorage.getItem("nara-mvp-v1");
+        var saved=raw?JSON.parse(raw):null;
+        if(onboarding && !(saved && saved.profile && saved.profile.onboarded)) onboarding.hidden=false;
+      }catch(e){
+        if(onboarding) onboarding.hidden=false;
+      }
+    },450);
   }
-},3000);
+  setTimeout(forcePastSplash,1800);
+  window.addEventListener("pageshow",function(){setTimeout(forcePastSplash,1800)});
+})();
 </script>
 </body>
 </html>
