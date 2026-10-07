@@ -29,9 +29,9 @@ const code=fs.readFileSync(new URL("../app.js",import.meta.url),"utf8");
 vm.runInContext(code,context,{filename:"app.js"});
 
 function reset(){
-  vm.runInContext(`state.transactions.length=0;state.reminders.length=0;state.notes.length=0;state.habits.length=0;state.goals.length=0;`,context);
+  vm.runInContext(`state.transactions.length=0;state.reminders.length=0;state.notes.length=0;state.habits.length=0;state.goals.length=0;state.pending=null;state.lastCreated=null;`,context);
 }
-function run(input){return vm.runInContext(`process(${JSON.stringify(input)})`,context)}
+function run(input){return vm.runInContext(`smartResponse(${JSON.stringify(input)})`,context)}
 function get(expr){return vm.runInContext(expr,context)}
 
 reset();
@@ -119,7 +119,7 @@ reset();
 let q=run("hari ini aku sore ke jember");
 assert.equal(get("state.reminders.length"),0);
 assert.equal(get("state.pending.kind"),"reminder-time");
-assert.match(String(q),/Jam berapa/i);
+assert.match(q.text,/Jam berapa/i);
 run("16:00");
 assert.equal(get("state.pending"),null);
 assert.equal(get("state.reminders.length"),1);

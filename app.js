@@ -164,6 +164,7 @@ function paraphraseNote(text){
     .replace(/\bnemuin\b/gi,"temui").replace(/\bnemui\b/gi,"temui")
     .replace(/\bketemu(?:an)?\s+(?:sama|dengan)?\s*/gi,"bertemu dengan ")
     .replace(/\s+/g," ").trim();
+  s=s.replace(/\bmas\s+([a-z])/g,(m,c)=>"Mas "+c.toUpperCase()).replace(/\bpak\s+([a-z])/g,(m,c)=>"Pak "+c.toUpperCase());
   s=sentenceCase(s||text);
   if(s&&!/[.!?]$/.test(s))s+=".";
   return s;
@@ -175,6 +176,7 @@ function looksLikeSchedule(text){
 }
 function clarificationFor(text){
   if(!looksLikeSchedule(text)||parseTime(text))return null;
+  if(financeType(text)&&parseAmount(text))return null;
   const part=daypartOf(text),date=parseDate(text),title=smartTitle(text);
   state.pending={kind:"reminder-time",title,date,daypart:part,source:text,leadMinutes:state.settings.reminderLead||30};
   return {text:`${prettyDate(date)} kamu punya agenda “${title}”. Jam berapa? Aku akan mengingatkan ${state.pending.leadMinutes} menit sebelumnya.`,actions:timeChoices(part)};
