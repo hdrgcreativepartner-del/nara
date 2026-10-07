@@ -308,7 +308,7 @@ function boot(){
     if(splash){splash.classList.add("hide");splash.style.pointerEvents="none"}
     setTimeout(()=>{if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},450);
     const onboarding=$("#onboarding");
-    if(onboarding&&!(state.profile&&state.profile.onboarded))onboarding.hidden=false
+    if(onboarding){if(state.profile&&state.profile.onboarded){onboarding.hidden=true;onboarding.style.display="none"}else{onboarding.hidden=false;onboarding.style.display=""}}
   },900)
 }
 
@@ -328,7 +328,7 @@ $("#chatInput").addEventListener("input",e=>{e.target.style.height="auto";e.targ
 $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#chatForm").requestSubmit()}});
 $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
-$("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",stopVoice);$("#onboardingForm").addEventListener("submit",e=>{e.preventDefault();finishOnboarding($("#userName").value)});$("#onboardingNext").addEventListener("click",()=>{const n=$("#userName").value.trim();if(n)finishOnboarding(n)});$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});
+$("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",stopVoice);$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});
 $("#downloadBackup").addEventListener("click",downloadBackup);
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
 $("#quickDate").value=localISO();renderAll();
