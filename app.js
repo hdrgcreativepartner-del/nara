@@ -259,7 +259,7 @@ function stopVoice(){try{recognition?.stop()}catch{}setVoiceUI(false)}
 window.NaraVoiceResult=function(text){setVoiceUI(false);if(text){voiceSession=true;sendText(String(text));$("#chatInput").value=""}else voiceSession=false};
 window.NaraVoiceError=function(message){setVoiceUI(false);voiceSession=false;msg("assistant",message||"Voice input tidak tersedia.");save()};
 function finishOnboarding(name){state.profile={name:name.trim(),onboarded:true};msg("assistant",`Senang bertemu denganmu, ${firstName()}. Mulai sekarang kamu bisa mengetik atau bicara ke NARA seperti ngobrol biasa.`);save();$("#onboarding").hidden=true;setTimeout(()=>$("#chatInput").focus(),350)}
-function boot(){const splash=$("#splash");setTimeout(()=>{splash?.classList.add("hide");setTimeout(()=>splash?.remove(),700);if(!state.profile?.onboarded)$("#onboarding").hidden=false},1250)}
+function boot(){const splash=$("#splash");setTimeout(()=>{splash?.classList.add("hide");setTimeout(()=>{if(splash?.remove)splash.remove()},700);if(!state.profile?.onboarded)$("#onboarding").hidden=false},1250)}
 \ndocument.addEventListener("click",e=>{
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}
