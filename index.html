@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#101214">
-  <meta name="description" content="NARA — Notes, Assistant, Reminder & Accounting. Personal daily assistant berbasis percakapan.">
-  <title>NARA — Personal Daily Assistant</title>
+  <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
+  <title>NARA — Asisten Harian Pribadi</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 <div id="splash" class="splash"><div class="splash-grid"></div><div class="splash-orb orb-a"></div><div class="splash-orb orb-b"></div><div class="splash-brand"><div class="logo-lockup splash-logo" role="img" aria-label="NARA"></div></div><div class="splash-foot"><i></i><span>Teman kecil untuk menemani harimu</span></div></div>
-<section id="onboarding" class="onboarding" hidden><div class="onboarding-glow"></div><div class="onboarding-card"><div class="onboarding-brand"><div class="logo-lockup onboarding-logo" role="img" aria-label="NARA"></div></div><div class="onboarding-copy"><span class="eyebrow">HALO, AKU NARA</span><h1>Aku bantu kamu <em>mengingat, mencatat, dan menjalani hari dengan lebih tenang.</em></h1><p>Ceritakan saja apa yang perlu kamu ingat. NARA akan bantu merapikannya, pelan-pelan.</p></div><form id="onboardingForm" class="name-form"><label for="userName">Biar lebih akrab, aku boleh panggil kamu siapa?</label><div class="name-input"><input id="userName" autocomplete="name" maxlength="40" placeholder="Nama atau panggilanmu…" required><button type="submit" aria-label="Lanjut">→</button></div><small>Tenang, nama ini hanya disimpan di perangkatmu.</small></form></div></section>
+<section id="onboarding" class="onboarding" hidden><div class="onboarding-glow"></div><div class="onboarding-card"><div class="onboarding-brand"><div class="logo-lockup onboarding-logo" role="img" aria-label="NARA"></div></div><div class="onboarding-copy"><span class="eyebrow">HALO, AKU NARA</span><h1>Aku bantu kamu <em>mengingat, mencatat, dan menjalani hari dengan lebih tenang.</em></h1><p>Ceritakan saja apa yang perlu kamu ingat. NARA akan bantu merapikannya, pelan-pelan.</p></div><form id="onboardingForm" class="name-form"><label for="userName">Biar lebih akrab, aku boleh panggil kamu siapa?</label><div class="name-input"><input id="userName" autocomplete="name" maxlength="40" placeholder="Nama atau panggilanmu…" required><button id="onboardingNext" type="submit" aria-label="Lanjut">→</button></div><small>Tenang, nama ini hanya disimpan di perangkatmu.</small></form></div></section>
 <div class="app" id="appRoot">
   <aside class="sidebar">
     <div class="brand"><div class="logo-lockup brand-logo" role="img" aria-label="NARA"></div><small>Asisten harian pribadimu</small></div>
@@ -48,9 +48,9 @@
           <article class="card">
             <label>Ringkasan hari ini</label>
             <small>Saldo tercatat</small><strong id="sideBalance">Rp0</strong>
-            <div class="ministats"><div><b id="sideTasks">0</b><span>Agenda</span></div><div><b id="sideHabits">0</b><span>Habit</span></div><div><b id="sideNotes">0</b><span>Catatan</span></div></div>
+            <div class="ministats"><div><b id="sideTasks">0</b><span>Agenda</span></div><div><b id="sideHabits">0</b><span>Kebiasaan</span></div><div><b id="sideNotes">0</b><span>Catatan</span></div></div>
           </article>
-          <article class="card soft insight-card"><span class="eyebrow">COBA UCAPKAN</span><p>“Hari ini bensin 50 ribu, besok jam 9 meeting, catat ide fitur baru.”</p><button id="tryVoice" type="button">🎙 Coba pakai suara</button></article>
+          <article class="card soft insight-card"><span class="eyebrow">COBA UCAPKAN</span><p>“Hari ini bensin 50 ribu, besok jam 9 rapat, catat ide fitur baru.”</p><button id="tryVoice" type="button">🎙 Coba pakai suara</button></article>
         </aside>
       </div>
     </section>
@@ -60,14 +60,14 @@
       <article class="hero"><div><label>Fokus hari ini</label><h3 id="focusText">Belum ada agenda mendesak.</h3></div><div id="dateBadge" class="datebadge"></div></article>
       <div class="twocol">
         <article class="card"><div class="cardhead"><h3>Agenda</h3><span id="agendaCount">0</span></div><div id="todayAgenda" class="list empty">Belum ada reminder hari ini.</div></article>
-        <article class="card"><div class="cardhead"><h3>Kebiasaan</h3><span id="habitCount">0</span></div><div id="todayHabits" class="list empty">Belum ada habit aktif.</div></article>
+        <article class="card"><div class="cardhead"><h3>Kebiasaan</h3><span id="habitCount">0</span></div><div id="todayHabits" class="list empty">Belum ada kebiasaan yang kamu pantau.</div></article>
       </div>
-      <article class="card"><div class="cardhead"><h3>Uang hari ini</h3><span id="todayNet">Rp0</span></div><div class="moneygrid"><div><small>Income</small><strong id="todayIncome">Rp0</strong></div><div><small>Expense</small><strong id="todayExpense">Rp0</strong></div></div></article>
+      <article class="card"><div class="cardhead"><h3>Uang hari ini</h3><span id="todayNet">Rp0</span></div><div class="moneygrid"><div><small>Pemasukan</small><strong id="todayIncome">Rp0</strong></div><div><small>Pengeluaran</small><strong id="todayExpense">Rp0</strong></div></div></article>
     </section>
 
     <section class="page" id="page-finance">
-      <div class="sectionhead"><div><small>Personal finance</small><h2>Keuangan</h2></div><button data-action="transaction">+ Transaksi</button></div>
-      <article class="financehero"><small>Total saldo tercatat</small><strong id="balanceTotal">Rp0</strong><div><span><small>Income bulan ini</small><b id="monthIncome">Rp0</b></span><span><small>Expense bulan ini</small><b id="monthExpense">Rp0</b></span></div></article>
+      <div class="sectionhead"><div><small>KEUANGAN PRIBADI</small><h2>Keuangan</h2></div><button data-action="transaction">+ Transaksi</button></div>
+      <article class="financehero"><small>Total saldo tercatat</small><strong id="balanceTotal">Rp0</strong><div><span><small>Pemasukan bulan ini</small><b id="monthIncome">Rp0</b></span><span><small>Pengeluaran bulan ini</small><b id="monthExpense">Rp0</b></span></div></article>
       <div class="twocol">
         <article class="card"><div class="cardhead"><h3>Pengeluaran per kategori</h3></div><div id="categoryBreakdown" class="category empty">Belum ada data.</div></article>
         <article class="card"><div class="cardhead"><h3>Transaksi terbaru</h3></div><div id="transactionList" class="list empty">Belum ada transaksi.</div></article>
@@ -81,7 +81,7 @@
     </section>
 
     <section class="page" id="page-goals">
-      <div class="sectionhead"><div><small>Progress, not pressure</small><h2>Goals & Habits</h2></div><button data-action="habit">+ Kebiasaan</button></div>
+      <div class="sectionhead"><div><small>PELAN-PELAN, TETAP MAJU</small><h2>Target &amp; Kebiasaan</h2></div><button data-action="habit">+ Kebiasaan</button></div>
       <article class="card"><div class="cardhead"><h3>Target bulan ini</h3><span id="goalMonth"></span></div><div id="goalsList" class="goals empty">Belum ada target bulan ini.</div></article>
       <article class="card"><div class="cardhead"><h3>Pelacak kebiasaan</h3><span id="habitWeek"></span></div><div id="habitTracker" class="habits empty">Tambahkan kebiasaan lewat obrolan atau tombol + Kebiasaan.</div></article>
     </section>
