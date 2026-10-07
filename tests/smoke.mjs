@@ -83,7 +83,7 @@ assert.equal(get("state.transactions[0].amount"),100000);
 
 reset();
 run("Besok jam 10 meeting dengan Pak Budi");
-vm.runInContext("renderToday()",context);
+vm.runInContext('state.settings.agendaRange="week";renderToday()',context);
 assert.match(elements.get("#todayAgenda").innerHTML,/Pak Budi/i);
 assert.match(elements.get("#todayAgenda").innerHTML,/reminder-done/);
 
