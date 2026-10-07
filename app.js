@@ -21,7 +21,11 @@ function firstName(){return ((state.profile&&state.profile.name)||"").trim().spl
 function greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
 
 function parseAmount(t){
-  const s=t.toLowerCase().replace(/rp\.?\s?/g,"").replace(/(\d)\.(?=\d{3}\b)/g,"$1").replace(/(\d),(?=\d{3}\b)/g,"$1");
+  let s=timeWordToNumber(t).replace(/rp\.?\s?/g,"").replace(/(\d)\.(?=\d{3}\b)/g,"$1").replace(/(\d),(?=\d{3}\b)/g,"$1");
+  s=s
+    .replace(/\b(?:(?:jam|pukul)\s+)?setengah\s+\d{1,2}\s*(?:pagi|siang|sore|malam)?\b/g," ")
+    .replace(/\b(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/g," ")
+    .replace(/\b\d{1,2}[.:]\d{2}\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/g," ");
   const m=s.match(/(\d+(?:[.,]\d+)?)\s*(juta|jt|ribu|rb|k)\b/i)||s.match(/(?:sebesar|senilai|pengeluaran|pemasukan|bayar|beli|makan|bensin|transfer|dapat|terima)\D{0,16}(\d[\d.]*)/i);
   if(!m)return null;
   let n=Number(String(m[1]).replace(/\./g,"").replace(",","."));
