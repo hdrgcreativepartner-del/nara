@@ -12,11 +12,11 @@ if(typeof document!=="undefined"&&document.documentElement&&document.documentEle
 let recognition=null,voiceSession=false,voiceFinal="";
 
 function fresh(){
-  return {profile:{name:""},settings:{reminderLead:30},messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],reminders:[],notes:[],habits:[],goals:[]};
+  return {profile:{name:""},settings:{reminderLead:30},pending:null,lastCreated:null,messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],reminders:[],notes:[],habits:[],goals:[]};
 }
 function load(){try{const base=fresh(),saved=JSON.parse(localStorage.getItem(KEY)||"{}")||{};return {...base,...saved,profile:{...base.profile,...(saved.profile||{})},settings:{...base.settings,...(saved.settings||{})}}}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
-function msg(role,text,result=""){state.messages.push({id:uid(),role,text,result,at:new Date().toISOString()})}
+function msg(role,text,result="",actions=[]){state.messages.push({id:uid(),role,text,result,actions:Array.isArray(actions)?actions:[],at:new Date().toISOString()})}
 function firstName(){return ((state.profile&&state.profile.name)||"").trim().split(/\s+/)[0]||""}
 function greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
 
@@ -88,8 +88,8 @@ function financeType(t){
 }
 function reminderIntent(t){
   const s=t.toLowerCase();
-  if(/ingatkan|pengingat|reminder|meeting|rapat|jadwal|deadline|janji|jemput|berangkat|telepon|hubungi|kirim|loading|pemasangan|pasang|review|temui|nemui/.test(s))return true;
-  return /\b(besok|lusa|tanggal\s+\d+)\b/.test(s)&&/\b(pergi|ke|bayar|beli|ambil|antar|datang|ketemu|temu|kerja|acara)\b/.test(s);
+  if(/ingatkan|pengingat|reminder|jadwal|deadline|janji/.test(s))return true;
+  return looksLikeSchedule(t);
 }
 function noteIntent(t){return /catat|note|ide|gagasan|jangan lupa bahwa/.test(t.toLowerCase())}
 function habitIntent(t){return /rutin|habit|kebiasaan|kali seminggu|setiap hari|olahraga|sholat|salat|belajar hal baru|belajar\s+\d+\s*menit/.test(t.toLowerCase())}
@@ -129,6 +129,99 @@ function markPaidBillFromText(t){
   state.transactions.push({id:uid(),type:"expense",amount:bill.amount,category:bill.category||"Bills",title:bill.title,date:localISO(),createdAt:new Date().toISOString()});
   return bill;
 }
+function sentenceCase(s){s=String(s||"").trim();return s?s.charAt(0).toUpperCase()+s.slice(1):s}
+function daypartOf(t){const m=String(t).toLowerCase().match(/\b(pagi|siang|sore|malam)\b/);return m?m[1]:""}
+function prettyDate(date){if(date===localISO())return"Hari ini";if(date===addDays(1))return"Besok";if(date===addDays(2))return"Lusa";return fmtDate(date)}
+function timeChoices(part){
+  const map={pagi:["07:00","08:00","09:00"],siang:["12:00","13:00","14:00"],sore:["15:00","16:00","17:00"],malam:["19:00","20:00","21:00"]};
+  return [...(map[part]||["09:00","13:00","16:00","19:00"]),"Pilih jam lain"];
+}
+function normalizeTimeForDaypart(time,part){
+  if(!time)return"";
+  let [h,m]=time.split(":").map(Number);
+  if((part==="sore"||part==="malam")&&h>0&&h<12)h+=12;
+  if(part==="siang"&&h>0&&h<7)h+=12;
+  return `${pad(Math.min(23,h))}:${pad(m||0)}`;
+}
+function smartTitle(text){
+  let s=String(text||"").trim()
+    .replace(/\b(tolong|nara|aku|saya|harus|mau|akan|ingin|ingatkan|catat(?:kan)?|note|reminder)\b/gi," ")
+    .replace(/\b(hari ini|besok|lusa|nanti|pagi|siang|sore|malam)\b/gi," ")
+    .replace(/\b(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\b/gi," ")
+    .replace(/\b\d{1,2}[.:]\d{2}\s*(?:wib|wita|wit)?\b/gi," ")
+    .replace(/\s+/g," ").replace(/^[,.:;\-\s]+|[,.:;\-\s]+$/g,"").trim();
+  s=s.replace(/\bnemuin\b/gi,"temui").replace(/\bnemui\b/gi,"temui").replace(/\bketemu\b/gi,"bertemu dengan");
+  if(/^ke\s+/i.test(s))s="Pergi "+s;
+  s=s.replace(/\bke\s+([a-z])/g,(m,c)=>"ke "+c.toUpperCase()).replace(/\bmas\s+([a-z])/g,(m,c)=>"Mas "+c.toUpperCase());
+  return sentenceCase(s||"Agenda");
+}
+function paraphraseNote(text){
+  let s=String(text||"").trim()
+    .replace(/^.*?(?:tolong\s+)?(?:catat(?:kan)?|note|ide)\s*:?[\s-]*/i,"")
+    .replace(/\bjangan lupa bahwa\b/gi,"")
+    .replace(/\baku\s+(?:harus|mau|akan|ingin)\b/gi,"")
+    .replace(/\bsaya\s+(?:harus|mau|akan|ingin)\b/gi,"")
+    .replace(/\bnemuin\b/gi,"temui").replace(/\bnemui\b/gi,"temui")
+    .replace(/\bketemu(?:an)?\s+(?:sama|dengan)?\s*/gi,"bertemu dengan ")
+    .replace(/\s+/g," ").trim();
+  s=s.replace(/\bmas\s+([a-z])/g,(m,c)=>"Mas "+c.toUpperCase()).replace(/\bpak\s+([a-z])/g,(m,c)=>"Pak "+c.toUpperCase());
+  s=sentenceCase(s||text);
+  if(s&&!/[.!?]$/.test(s))s+=".";
+  return s;
+}
+function looksLikeSchedule(text){
+  const s=String(text).toLowerCase(),temporal=/\b(hari ini|besok|lusa|nanti|pagi|siang|sore|malam|tanggal\s+\d+)\b/.test(s)||!!parseTime(text);
+  const activity=/\b(ke|pergi|berangkat|temui|nemui|nemuin|ketemu|meeting|rapat|review|loading|pasang|pemasangan|acara|jemput|antar|kirim|bayar|ambil|datang|kerja)\b/.test(s);
+  return temporal&&activity;
+}
+function clarificationFor(text){
+  if(!looksLikeSchedule(text)||parseTime(text))return null;
+  if(financeType(text)&&parseAmount(text))return null;
+  const part=daypartOf(text),date=parseDate(text),title=smartTitle(text);
+  state.pending={kind:"reminder-time",title,date,daypart:part,source:text,leadMinutes:state.settings.reminderLead||30};
+  return {text:`${prettyDate(date)} kamu punya agenda “${title}”. Jam berapa? Aku akan mengingatkan ${state.pending.leadMinutes} menit sebelumnya.`,actions:timeChoices(part)};
+}
+function resolvePending(text){
+  const p=state.pending;if(!p)return null;
+  const raw=String(text||"").trim();
+  if(p.kind==="reminder-time"){
+    if(/pilih jam lain/i.test(raw)){p.custom=true;return{text:"Boleh. Ketik jamnya, misalnya 18.30 atau pukul 7 malam.",actions:[]}}
+    let time=parseTime(raw);
+    if(!time&&/^\d{1,2}:\d{2}$/.test(raw))time=raw;
+    if(!time&&/^\d{1,2}$/.test(raw))time=`${pad(+raw)}:00`;
+    if(!time)return{text:"Aku belum menangkap jamnya. Pilih salah satu atau ketik misalnya 16.30.",actions:timeChoices(p.daypart)};
+    time=normalizeTimeForDaypart(time,p.daypart);
+    const id=uid();state.reminders.push({id,title:p.title,date:p.date,time,done:false,leadMinutes:p.leadMinutes,notified:false,sourceText:p.source});
+    state.lastCreated={type:"reminder",ids:[id],at:Date.now()};state.pending=null;
+    return{text:`Siap. “${p.title}” aku jadwalkan ${prettyDate(p.date)} pukul ${time}, dan kuingatkan ${p.leadMinutes} menit sebelumnya.`,actions:[]}
+  }
+  return null;
+}
+function correctRecent(text){
+  const s=String(text).toLowerCase();
+  if(!/\b(salah|maksudnya|seharusnya|koreksi|ralat)\b/.test(s)||!state.lastCreated||state.lastCreated.type!=="reminder")return null;
+  const rows=state.reminders.filter(r=>state.lastCreated.ids.includes(r.id));if(!rows.length)return null;
+  let changed=[];
+  if(/\bhari ini\b/.test(s)){rows.forEach(r=>{r.date=localISO();r.notified=false});changed.push("tanggal menjadi hari ini")}
+  else if(/\bbesok\b/.test(s)){rows.forEach(r=>{r.date=addDays(1);r.notified=false});changed.push("tanggal menjadi besok")}
+  else if(/\blusa\b/.test(s)){rows.forEach(r=>{r.date=addDays(2);r.notified=false});changed.push("tanggal menjadi lusa")}
+  const tm=parseTime(text);if(tm){rows.forEach(r=>{r.time=normalizeTimeForDaypart(tm,daypartOf(text));r.notified=false});changed.push("jam diperbarui")}
+  if(!changed.length)return{text:"Boleh, bagian mana yang perlu dikoreksi—tanggal, jam, atau keterangannya?",actions:["Hari ini","Besok","Ubah jam"]};
+  return{text:`Oke, aku koreksi agenda terakhir: ${changed.join(" dan ")}.`,actions:[]}
+}
+function smartResponse(text){
+  const pending=resolvePending(text);if(pending)return pending;
+  const corrected=correctRecent(text);if(corrected)return corrected;
+  const clarification=clarificationFor(text);if(clarification)return clarification;
+  const beforeReminderIds=new Set(state.reminders.map(r=>r.id)),beforeNoteIds=new Set(state.notes.map(n=>n.id));
+  const lines=process(text);
+  const newReminders=state.reminders.filter(r=>!beforeReminderIds.has(r.id));
+  const newNotes=state.notes.filter(n=>!beforeNoteIds.has(n.id));
+  if(newReminders.length)state.lastCreated={type:"reminder",ids:newReminders.map(r=>r.id),at:Date.now()};
+  else if(newNotes.length)state.lastCreated={type:"note",ids:newNotes.map(n=>n.id),at:Date.now()};
+  return{text:lines.join("\n"),actions:[]}
+}
+
 function process(text){
   const monthly=/bulan ini|target bulan/.test(text.toLowerCase());
   const paidBill=markPaidBillFromText(text);
@@ -161,15 +254,15 @@ function process(text){
       continue;
     }
     if(reminderIntent(clause)){
-      const ownDate=/\b(hari ini|tadi|barusan|besok|lusa|tanggal\s+\d+|20\d{2}-\d{1,2}-\d{1,2})\b/i.test(clause),date=!ownDate&&hasFutureContext?contextDate:parseDate(clause),time=parseTime(clause),title=cleanTitle(clause)||"Pengingat";
-      state.reminders.push({id:uid(),title,date,time,done:false,leadMinutes:state.settings.reminderLead||30,notified:false});
+      const ownDate=/\b(hari ini|tadi|barusan|besok|lusa|tanggal\s+\d+|20\d{2}-\d{1,2}-\d{1,2})\b/i.test(clause),date=!ownDate&&hasFutureContext?contextDate:parseDate(clause),time=parseTime(clause),title=smartTitle(clause);
+      state.reminders.push({id:uid(),title,date,time,done:false,leadMinutes:state.settings.reminderLead||30,notified:false,sourceText:clause});
       results.push(`Siap, aku ingatkan “${title}” pada ${fmtDate(date)}${time?" pukul "+time:""}.`);
       continue;
     }
     if(noteIntent(clause)){
-      const body=clause.replace(/^.*?(?:catat(?:kan)?|note|ide)\s*:?\s*/i,"").trim()||clause;
-      state.notes.push({id:uid(),title:body.slice(0,48),body,date:localISO(),createdAt:new Date().toISOString()});
-      results.push(`Sudah kusimpan di Catatan: “${body.slice(0,42)}${body.length>42?"…":""}”`);
+      const body=paraphraseNote(clause),title=body.replace(/[.!?]$/,"").slice(0,56);
+      state.notes.push({id:uid(),title,body,sourceText:clause,date:localISO(),createdAt:new Date().toISOString()});
+      results.push(`Sudah kurapikan dan kusimpan: “${body.slice(0,58)}${body.length>58?"…":""}”`);
       continue;
     }
     if(monthly&&clause.length>2){
@@ -201,10 +294,10 @@ function scrollChatToBottom(smooth=false){
 function sendText(text){
   const t=text.trim();if(!t)return;
   msg("user",t);renderChat(true);scrollChatToBottom(true);
-  setTimeout(()=>{const results=process(t);const reply=results.join("\n");msg("assistant",reply,results.length>1?`${results.length} data diproses`:"");save();speak(reply);renderChat(false);scrollChatToBottom(true)},voiceSession?420:180);
+  setTimeout(()=>{const response=smartResponse(t),reply=response.text||"Coba ceritakan sedikit lebih lengkap ya.";msg("assistant",reply,"",response.actions||[]);save();speak(reply);renderChat(false);scrollChatToBottom(true)},voiceSession?420:180);
 }
 function renderChat(showTyping=false){
-  const s=$("#chatStream");s.innerHTML=state.messages.map(m=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing"><i></i><i></i><i></i></span></div>`:"");
+  const s=$("#chatStream");s.innerHTML=state.messages.map(m=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}${m.actions&&m.actions.length?`<div class="chat-actions">${m.actions.map(a=>`<button type="button" data-chat-choice="${esc(a)}">${esc(a)}</button>`).join("")}</div>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing"><i></i><i></i><i></i></span></div>`:"");
   syncChatSafeArea();
 }
 function txTotals(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>{a[t.type]+=t.amount;return a},{income:0,expense:0})}
@@ -380,7 +473,7 @@ function boot(){
 
 document.addEventListener("click",e=>{
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);const en=e.target.closest(".edit-note");if(en)openEditor("note",en.dataset.id);const et=e.target.closest(".edit-tx");if(et)openEditor("tx",et.dataset.id);const er=e.target.closest(".edit-reminder");if(er)openEditor("reminder",er.dataset.id);const eh=e.target.closest(".edit-habit");if(eh)openEditor("habit",eh.dataset.id);
-  const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}
+  const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}const choice=e.target.closest("[data-chat-choice]");if(choice)sendText(choice.dataset.chatChoice);
   const act=e.target.closest("[data-action]");if(act){const map={quick:"expense",transaction:"expense",note:"note",habit:"habit"};openQuick(map[act.dataset.action])}
   const ht=e.target.closest(".habit-toggle");if(ht){const h=state.habits.find(x=>x.id===ht.dataset.id),d=localISO();if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
   const done=e.target.closest(".reminder-done");if(done){const r=state.reminders.find(x=>x.id===done.dataset.id);if(r){r.done=true;save()}}

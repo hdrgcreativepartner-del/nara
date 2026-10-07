@@ -204,3 +204,40 @@ body{background:var(--bg)}
   .conversation-scroll{flex:1 1 auto;min-height:0;padding-right:4px;padding-bottom:32px}
   .composer{flex:0 0 auto}
 }
+
+/* NARA v5.2 — smart-context choices + hard responsive wrapping */
+html,body{max-width:100%;overflow-x:hidden}
+.app,.main,.page,.twocol,.card,.hero,.financehero,.list,.row,.rowmain,.sectionhead,.account-layout{min-width:0;max-width:100%}
+.page{overflow-x:hidden}
+.sectionhead{gap:10px;flex-wrap:wrap;align-items:flex-start}
+.sectionhead>div{min-width:0;flex:1 1 220px}
+.hero{width:100%;box-sizing:border-box;overflow:hidden}
+.hero>div:first-child{min-width:0;flex:1 1 180px}
+.hero h3{max-width:none;overflow-wrap:anywhere}
+.datebadge{flex:0 0 auto}
+.twocol,.finance-insights,.account-layout{width:100%;grid-template-columns:minmax(0,1fr)}
+.card{width:100%;box-sizing:border-box;overflow:hidden}
+.row{min-width:0;max-width:100%;align-items:flex-start}
+.rowmain{min-width:0;max-width:100%}
+.rowmain strong,.rowmain span{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;word-break:break-word}
+.rowvalue{flex:0 0 auto;max-width:100%;overflow-wrap:anywhere}
+.edit-action,.rowaction{flex:0 0 auto}
+.chat-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.chat-actions button{border:1px solid #cddbf8;background:#f6f9ff;color:#2454b8;border-radius:999px;padding:8px 11px;font-size:10px;font-weight:800;white-space:nowrap}
+.chat-actions button:active{transform:scale(.97)}
+@media(max-width:520px){
+  .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px}
+  .hero h3{font-size:17px}
+  .datebadge{min-width:56px}
+  .row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:9px}
+  .row .rowvalue{grid-column:2/4;justify-self:start}
+  .row .row-actions{grid-column:3;grid-row:1/3}
+  .moneygrid,.financehero>div{grid-template-columns:minmax(0,1fr)}
+  .donut-wrap{grid-template-columns:minmax(0,1fr);justify-items:center}
+  .donut-legend{width:100%}
+}
+@media(min-width:720px){
+  .twocol{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .finance-insights{grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)}
+  .account-layout{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
