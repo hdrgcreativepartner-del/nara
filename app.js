@@ -302,6 +302,10 @@ function unknownIntentPrompt(text){
 function smartResponse(text){
   const pending=resolvePending(text);if(pending)return pending;
   const corrected=correctRecent(text);if(corrected)return corrected;
+  const paidBill=markPaidBillFromText(text);
+  if(paidBill)return{text:`Sip, tagihan “${paidBill.title}” sudah lunas. ${rupiah(paidBill.amount)} juga sudah masuk ke pengeluaran.`,actions:[]};
+  const completedHabit=markHabitFromText(text);
+  if(completedHabit)return{text:`Bagus, “${completedHabit.name}” sudah aku tandai selesai untuk hari ini.`,actions:[]};
   const intent=classifyIntent(text);
   if(intent.type==="unknown")return unknownIntentPrompt(text);
   if(intent.type==="agenda-incomplete"){
