@@ -9,7 +9,7 @@ const fmtDate=s=>new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short",ye
 const state=load();
 const NARA_ENV={isMedian:/median|MedianIOS|MedianAndroid/i.test((navigator&&navigator.userAgent)||"")};
 if(typeof document!=="undefined"&&document.documentElement&&document.documentElement.classList)document.documentElement.classList.toggle("median-app",NARA_ENV.isMedian);
-let recognition=null,voiceSession=false,voiceFinal="";
+let recognition=null,voiceSession=false,voiceFinal="",voiceDraft="",voiceSubmitRequested=false;
 
 function fresh(){
   return {profile:{name:""},settings:{reminderLead:30,agendaRange:"today"},pending:null,lastCreated:null,messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],liabilities:[],receivables:[],reminders:[],notes:[],habits:[],goals:[]};
@@ -507,7 +507,7 @@ function syncChatSafeArea(){
   if(!stream)return;
   const composerH=composer&&typeof composer.getBoundingClientRect==="function"?composer.getBoundingClientRect().height:64;
   const navH=typeof innerWidth!=="undefined"&&innerWidth<980&&nav&&typeof nav.getBoundingClientRect==="function"?nav.getBoundingClientRect().height:0;
-  const safe=Math.ceil(composerH+navH+28);
+  const safe=Math.ceil(composerH+navH+44);
   if(stream.style&&typeof stream.style.setProperty==="function")stream.style.setProperty("--chat-safe-bottom",safe+"px");
 }
 function scrollChatToBottom(smooth=false){
@@ -752,12 +752,70 @@ function updateAccountName(name){
   if($("#accountSaveStatus")){$("#accountSaveStatus").textContent="Nama sudah diperbarui.";setTimeout(()=>{$("#accountSaveStatus").textContent="Perubahan tersimpan di perangkat ini."},1800)}
 }
 
-function setVoiceUI(active,transcript=""){if($("#voiceMode"))$("#voiceMode").hidden=!active;if($("#voiceModeTranscript")&&transcript)$("#voiceModeTranscript").textContent=transcript;if($("#micButton"))$("#micButton").classList.toggle("active",active);if($("#listeningPanel"))$("#listeningPanel").hidden=!active;if($("#voiceStatus")){$("#voiceStatus").classList.toggle("listening",active);$("#voiceStatus span").textContent=active?"Mendengarkan…":"Suara siap"}if(transcript&&$("#voiceTranscript"))$("#voiceTranscript").textContent=transcript}
-function webSpeechStart(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return false;if(!recognition){recognition=new SR();recognition.lang="id-ID";recognition.interimResults=true;recognition.continuous=false;recognition.maxAlternatives=1;recognition.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript;if(e.results[i].isFinal)voiceFinal+=txt;else interim+=txt}const shown=(voiceFinal||interim).trim();setVoiceUI(true,shown||"Silakan bicara…");$("#chatInput").value=shown};recognition.onerror=e=>{setVoiceUI(false);voiceSession=false;if($("#voiceTranscript"))$("#voiceTranscript").textContent=e.error==="not-allowed"?"Izin mikrofon diperlukan.":"Fitur suara tidak tersedia."};recognition.onend=()=>{setVoiceUI(false);const txt=voiceFinal.trim();voiceFinal="";if(txt){voiceSession=true;sendText(txt);$("#chatInput").value=""}else voiceSession=false}}try{voiceFinal="";voiceSession=true;recognition.start();setVoiceUI(true);return true}catch{return false}}
-function startVoice(){try{if(window.NaraAndroid&&window.NaraAndroid.startVoiceInput){voiceSession=true;setVoiceUI(true);window.NaraAndroid.startVoiceInput();return}}catch{}if(!webSpeechStart()){setVoiceUI(false);voiceSession=false;msg("assistant","Maaf, fitur suara belum didukung di browser ini. Kamu tetap bisa mengetik seperti biasa.");save()}}
-function stopVoice(){try{if(recognition)recognition.stop()}catch{}setVoiceUI(false)}
-window.NaraVoiceResult=function(text){setVoiceUI(false);if(text){voiceSession=true;sendText(String(text));$("#chatInput").value=""}else voiceSession=false};
-window.NaraVoiceError=function(message){setVoiceUI(false);voiceSession=false;msg("assistant",message||"Maaf, fitur suara sedang tidak tersedia.");save()};
+function setVoiceUI(active,transcript="",mode="listening"){
+  const panel=$("#voiceMode"),text=transcript||"Silakan bicara…";
+  if(panel)panel.hidden=!active;
+  if($("#micButton"))$("#micButton").classList.toggle("active",active);
+  if($("#listeningPanel"))$("#listeningPanel").hidden=true;
+  if($("#voiceStatus")){$("#voiceStatus").classList.toggle("listening",active);$("#voiceStatus span").textContent=active?"Mendengarkan…":"Suara siap"}
+  if($("#voiceModeTranscript"))$("#voiceModeTranscript").textContent=text;
+  if($("#voiceTranscript"))$("#voiceTranscript").textContent=text;
+  if($("#voiceModeState"))$("#voiceModeState").textContent=mode==="review"?"UCAPAN TERTANGKAP":"MENDENGARKAN";
+  if($("#voiceModeHint"))$("#voiceModeHint").textContent=mode==="review"?"Periksa sebentar. Tekan Selesai untuk memproses ucapan ini.":"Bicara seperti biasa. NARA akan memahami dulu sebelum mencatat.";
+  if($("#voiceDone"))$("#voiceDone").textContent=mode==="review"?"Proses":"Selesai";
+  if(panel)panel.classList.toggle("review",mode==="review");
+}
+function showVoiceReview(text){
+  voiceDraft=String(text||"").trim();
+  voiceSession=!!voiceDraft;
+  if(voiceDraft)setVoiceUI(true,voiceDraft,"review");
+  else{voiceSession=false;setVoiceUI(false)}
+}
+function webSpeechStart(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return false;
+  if(!recognition){
+    recognition=new SR();recognition.lang="id-ID";recognition.interimResults=true;recognition.continuous=false;recognition.maxAlternatives=1;
+    recognition.onresult=e=>{
+      let interim="";
+      for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript;if(e.results[i].isFinal)voiceFinal+=txt;else interim+=txt}
+      const shown=(voiceFinal||interim).trim();voiceDraft=shown;
+      setVoiceUI(true,shown||"Silakan bicara…","listening");
+      $("#chatInput").value=shown;
+    };
+    recognition.onerror=e=>{
+      voiceSubmitRequested=false;voiceSession=false;
+      const msgText=e.error==="not-allowed"?"Izin mikrofon diperlukan.":"Suara belum bisa ditangkap. Coba lagi.";
+      voiceDraft="";setVoiceUI(true,msgText,"review");
+      if($("#voiceModeHint"))$("#voiceModeHint").textContent=e.error==="not-allowed"?"Aktifkan izin mikrofon untuk memakai input suara.":"Pastikan mikrofon aktif dan coba bicara lebih dekat.";
+    };
+    recognition.onend=()=>{
+      const txt=(voiceFinal||voiceDraft).trim();voiceFinal="";
+      if(voiceSubmitRequested){voiceSubmitRequested=false;if(txt){setVoiceUI(false);voiceSession=true;sendText(txt);$("#chatInput").value="";voiceDraft=""}else setVoiceUI(false)}
+      else if(txt)showVoiceReview(txt);else{voiceSession=false;setVoiceUI(false)}
+    };
+  }
+  try{voiceFinal="";voiceDraft="";voiceSubmitRequested=false;voiceSession=true;recognition.start();setVoiceUI(true,"Silakan bicara…","listening");return true}catch{return false}
+}
+function startVoice(){
+  try{if(window.NaraAndroid&&window.NaraAndroid.startVoiceInput){voiceSession=true;voiceDraft="";setVoiceUI(true,"Silakan bicara…","listening");window.NaraAndroid.startVoiceInput();return}}catch{}
+  if(!webSpeechStart()){setVoiceUI(false);voiceSession=false;msg("assistant","Maaf, fitur suara belum didukung di browser ini. Kamu tetap bisa mengetik seperti biasa.");save()}
+}
+function cancelVoice(){
+  voiceSubmitRequested=false;voiceDraft="";voiceFinal="";voiceSession=false;
+  try{if(recognition)recognition.abort()}catch{}
+  setVoiceUI(false);$("#chatInput").value="";
+}
+function submitVoice(){
+  const txt=(voiceFinal||voiceDraft||$("#chatInput").value||"").trim();
+  if(recognition){
+    try{voiceSubmitRequested=true;recognition.stop();return}catch{}
+  }
+  if(txt){setVoiceUI(false);voiceSession=true;sendText(txt);$("#chatInput").value="";voiceDraft=""}
+  else cancelVoice();
+}
+window.NaraVoiceResult=function(text){const txt=String(text||"").trim();if(txt){$("#chatInput").value=txt;showVoiceReview(txt)}else cancelVoice()};
+window.NaraVoiceError=function(message){voiceSession=false;voiceDraft="";setVoiceUI(true,message||"Maaf, fitur suara sedang tidak tersedia.","review");if($("#voiceModeHint"))$("#voiceModeHint").textContent="Coba lagi atau gunakan input teks."};
+
 function boot(){
   window.__NARA_BOOTED__=true;
   const splash=$("#splash");
@@ -795,7 +853,7 @@ $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){
 $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
 $("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",stopVoice);$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});
-$("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());$("#confirmCancel").addEventListener("click",closeConfirm);$("#confirmOk").addEventListener("click",()=>{const fn=confirmAction;closeConfirm();if(typeof fn==="function")fn()});$("#confirmDialog").addEventListener("click",e=>{if(e.target===$("#confirmDialog"))closeConfirm()});$("#closeAgendaSheet").addEventListener("click",closeAgendaSheet);$("#agendaSheet").addEventListener("click",e=>{if(e.target===$("#agendaSheet"))closeAgendaSheet()});$("#closeVoiceMode").addEventListener("click",stopVoice);$("#voiceCancel").addEventListener("click",stopVoice);$("#voiceDone").addEventListener("click",stopVoice);$("#dismissReminderToast").addEventListener("click",()=>$("#reminderToast").hidden=true);
+$("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());$("#confirmCancel").addEventListener("click",closeConfirm);$("#confirmOk").addEventListener("click",()=>{const fn=confirmAction;closeConfirm();if(typeof fn==="function")fn()});$("#confirmDialog").addEventListener("click",e=>{if(e.target===$("#confirmDialog"))closeConfirm()});$("#closeAgendaSheet").addEventListener("click",closeAgendaSheet);$("#agendaSheet").addEventListener("click",e=>{if(e.target===$("#agendaSheet"))closeAgendaSheet()});$("#closeVoiceMode").addEventListener("click",cancelVoice);$("#voiceCancel").addEventListener("click",cancelVoice);$("#voiceDone").addEventListener("click",submitVoice);$("#dismissReminderToast").addEventListener("click",()=>$("#reminderToast").hidden=true);
 $("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});
 $("#profilePromptSkip").addEventListener("click",()=>{$("#profilePromptForm").hidden=true});
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;

@@ -51,4 +51,7 @@ assert.ok(html.includes('data-agenda-range="today"')&&html.includes('data-agenda
 assert.ok(js.includes("agendaSort")&&js.includes("agendaInRange"),"Agenda must sort and filter through dedicated logic");
 assert.ok(js.includes('class="agenda-check habit-toggle'),"Habit completion control must match agenda check UI");
 assert.ok(css.includes(".agenda-time-block"),"Agenda date and time must have a clear visual block");
-console.log("NARA UI contract passed: commercial agenda filters, time hierarchy, consistent habit controls, centered modals, Median contrast.");
+assert.ok(css.includes("bottom:calc(92px + env(safe-area-inset-bottom))"),"Chat composer must keep breathing room above bottom navigation");
+assert.ok(html.includes("voice-examples")&&html.includes("voice-level"),"Voice mode must expose examples and a listening indicator");
+assert.ok(js.includes("showVoiceReview")&&js.includes("submitVoice"),"Voice capture must support transcript review before processing");
+console.log("NARA UI contract passed: composer spacing, reviewed voice capture, commercial agenda filters, centered modals, Median contrast.");
