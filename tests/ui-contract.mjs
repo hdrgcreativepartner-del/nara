@@ -40,4 +40,6 @@ assert.ok(js.includes("nextWeekdayDate"),"Natural weekday dates must be supporte
 assert.ok(css.includes(".target-card.collapsed")&&js.includes("data-target-collapse"),"Targets must support compact minimized list mode");
 assert.ok(html.includes('id="confirmDialog"')&&css.includes(".center-dialog"),"Critical confirmations must use centered app dialogs");
 assert.ok(css.includes(".median-app .modal"),"Median dialogs must force readable light contrast");
+assert.ok(css.includes(".median-app .reminder-toast"),"Median reminder popups must force readable contrast");
+assert.ok(!js.includes('confirm("Pulihkan backup')&&!js.includes('confirm("Reset semua data'),"Critical app actions must not use native confirm dialogs");
 console.log("NARA UI contract passed: minimized targets, centered high-contrast dialogs, Median contrast, smart reasoning regressions.");

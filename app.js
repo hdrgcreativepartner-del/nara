@@ -680,8 +680,8 @@ function saveEditor(e){e.preventDefault();if(!editContext)return;const {kind,id}
   if(kind==="target"){const x=state.goals.find(x=>x.id===id);if(x){x.title=targetTitle(title);x.period=$("#editTargetPeriod").value||x.period}}
   $("#editDialog").close();editContext=null;save();
 }
-function restoreBackupFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const parsed=JSON.parse(reader.result),data=parsed.data||parsed;if(!data||!Array.isArray(data.notes)||!Array.isArray(data.transactions))throw new Error("Format tidak cocok");if(!confirm("Pulihkan backup ini? Data NARA saat ini akan diganti."))return;localStorage.setItem(KEY,JSON.stringify(data));location.reload()}catch(e){alert("File backup tidak valid.")}};reader.readAsText(file)}
-function resetAllData(){if(!confirm("Reset semua data NARA di perangkat ini?"))return;if(!confirm("Yakin? Catatan, transaksi, pengingat, dan target akan dihapus."))return;localStorage.removeItem(KEY);location.reload()}
+function restoreBackupFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const parsed=JSON.parse(reader.result),data=parsed.data||parsed;if(!data||!Array.isArray(data.notes)||!Array.isArray(data.transactions))throw new Error("Format tidak cocok");askConfirm("Pulihkan backup?","Data NARA saat ini akan diganti dengan isi file backup.","Pulihkan",()=>{localStorage.setItem(KEY,JSON.stringify(data));location.reload()})}catch(e){alert("File backup tidak valid.")}};reader.readAsText(file)}
+function resetAllData(){askConfirm("Reset semua data?","Catatan, transaksi, agenda, target, hutang/piutang, dan kebiasaan di perangkat ini akan dihapus.","Reset",()=>{localStorage.removeItem(KEY);location.reload()})}
 function showReminder(r,minutes){$("#reminderToastTitle").textContent=r.title;$("#reminderToastTime").textContent=minutes<=1?"Agenda segera dimulai":`${minutes} menit lagi · ${r.time||""}`;$("#reminderToast").hidden=false;
   if("Notification"in window&&Notification.permission==="granted"){try{new Notification("NARA · Pengingat",{body:`${r.title} — ${minutes} menit lagi`})}catch(e){}}
 }

@@ -504,3 +504,14 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   .confirm-card{border-radius:20px;padding:18px}
   .target-card.collapsed .edit-action,.target-card.collapsed .rowaction{width:30px;height:30px;padding:5px}
 }
+
+/* v5.7.1 — Median readability */
+.median-app .reminder-toast{
+  background:#ffffff!important;
+  color:#111827!important;
+  border-color:#dbe3ee!important;
+}
+.median-app .reminder-toast small{color:#2563eb!important}
+.median-app .reminder-toast strong{color:#111827!important}
+.median-app .reminder-toast span{color:#66706b!important}
+.median-app .reminder-toast>button{color:#66706b!important}
