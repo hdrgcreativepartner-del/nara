@@ -515,3 +515,230 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .median-app .reminder-toast strong{color:#111827!important}
 .median-app .reminder-toast span{color:#66706b!important}
 .median-app .reminder-toast>button{color:#66706b!important}
+
+/* NARA v5.8 — cohesive mobile-first polish, Apple-HIG-inspired interaction discipline */
+:root{
+  --radius-card:24px;
+  --radius-control:16px;
+  --radius-modal:28px;
+  --shadow-card:0 10px 32px rgba(20,28,38,.06);
+  --shadow-float:0 28px 90px rgba(6,12,24,.34);
+  --tap:44px;
+}
+
+/* Better focus and tap ergonomics */
+button,input,select,textarea{-webkit-tap-highlight-color:transparent}
+button{touch-action:manipulation}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:3px solid rgba(37,99,235,.22);
+  outline-offset:2px;
+}
+.square,.edit-action,.rowaction,.agenda-menu-trigger,.agenda-check,.target-collapse,.sheet-close{
+  min-width:var(--tap);min-height:var(--tap);
+}
+
+/* Surface hierarchy */
+.card,.hero,.financehero,.profile-prompt,.composer{
+  border-radius:var(--radius-card);
+}
+.card{
+  box-shadow:var(--shadow-card);
+}
+.page{padding-top:18px}
+.sectionhead{margin-bottom:16px}
+.sectionhead h2{letter-spacing:-.035em}
+.cardhead h3,.sectionhead h2,.welcome-panel h2{letter-spacing:-.025em}
+
+/* Inputs: clean, predictable, easier to scan */
+.modal label{gap:7px;margin:14px 0 0}
+.modal input,.modal select,.modal textarea{
+  min-height:48px;
+  border-radius:var(--radius-control);
+  border:1px solid #d9dfe7;
+  background:#f8fafc;
+  color:#111827;
+  font-size:15px;
+  padding:12px 14px;
+  box-sizing:border-box;
+}
+.modal textarea{min-height:112px;line-height:1.5}
+.modal input:focus,.modal select:focus,.modal textarea:focus{
+  border-color:#9fb8ef;
+  background:#fff;
+  box-shadow:0 0 0 4px rgba(37,99,235,.07);
+}
+.primary{
+  min-height:50px;
+  border-radius:17px;
+  margin-top:18px;
+  font-size:15px;
+  letter-spacing:-.01em;
+}
+
+/* One consistent floating-modal language */
+dialog.center-dialog,
+dialog.action-sheet-dialog{
+  position:fixed!important;
+  inset:0!important;
+  margin:auto!important;
+  padding:0!important;
+  border:0!important;
+  width:min(92vw,500px)!important;
+  max-width:500px!important;
+  height:max-content!important;
+  max-height:calc(100dvh - 40px)!important;
+  overflow:visible!important;
+  background:transparent!important;
+  color-scheme:light;
+}
+dialog.center-dialog::backdrop,
+dialog.action-sheet-dialog::backdrop{
+  background:rgba(10,15,24,.80)!important;
+  backdrop-filter:blur(10px) saturate(.9)!important;
+  animation:naraBackdropIn .20s ease both;
+}
+dialog.center-dialog[open] .modal,
+dialog.center-dialog[open] .confirm-card,
+dialog.action-sheet-dialog[open] .action-sheet{
+  animation:naraModalIn .24s cubic-bezier(.2,.8,.2,1) both!important;
+}
+@keyframes naraBackdropIn{from{opacity:0}to{opacity:1}}
+@keyframes naraModalIn{
+  from{opacity:0;transform:translateY(8px) scale(.975)}
+  to{opacity:1;transform:none}
+}
+.center-dialog .modal,.confirm-card,.action-sheet{
+  position:relative!important;
+  inset:auto!important;
+  width:100%!important;
+  max-width:none!important;
+  box-sizing:border-box;
+  margin:0!important;
+  border-radius:var(--radius-modal)!important;
+  background:rgba(255,255,255,.98)!important;
+  color:#111827!important;
+  box-shadow:var(--shadow-float)!important;
+  border:1px solid rgba(255,255,255,.78)!important;
+}
+.center-dialog .modal,.action-sheet{padding:22px!important}
+.action-sheet{
+  bottom:auto!important;
+  left:auto!important;
+  right:auto!important;
+}
+.sheet-handle{display:none!important}
+.modalhead,.sheet-head{margin:0 0 14px;padding:0}
+.modalhead h3,.sheet-head h3{font-size:22px;line-height:1.15;letter-spacing:-.035em}
+.modalhead small,.sheet-head small,.confirm-card>small{
+  font-size:10px;
+  letter-spacing:.14em;
+  font-weight:900;
+  color:#747d78;
+}
+.square,.sheet-close{
+  border:1px solid #e1e5e3!important;
+  background:#f8faf9!important;
+  color:#111827!important;
+  border-radius:15px!important;
+  font-size:22px!important;
+}
+.action-sheet>button:not(.sheet-close){
+  min-height:64px;
+  padding:13px 4px!important;
+  border-top:1px solid #ecefed!important;
+}
+.action-sheet>button span{font-size:14px!important}
+.action-sheet>button small{font-size:10px!important;line-height:1.45}
+.action-sheet>button:active{background:#f4f6f8!important;border-radius:12px}
+.action-sheet>button.danger span{color:#c53232!important}
+
+/* Confirmation dialog: explicit hierarchy */
+.confirm-card{padding:22px!important}
+.confirm-card h3{font-size:23px;letter-spacing:-.035em;margin:7px 0 8px}
+.confirm-card p{font-size:13px;line-height:1.55;color:#68706c}
+.confirm-actions{gap:10px;margin-top:22px}
+.confirm-actions button{
+  min-height:48px;
+  border-radius:16px;
+  font-size:14px;
+}
+
+/* Target compact mode behaves like a list */
+.target-card.collapsed{
+  padding:8px 0!important;
+  border-radius:16px;
+}
+.target-card.collapsed .target-card-head{min-height:52px}
+.target-card.collapsed .target-collapse{background:#f5f7fa}
+.target-card.collapsed .target-main small{font-size:9px}
+.target-card.collapsed .goaltop{align-items:center}
+.target-card.collapsed .goaltop strong{
+  font-size:12px;
+  line-height:1.35;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.target-card.collapsed .target-detail{display:none!important}
+
+/* Lists and cards */
+.row{padding-block:10px}
+.rowmain strong{font-size:12px;line-height:1.35}
+.rowmain span{line-height:1.45}
+.agenda-row.done{opacity:.66}
+.agenda-row.done .agenda-check{opacity:1}
+
+/* Bottom navigation feels calmer and more stable */
+.bottomnav{
+  background:rgba(255,255,255,.96);
+  backdrop-filter:blur(18px) saturate(1.25);
+  border-top:1px solid rgba(214,220,216,.8);
+}
+.bottomnav .navbtn{
+  min-height:58px;
+  border-radius:14px;
+}
+
+/* Median/WebView contrast lock */
+.median-app dialog.center-dialog,
+.median-app dialog.action-sheet-dialog{color-scheme:light!important}
+.median-app .modal,
+.median-app .confirm-card,
+.median-app .action-sheet{
+  background:#fff!important;color:#111827!important;
+}
+.median-app .confirm-actions button:not(.danger){background:#f5f7f6!important;color:#111827!important}
+.median-app .confirm-actions button.danger{background:#c83c3c!important;color:#fff!important}
+.median-app .action-sheet>button{color:#111827!important}
+
+/* Small screens: vertical form rhythm, no edge crowding */
+@media(max-width:520px){
+  dialog.center-dialog,
+  dialog.action-sheet-dialog{
+    width:calc(100vw - 28px)!important;
+    max-height:calc(100dvh - 28px)!important;
+  }
+  .center-dialog .modal,.confirm-card,.action-sheet{
+    border-radius:24px!important;
+    padding:18px!important;
+  }
+  .formrow{grid-template-columns:1fr!important;gap:0!important}
+  .modalhead h3,.sheet-head h3{font-size:20px}
+  .section-actions{gap:6px}
+}
+
+/* Larger mobile / tablet: keep balanced two-column field layout where useful */
+@media(min-width:521px){
+  .formrow{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(prefers-reduced-motion:reduce){
+  dialog.center-dialog::backdrop,
+  dialog.action-sheet-dialog::backdrop,
+  dialog.center-dialog[open] .modal,
+  dialog.center-dialog[open] .confirm-card,
+  dialog.action-sheet-dialog[open] .action-sheet{
+    animation:none!important;
+  }
+  *{scroll-behavior:auto!important}
+}
