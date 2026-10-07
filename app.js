@@ -12,9 +12,9 @@ if(typeof document!=="undefined"&&document.documentElement&&document.documentEle
 let recognition=null,voiceSession=false,voiceFinal="";
 
 function fresh(){
-  return {profile:{name:""},settings:{reminderLead:30},pending:null,lastCreated:null,messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],reminders:[],notes:[],habits:[],goals:[]};
+  return {profile:{name:""},settings:{reminderLead:30},pending:null,lastCreated:null,messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],liabilities:[],receivables:[],reminders:[],notes:[],habits:[],goals:[]};
 }
-function load(){try{const base=fresh(),saved=JSON.parse(localStorage.getItem(KEY)||"{}")||{};return {...base,...saved,profile:{...base.profile,...(saved.profile||{})},settings:{...base.settings,...(saved.settings||{})}}}catch{return fresh()}}
+function load(){try{const base=fresh(),saved=JSON.parse(localStorage.getItem(KEY)||"{}")||{};return {...base,...saved,profile:{...base.profile,...(saved.profile||{})},settings:{...base.settings,...(saved.settings||{})},liabilities:Array.isArray(saved.liabilities)?saved.liabilities:[],receivables:Array.isArray(saved.receivables)?saved.receivables:[]}}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
 function msg(role,text,result="",actions=[]){state.messages.push({id:uid(),role,text,result,actions:Array.isArray(actions)?actions:[],at:new Date().toISOString()})}
 function firstName(){return ((state.profile&&state.profile.name)||"").trim().split(/\s+/)[0]||""}
@@ -118,6 +118,55 @@ function financeType(t){
   if(/\bfee\b|\bhonor\b/.test(s))return"income";
   return null;
 }
+function debtIntent(t){
+  const s=String(t).toLowerCase();
+  if(/\b(piutang|meminjamkan|pinjemin|pinjamin)\b/.test(s))return"receivable";
+  if(/\b(berhutang|berutang|hutang|utang|pinjam uang|pinjem uang)\b/.test(s))return"liability";
+  return null;
+}
+function counterpartyFromText(t){
+  const m=String(t).match(/(?:dari|ke|kepada|sama)\s+([A-Za-z][A-Za-z .'-]{1,28})/i);
+  return m?sentenceCase(m[1].trim().replace(/\b(sebesar|senilai|rp|ribu|rb|juta|jt)\b.*$/i,"").trim()):"";
+}
+function accountingCashImpact(t){return typeof t.cashImpact==="number"?t.cashImpact:(t.type==="income"?t.amount:t.type==="expense"?-t.amount:0)}
+function cashBalance(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>a+accountingCashImpact(t),0)}
+function openLiabilityTotal(){return state.liabilities.filter(x=>!x.done).reduce((a,x)=>a+(x.remaining??x.amount),0)}
+function openReceivableTotal(){return state.receivables.filter(x=>!x.done).reduce((a,x)=>a+(x.remaining??x.amount),0)}
+function createLiability(source,amount,kind="cash-loan"){
+  const creditor=counterpartyFromText(source),title=creditor?`Hutang kepada ${creditor}`:"Hutang",id=uid();
+  const debt={id,title,creditor,amount,remaining:amount,kind,date:parseDate(source),done:false,sourceText:source,createdAt:new Date().toISOString()};
+  state.liabilities.push(debt);
+  if(kind==="cash-loan")state.transactions.push({id:uid(),type:"financing_in",amount,title:`Pinjaman diterima${creditor?" dari "+creditor:""}`,category:"Debt",date:debt.date,cashImpact:amount,createdAt:new Date().toISOString(),linkedDebtId:id});
+  if(kind==="credit-purchase")state.transactions.push({id:uid(),type:"expense",amount,title:smartFinanceTitle(source,"Pembelian secara hutang"),category:categoryFor(source),date:debt.date,cashImpact:0,createdAt:new Date().toISOString(),linkedDebtId:id});
+  return debt;
+}
+function createReceivable(source,amount){
+  const debtor=counterpartyFromText(source),title=debtor?`Piutang kepada ${debtor}`:"Piutang",id=uid(),date=parseDate(source);
+  const item={id,title,debtor,amount,remaining:amount,date,done:false,sourceText:source,createdAt:new Date().toISOString()};
+  state.receivables.push(item);
+  state.transactions.push({id:uid(),type:"financing_out",amount,title:`Uang dipinjamkan${debtor?" kepada "+debtor:""}`,category:"Receivable",date,cashImpact:-amount,createdAt:new Date().toISOString(),linkedReceivableId:id});
+  return item;
+}
+function payLiabilityFromText(text){
+  const s=String(text).toLowerCase();if(!/\b(bayar|melunasi|lunas)\b.*\b(hutang|utang)\b|\b(hutang|utang)\b.*\b(bayar|lunas)\b/.test(s))return null;
+  const amount=parseAmount(text),open=state.liabilities.filter(x=>!x.done);if(!open.length)return null;
+  const creditor=counterpartyFromText(text).toLowerCase(),item=(creditor&&open.find(x=>(x.creditor||"").toLowerCase().includes(creditor)))||open[0];
+  const paid=Math.min(amount||item.remaining||item.amount,item.remaining||item.amount);item.remaining=Math.max(0,(item.remaining??item.amount)-paid);if(item.remaining===0){item.done=true;item.paidAt=new Date().toISOString()}
+  state.transactions.push({id:uid(),type:"debt_payment",amount:paid,title:`Pembayaran ${item.title}`,category:"Debt",date:localISO(),cashImpact:-paid,createdAt:new Date().toISOString(),linkedDebtId:item.id});
+  return {item,paid};
+}
+function receiveReceivableFromText(text){
+  const s=String(text).toLowerCase();if(!/\b(bayar|dibayar|mengembalikan|balikin|lunas)\b/.test(s)||!state.receivables.some(x=>!x.done))return null;
+  const debtor=counterpartyFromText(text).toLowerCase(),open=state.receivables.filter(x=>!x.done),item=(debtor&&open.find(x=>(x.debtor||"").toLowerCase().includes(debtor)))||null;
+  if(!item)return null;
+  const amount=parseAmount(text),received=Math.min(amount||item.remaining||item.amount,item.remaining||item.amount);item.remaining=Math.max(0,(item.remaining??item.amount)-received);if(item.remaining===0){item.done=true;item.paidAt=new Date().toISOString()}
+  state.transactions.push({id:uid(),type:"receivable_payment",amount:received,title:`Pembayaran ${item.title}`,category:"Receivable",date:localISO(),cashImpact:received,createdAt:new Date().toISOString(),linkedReceivableId:item.id});
+  return {item,received};
+}
+function smartFinanceTitle(text,fallback="Transaksi"){
+  let s=String(text).replace(/\b(aku|saya|tadi|hari ini|sebesar|senilai|rp)\b/gi," ").replace(/\b\d+(?:[.,]\d+)?\s*(?:ribu|rb|k|juta|jt)?\b/gi," ").replace(/\s+/g," ").trim();
+  return sentenceCase(s||fallback);
+}
 function reminderIntent(t){
   const s=t.toLowerCase();
   if(/ingatkan|pengingat|reminder|jadwal|deadline|janji/.test(s))return true;
@@ -183,7 +232,7 @@ function smartTitle(text){
     .replace(/\b(?:jam|pukul)\s*(?:\d{1,2}|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas)(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/gi," ")
     .replace(/\b\d{1,2}(?:[.:]\d{2})?\s*(?:pagi|siang|sore|malam)\b/gi," ")
     .replace(/\s+/g," ").replace(/^[,.:;\-\s]+|[,.:;\-\s]+$/g,"").trim();
-  s=s.replace(/\bnemuin\b/gi,"temui").replace(/\bnemui\b/gi,"temui").replace(/\bketemu\b/gi,"bertemu dengan");
+  s=s.replace(/^(kemudian|terus|habis itu|lalu)\s+/i,"").replace(/\bnemuin\b/gi,"temui").replace(/\bnemui\b/gi,"temui").replace(/\bketemu\b/gi,"bertemu dengan").replace(/\bphoto\b/gi,"Foto");
   if(/^ke\s+/i.test(s))s="Pergi "+s;
   s=s.replace(/\bke\s+([a-z])/g,(m,c)=>"ke "+c.toUpperCase()).replace(/\bmas\s+([a-z])/g,(m,c)=>"Mas "+c.toUpperCase());
   return sentenceCase(s||"Agenda");
@@ -197,7 +246,7 @@ function paraphraseNote(text){
     .replace(/\bnemuin\b/gi,"temui").replace(/\bnemui\b/gi,"temui")
     .replace(/\bketemu(?:an)?\s+(?:sama|dengan)?\s*/gi,"bertemu dengan ")
     .replace(/\s+/g," ").trim();
-  s=s.replace(/\bmas\s+([a-z])/g,(m,c)=>"Mas "+c.toUpperCase()).replace(/\bpak\s+([a-z])/g,(m,c)=>"Pak "+c.toUpperCase());
+  s=s.replace(/^(kemudian|terus|habis itu|lalu)\s+/i,"").replace(/\bmas\s+([a-z])/g,(m,c)=>"Mas "+c.toUpperCase()).replace(/\bpak\s+([a-z])/g,(m,c)=>"Pak "+c.toUpperCase()).replace(/\bphoto\b/gi,"Foto");
   s=sentenceCase(s||text);
   if(s&&!/[.!?]$/.test(s))s+=".";
   return s;
@@ -217,6 +266,12 @@ function clarificationFor(text){
 function resolvePending(text){
   const p=state.pending;if(!p)return null;
   const raw=String(text||"").trim(),low=raw.toLowerCase();
+
+  if(p.kind==="debt-kind"){
+    if(/pinjaman masuk kas|masuk kas|terima uang/.test(low)){const d=createLiability(p.source,p.amount,"cash-loan");state.pending=null;return{text:`Siap. ${d.title} ${rupiah(d.amount)} dicatat sebagai kewajiban. Kas bertambah, tetapi tidak dihitung sebagai pendapatan.`,actions:[]}}
+    if(/hutang pembelian|beli|pembelian/.test(low)){const d=createLiability(p.source,p.amount,"credit-purchase");state.pending=null;return{text:`Siap. ${d.title} ${rupiah(d.amount)} dicatat sebagai kewajiban dan pembelian dicatat sebagai beban tanpa mengurangi kas saat ini.`,actions:[]}}
+    return{text:"Pilih jenis hutangnya dulu ya.",actions:["Pinjaman masuk kas","Hutang pembelian"]}
+  }
 
   if(p.kind==="intent-choice"){
     if(/jadikan catatan|catatan|note/.test(low)){const source=p.source;state.pending=null;return saveExplicitNote(source)}
@@ -271,13 +326,18 @@ function correctRecent(text){
 function explicitTargetIntent(t){return /\b(target|sasaran|tujuan|goal)\b/i.test(t)}
 function targetPeriod(t){const s=String(t).toLowerCase();if(/minggu ini|pekan ini/.test(s))return"weekly";return"monthly"}
 function targetTitle(t){
-  let s=String(t).replace(/\b(target|sasaran|tujuan|goal)\b/gi," ").replace(/\b(bulan ini|minggu ini|pekan ini)\b/gi," ").replace(/^[,.:;\-\s]+|[,.:;\-\s]+$/g," ").replace(/\s+/g," ").trim();
-  s=s.replace(/^(aku|saya)\s+(mau|ingin|harus)\s+/i,"").replace(/^menyelesaikan\s+/i,"Menyelesaikan ");
+  let s=String(t)
+    .replace(/\b(target|sasaran|tujuan|goal)\b/gi," ")
+    .replace(/\b(di\s+)?bulan ini|\bminggu ini|\bpekan ini/gi," ")
+    .replace(/\baku punya\b|\bsaya punya\b|\baku ingin\b|\bsaya ingin\b|\baku mau\b|\bsaya mau\b/gi," ")
+    .replace(/\buntuk\s+(?=menyelesaikan|membuat|mengerjakan|belajar|mencapai)/gi," ")
+    .replace(/^[,.:;\-\s]+|[,.:;\-\s]+$/g," ").replace(/\s+/g," ").trim();
   return sentenceCase(s||"Target baru");
 }
+function defaultTargetSteps(){return Array.from({length:7},(_,i)=>({id:uid(),title:`Langkah ${i+1}`,done:false}))}
 function addTargetFromText(t){
   const period=targetPeriod(t),title=targetTitle(t),month=localISO().slice(0,7),id=uid();
-  const goal={id,title,target:1,progress:0,kind:"manual",period,month,completed:false,createdAt:new Date().toISOString(),sourceText:t};
+  const goal={id,title,target:7,progress:0,kind:"manual",period,month,completed:false,steps:defaultTargetSteps(),createdAt:new Date().toISOString(),sourceText:t};
   state.goals.push(goal);state.lastCreated={type:"target",ids:[id],at:Date.now()};return goal;
 }
 function explicitNoteIntent(t){return /\b(catat|catatkan|note|jadikan catatan|simpan catatan|ide|gagasan|jangan lupa bahwa)\b/i.test(t)}
@@ -286,7 +346,8 @@ function activityIntent(t){return /\b(ke|pergi|berangkat|temui|nemui|nemuin|kete
 function hasDateContext(t){return /\b(hari ini|besok|lusa|nanti|tanggal\s+\d+|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)\b/i.test(t)}
 function hasTimeContext(t){return !!parseTime(t)||/\b(pagi|siang|sore|malam|habis magrib|setelah magrib|sehabis magrib)\b/i.test(t)}
 function classifyIntent(text){
-  const ft=financeType(text),amount=ft?parseAmount(text):null;
+  const debt=debtIntent(text),rawAmount=parseAmount(text),ft=financeType(text),amount=ft?rawAmount:null;
+  if(debt&&rawAmount)return{type:debt,confidence:.99,amount:rawAmount};
   if(ft&&amount)return{type:"finance",confidence:.98};
   if(explicitTargetIntent(text))return{type:"target",confidence:.98};
   if(habitIntent(text))return{type:"habit",confidence:.92};
@@ -323,11 +384,20 @@ function unknownIntentPrompt(text){
 function smartResponse(text){
   const pending=resolvePending(text);if(pending)return pending;
   const corrected=correctRecent(text);if(corrected)return corrected;
+  const debtPaid=payLiabilityFromText(text);
+  if(debtPaid)return{text:`Pembayaran hutang ${rupiah(debtPaid.paid)} sudah dicatat. Sisa hutang: ${rupiah(debtPaid.item.remaining||0)}.`,actions:[]};
+  const receivablePaid=receiveReceivableFromText(text);
+  if(receivablePaid)return{text:`Pembayaran piutang ${rupiah(receivablePaid.received)} sudah masuk kas. Sisa piutang: ${rupiah(receivablePaid.item.remaining||0)}.`,actions:[]};
   const paidBill=markPaidBillFromText(text);
   if(paidBill)return{text:`Sip, tagihan “${paidBill.title}” sudah lunas. ${rupiah(paidBill.amount)} juga sudah masuk ke pengeluaran.`,actions:[]};
   const completedHabit=markHabitFromText(text);
   if(completedHabit)return{text:`Bagus, “${completedHabit.name}” sudah aku tandai selesai untuk hari ini.`,actions:[]};
   const intent=classifyIntent(text);
+  if(intent.type==="liability"){
+    state.pending={kind:"debt-kind",source:text,amount:intent.amount};
+    return{text:`Aku tangkap kamu berhutang ${rupiah(intent.amount)}. Ini uang pinjaman yang masuk ke kas, atau hutang karena membeli sesuatu?`,actions:["Pinjaman masuk kas","Hutang pembelian"]};
+  }
+  if(intent.type==="receivable"){const r=createReceivable(text,intent.amount);return{text:`Siap. ${r.title} sebesar ${rupiah(r.amount)} dicatat sebagai piutang/aset, bukan pengeluaran.`,actions:[]}}
   if(intent.type==="unknown")return unknownIntentPrompt(text);
   if(intent.type==="target"){const g=addTargetFromText(text);return{text:`Siap. Aku jadikan target ${g.period==="weekly"?"minggu ini":"bulan ini"}: “${g.title}”.`,actions:[]}}
   if(intent.type==="agenda-incomplete"){
@@ -423,14 +493,14 @@ function renderChat(showTyping=false){
   const s=$("#chatStream");s.innerHTML=state.messages.map(m=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}${m.actions&&m.actions.length?`<div class="chat-actions">${m.actions.map(a=>`<button type="button" data-chat-choice="${esc(a)}">${esc(a)}</button>`).join("")}</div>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing"><i></i><i></i><i></i></span></div>`:"");
   syncChatSafeArea();
 }
-function txTotals(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>{a[t.type]+=t.amount;return a},{income:0,expense:0})}
+function txTotals(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>{if(t.type==="income")a.income+=t.amount;if(t.type==="expense")a.expense+=t.amount;return a},{income:0,expense:0})}
 function renderToday(){
-  const today=localISO(),agenda=[...state.reminders].filter(r=>!r.done).sort((a,b)=>(a.date+(a.time||"99:99")).localeCompare(b.date+(b.time||"99:99"))).slice(0,8),habits=state.habits;
+  const today=localISO(),agenda=[...state.reminders].sort((a,b)=>(Number(a.done)-Number(b.done))||(a.date+(a.time||"99:99")).localeCompare(b.date+(b.time||"99:99"))).slice(0,12),activeAgenda=agenda.filter(r=>!r.done),habits=state.habits;
   $("#agendaCount").textContent=agenda.length;$("#habitCount").textContent=habits.length;
-  $("#focusText").textContent=(agenda[0]&&agenda[0].title)||(habits.length?"Jaga konsistensi habit hari ini.":"Belum ada agenda mendesak.");
+  $("#focusText").textContent=(activeAgenda[0]&&activeAgenda[0].title)||(habits.length?"Jaga konsistensi habit hari ini.":"Belum ada agenda mendesak.");
   const d=new Date();$("#dateBadge").innerHTML=`<b>${d.getDate()}</b><br>${new Intl.DateTimeFormat("id-ID",{month:"short"}).format(d)}`;
   $("#todayAgenda").classList.toggle("empty",!agenda.length);
-  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row agenda-row" data-agenda-id="${r.id}"><button class="agenda-check reminder-done" data-id="${r.id}" aria-label="Tandai agenda selesai"><svg><use href="#ico-check-circle"/></svg></button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}${r.amount?" · "+rupiah(r.amount):""} · ingatkan ${r.leadMinutes||state.settings.reminderLead||30} mnt sebelumnya</span></div><button class="agenda-menu-trigger" data-id="${r.id}" aria-label="Opsi agenda"><svg><use href="#ico-more"/></svg></button></div>`).join(""):"Belum ada agenda mendatang.";
+  $("#todayAgenda").innerHTML=agenda.length?agenda.map(r=>`<div class="row agenda-row ${r.done?"done":""}" data-agenda-id="${r.id}"><button class="agenda-check reminder-done ${r.done?"done":""}" data-id="${r.id}" aria-label="${r.done?"Buka kembali agenda":"Tandai agenda selesai"}"><svg><use href="#ico-check-circle"/></svg></button><div class="rowmain"><strong>${esc(r.title)}</strong><span>${r.done?`Selesai${r.completedAt?" · "+new Intl.DateTimeFormat("id-ID",{hour:"2-digit",minute:"2-digit"}).format(new Date(r.completedAt)):""}`:`${r.time||"Tanpa jam"} · ${r.date===today?"Hari ini":fmtDate(r.date)}${r.amount?" · "+rupiah(r.amount):""} · ingatkan ${r.leadMinutes||state.settings.reminderLead||30} mnt sebelumnya`}</span></div><button class="agenda-menu-trigger" data-id="${r.id}" aria-label="Opsi agenda"><svg><use href="#ico-more"/></svg></button></div>`).join(""):"Belum ada agenda mendatang.";
   $("#todayHabits").classList.toggle("empty",!habits.length);
   $("#todayHabits").innerHTML=habits.length?habits.map(h=>{const done=h.doneDates.includes(today);return `<div class="row"><button class="rowicon habit-toggle" data-id="${h.id}" aria-label="Tandai kebiasaan">${done?"✓":"○"}</button><div class="rowmain"><strong>${esc(h.name)}</strong><span>${h.period==="weekly"?h.target+"× per minggu":"Setiap hari"}</span></div><span class="rowvalue">${done?"Selesai":""}</span></div>`}).join(""):"Belum ada kebiasaan yang kamu pantau.";
   const total=txTotals(t=>t.date===today);$("#todayIncome").textContent=rupiah(total.income);$("#todayExpense").textContent=rupiah(total.expense);$("#todayNet").textContent=rupiah(total.income-total.expense);
@@ -438,9 +508,9 @@ function renderToday(){
 function row(icon,title,sub,value,klass=""){return `<div class="row"><div class="rowicon">${icon}</div><div class="rowmain"><strong>${esc(title)}</strong><span>${esc(sub)}</span></div>${value?`<div class="rowvalue ${klass}">${esc(value)}</div>`:""}</div>`}
 function renderFinance(){
   const total=txTotals(),month=localISO().slice(0,7),mt=txTotals(t=>t.date.startsWith(month));
-  $("#balanceTotal").textContent=rupiah(total.income-total.expense);$("#monthIncome").textContent=rupiah(mt.income);$("#monthExpense").textContent=rupiah(mt.expense);$("#sideBalance").textContent=rupiah(total.income-total.expense);
+  $("#balanceTotal").textContent=rupiah(cashBalance());$("#monthIncome").textContent=rupiah(mt.income);$("#monthExpense").textContent=rupiah(mt.expense);$("#sideBalance").textContent=rupiah(cashBalance());
   const recent=[...state.transactions].sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).slice(0,12);
-  $("#transactionList").classList.toggle("empty",!recent.length);$("#transactionList").innerHTML=recent.length?recent.map(t=>`<div class="row"><div class="rowicon">${t.type==="income"?"+":"−"}</div><div class="rowmain"><strong>${esc(t.title)}</strong><span>${esc(categoryLabel(t.category))} · ${fmtDate(t.date)}</span></div><div class="rowvalue ${t.type==="income"?"good":"bad"}">${t.type==="income"?"+":"−"} ${rupiah(t.amount)}</div><div class="row-actions"><button class="edit-action edit-tx" data-id="${t.id}" aria-label="Edit transaksi"><svg><use href="#ico-edit"/></svg></button><button class="rowaction delete-tx" data-id="${t.id}" aria-label="Hapus transaksi">×</button></div></div>`).join(""):"Belum ada transaksi.";
+  $("#transactionList").classList.toggle("empty",!recent.length);$("#transactionList").innerHTML=recent.length?recent.map(t=>`<div class="row"><div class="rowicon">${t.type==="income"?"+":"−"}</div><div class="rowmain"><strong>${esc(t.title)}</strong><span>${esc(categoryLabel(t.category))} · ${fmtDate(t.date)}</span></div><div class="rowvalue ${accountingCashImpact(t)>0?"good":accountingCashImpact(t)<0?"bad":""}">${accountingCashImpact(t)>0?"+":accountingCashImpact(t)<0?"−":"•"} ${rupiah(t.amount)}</div><div class="row-actions"><button class="edit-action edit-tx" data-id="${t.id}" aria-label="Edit transaksi"><svg><use href="#ico-edit"/></svg></button><button class="rowaction delete-tx" data-id="${t.id}" aria-label="Hapus transaksi">×</button></div></div>`).join(""):"Belum ada transaksi.";
   const cats={};state.transactions.filter(t=>t.type==="expense"&&t.date.startsWith(month)).forEach(t=>cats[t.category]=(cats[t.category]||0)+t.amount);
   const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...entries.map(x=>x[1])),sum=entries.reduce((a,x)=>a+x[1],0);
   $("#categoryBreakdown").classList.toggle("empty",!entries.length);$("#categoryBreakdown").innerHTML=entries.length?entries.map(([k,v])=>`<div class="cat"><span>${esc(categoryLabel(k))}</span><b>${rupiah(v)}</b><div class="bar"><i style="width:${Math.round(v/max*100)}%"></i></div></div>`).join(""):"Belum ada data.";
@@ -452,7 +522,13 @@ function renderFinance(){
   const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const iso=localISO(d),tt=txTotals(t=>t.date===iso);days.push({d,iso,...tt})}
   const peak=Math.max(1,...days.flatMap(x=>[x.income,x.expense]));$("#cashflowTrend").textContent=rupiah(days.reduce((a,x)=>a+x.income-x.expense,0));
   $("#cashflowChart").innerHTML=days.map(x=>`<div class="cash-day"><div class="cash-bars"><i class="cash-bar income" style="height:${Math.max(2,x.income/peak*100)}%"></i><i class="cash-bar expense" style="height:${Math.max(2,x.expense/peak*100)}%"></i></div><small>${new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(x.d).slice(0,3)}</small></div>`).join("");
+  const debts=state.liabilities.filter(x=>!x.done),receivables=state.receivables.filter(x=>!x.done);
+  $("#liabilityTotal").textContent=rupiah(openLiabilityTotal());$("#liabilityCount").textContent=debts.length+" hutang";
+  $("#receivableTotal").textContent=rupiah(openReceivableTotal());$("#receivableCount").textContent=receivables.length+" piutang";
+  $("#liabilityList").classList.toggle("empty",!debts.length);$("#liabilityList").innerHTML=debts.length?debts.slice(0,4).map(x=>`<div><span>${esc(x.title)}</span><b>${rupiah(x.remaining??x.amount)}</b></div>`).join(""):"Belum ada hutang aktif.";
+  $("#receivableList").classList.toggle("empty",!receivables.length);$("#receivableList").innerHTML=receivables.length?receivables.slice(0,4).map(x=>`<div><span>${esc(x.title)}</span><b>${rupiah(x.remaining??x.amount)}</b></div>`).join(""):"Belum ada piutang aktif.";
 }
+
 function renderNotes(){
   const q=(($("#noteSearch")&&$("#noteSearch").value)||"").toLowerCase(),notes=[...state.notes].filter(n=>(n.title+" "+n.body).toLowerCase().includes(q)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   $("#notesGrid").innerHTML=notes.length?notes.map(n=>`<article class="note"><div class="note-actions"><button class="edit-action edit-note" data-id="${n.id}" aria-label="Edit catatan"><svg><use href="#ico-edit"/></svg></button><button class="cardaction delete-note" data-id="${n.id}" aria-label="Hapus catatan">×</button></div><h3>${esc(n.title)}</h3><p>${esc(n.body)}</p><div class="notemeta">${fmtDate(n.date)}</div></article>`).join(""):`<div class="empty">Belum ada note.</div>`;
@@ -467,11 +543,12 @@ function goalProgress(g){
     const days=h.doneDates.filter(x=>x.startsWith(g.month)).length;
     return Math.min(100,Math.round(days/Math.max(1,g.target)*100));
   }
+  if(Array.isArray(g.steps)&&g.steps.length){const done=g.steps.filter(s=>s.done).length;return Math.round(done/g.steps.length*100)}
   return g.progress||0;
 }
 function renderGoals(){
   const month=localISO().slice(0,7),goals=state.goals.filter(g=>g.month===month);$("#goalMonth").textContent=new Intl.DateTimeFormat("id-ID",{month:"long"}).format(new Date());
-  $("#goalsList").classList.toggle("empty",!goals.length);$("#goalsList").innerHTML=goals.length?goals.map(g=>{const p=goalProgress(g);return `<div class="goal"><div class="goaltop"><strong>${esc(g.title)}</strong><span>${p}%</span></div><div class="progress"><i style="width:${p}%"></i></div></div>`}).join(""):"Belum ada target bulan ini.";
+  $("#goalsList").classList.toggle("empty",!goals.length);$("#goalsList").innerHTML=goals.length?goals.map(g=>{if(!Array.isArray(g.steps)&&g.kind==="manual")g.steps=defaultTargetSteps();const p=g.completed?100:goalProgress(g),steps=(g.steps||[]).map((s,i)=>`<button class="target-step ${s.done?"done":""}" data-goal="${g.id}" data-step="${s.id}"><span>${s.done?"✓":i+1}</span><b>${esc(s.title||("Langkah "+(i+1)))}</b></button>`).join("");return `<div class="goal target-card ${g.completed?"done":""}"><div class="target-card-head"><div class="target-main"><div class="goaltop"><strong>${esc(g.title)}</strong><span>${p}%</span></div><small>${g.period==="weekly"?"Minggu ini":"Bulan ini"}</small></div><button class="rowaction delete-target" data-id="${g.id}" aria-label="Hapus target">×</button></div><div class="progress"><i style="width:${p}%"></i></div>${steps?`<div class="target-steps">${steps}</div>`:""}<button class="target-done-button ${g.completed?"done":""}" data-target-done="${g.id}">${g.completed?"Selesai ✓":"Done"}</button></div>`}).join(""):"Belum ada target bulan ini.";
   const days=["S","S","R","K","J","S","M"];$("#habitWeek").textContent="Minggu ini";
   $("#habitTracker").classList.toggle("empty",!state.habits.length);
   $("#habitTracker").innerHTML=state.habits.length?state.habits.map(h=>{
@@ -502,7 +579,7 @@ function renderAccount(){
   if($("#backupTxCount"))$("#backupTxCount").textContent=state.transactions.length;
   if($("#backupNoteCount"))$("#backupNoteCount").textContent=state.notes.length;
   if($("#backupReminderCount"))$("#backupReminderCount").textContent=state.reminders.length;
-  if($("#backupHabitCount"))$("#backupHabitCount").textContent=state.habits.length;
+  if($("#backupHabitCount"))$("#backupHabitCount").textContent=state.habits.length;if($("#backupDebtCount"))$("#backupDebtCount").textContent=state.liabilities.length+state.receivables.length;
 }
 function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile();renderAccount();renderSettings()}
 
@@ -524,7 +601,7 @@ function quickSubmit(e){
   if(["expense","income"].includes(type)){const amount=Number($("#quickAmount").value.replace(/\D/g,""));if(!amount)return alert("Masukkan nominal.");state.transactions.push({id:uid(),type,amount,category:categoryFor(title),title,date:$("#quickDate").value||localISO(),createdAt:new Date().toISOString()})}
   if(type==="reminder")state.reminders.push({id:uid(),title,date:$("#quickDate").value||localISO(),time:$("#quickTime").value,done:false,leadMinutes:Number($("#quickReminderLead").value)||state.settings.reminderLead||30,notified:false});
   if(type==="note")state.notes.push({id:uid(),title:title.slice(0,48),body:title,date:localISO(),createdAt:new Date().toISOString()});
-  if(type==="target")state.goals.push({id:uid(),title,target:1,progress:0,kind:"manual",period:$("#quickTargetPeriod").value||"monthly",month:localISO().slice(0,7),completed:false,createdAt:new Date().toISOString()});
+  if(type==="target")state.goals.push({id:uid(),title:targetTitle(title),target:7,progress:0,kind:"manual",period:$("#quickTargetPeriod").value||"monthly",month:localISO().slice(0,7),completed:false,steps:defaultTargetSteps(),createdAt:new Date().toISOString()});
   if(type==="habit"){const f=$("#quickFrequency").value,spec={name:title,period:f==="daily"?"daily":"weekly",target:f==="3-week"?3:1};addHabit(spec,true)}
   $("#quickForm").reset();$("#quickDate").value=localISO();$("#quickDialog").close();save();
 }
@@ -540,7 +617,7 @@ function closeAgendaSheet(){agendaSheetId=null;if($("#agendaSheet").open)$("#age
 function runAgendaSheetAction(action){
   const id=agendaSheetId,r=state.reminders.find(x=>x.id===id);if(!r)return closeAgendaSheet();
   if(action==="edit"){closeAgendaSheet();openEditor("reminder",id);return}
-  if(action==="done"){r.done=true;closeAgendaSheet();save();return}
+  if(action==="done"){r.done=!r.done;r.completedAt=r.done?new Date().toISOString():null;closeAgendaSheet();save();return}
   if(action==="delete"&&confirm("Hapus agenda ini?")){state.reminders=state.reminders.filter(x=>x.id!==id);closeAgendaSheet();save()}
 }
 
@@ -616,10 +693,11 @@ document.addEventListener("click",e=>{
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}const choice=e.target.closest("[data-chat-choice]");if(choice)sendText(choice.dataset.chatChoice);
   const act=e.target.closest("[data-action]");if(act){const map={quick:"expense",transaction:"expense",note:"note",target:"target",habit:"habit"};openQuick(map[act.dataset.action])}
   const ht=e.target.closest(".habit-toggle");if(ht){const h=state.habits.find(x=>x.id===ht.dataset.id),d=localISO();if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
-  const done=e.target.closest(".reminder-done");if(done){const r=state.reminders.find(x=>x.id===done.dataset.id);if(r){r.done=true;save()}}
+  const done=e.target.closest(".reminder-done");if(done){const r=state.reminders.find(x=>x.id===done.dataset.id);if(r){r.done=!r.done;r.completedAt=r.done?new Date().toISOString():null;save()}}
   const delTx=e.target.closest(".delete-tx");if(delTx){state.transactions=state.transactions.filter(x=>x.id!==delTx.dataset.id);save()}
   const delNote=e.target.closest(".delete-note");if(delNote){state.notes=state.notes.filter(x=>x.id!==delNote.dataset.id);save()}
-  const targetCheck=e.target.closest(".target-check");if(targetCheck){const g=state.goals.find(x=>x.id===targetCheck.dataset.targetId);if(g){g.completed=!g.completed;g.progress=g.completed?100:0;save()}}
+  const targetStep=e.target.closest(".target-step");if(targetStep){const g=state.goals.find(x=>x.id===targetStep.dataset.goal),s=g&&g.steps&&g.steps.find(x=>x.id===targetStep.dataset.step);if(s){s.done=!s.done;g.completed=g.steps.every(x=>x.done);g.progress=goalProgress(g);save()}}
+  const targetDone=e.target.closest("[data-target-done]");if(targetDone){const g=state.goals.find(x=>x.id===targetDone.dataset.targetDone);if(g){g.completed=!g.completed;if(Array.isArray(g.steps))g.steps.forEach(s=>s.done=g.completed);g.progress=g.completed?100:0;save()}}
   const delTarget=e.target.closest(".delete-target");if(delTarget&&confirm("Hapus target ini?")){state.goals=state.goals.filter(x=>x.id!==delTarget.dataset.id);save()}
   const delHabit=e.target.closest(".delete-habit");if(delHabit){const h=state.habits.find(x=>x.id===delHabit.dataset.id);if(h){state.habits=state.habits.filter(x=>x.id!==h.id);state.goals=state.goals.filter(g=>g.habitName!==h.name);save()}}
   const dot=e.target.closest(".daydot");if(dot){const h=state.habits.find(x=>x.id===dot.dataset.habit),d=dot.dataset.date;if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}

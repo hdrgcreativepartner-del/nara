@@ -31,4 +31,7 @@ assert.ok(html.includes('id="agendaSheet"'),"Agenda actions must use a global ac
 assert.ok(js.includes("runAgendaSheetAction")&&html.includes("data-sheet-action"),"Agenda action sheet must be wired");
 assert.ok(html.includes('id="ico-check-circle"'),"Agenda completion must use a clear check icon");
 assert.ok(js.includes("explicitTargetIntent"),"Target must be a first-class intent");
-console.log("NARA UI contract passed: agenda action sheet, clear check, target intent, smart choices, responsive layout.");
+assert.ok(html.includes('id="liabilityTotal"')&&html.includes('id="receivableTotal"'),"Finance page must expose debt and receivable summaries");
+assert.ok(js.includes("defaultTargetSteps")&&css.includes(".target-steps"),"Targets must support a 7-step checklist");
+assert.ok(css.includes(".agenda-row.done"),"Completed agendas must stay visible with a completed state");
+console.log("NARA UI contract passed: smart accounting, target checklist, persistent completed agenda, responsive action sheet.");
