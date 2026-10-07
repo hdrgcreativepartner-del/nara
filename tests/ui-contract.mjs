@@ -23,5 +23,7 @@ assert.ok(html.includes('id="conversationScroll"'),"Intro and messages must shar
 assert.ok(js.includes('$("#conversationScroll")'),"Chat auto-scroll must target the conversation surface");
 assert.ok(html.includes("Powered by <b>HDRG Creative Partner</b>"),"Account footer branding must exist");
 assert.ok(css.includes("overflow-x:hidden"),"Mobile pages must not overflow horizontally");
+assert.ok(css.includes("#page-chat .profile-prompt")&&css.includes("display:grid!important"),"Profile prompt must remain a grid on mobile");
+assert.ok(css.includes("#page-chat .chips")&&css.includes("flex-wrap:nowrap!important"),"Prompt chips must stay single-row horizontal scroll");
 assert.ok(css.includes(".chat-actions"),"Assistant clarification choices must wrap responsively");
 console.log("NARA UI contract passed: smart choices, responsive wrap, scrollable intro, fixed composer, account footer and editable data.");
