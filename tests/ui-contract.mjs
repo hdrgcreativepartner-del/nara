@@ -22,4 +22,6 @@ assert.ok(css.includes("--chat-safe-bottom")||css.includes("scroll-padding-botto
 assert.ok(html.includes('id="conversationScroll"'),"Intro and messages must share one scroll surface");
 assert.ok(js.includes('$("#conversationScroll")'),"Chat auto-scroll must target the conversation surface");
 assert.ok(html.includes("Powered by <b>HDRG Creative Partner</b>"),"Account footer branding must exist");
-console.log("NARA UI contract passed: scrollable intro, fixed composer, account footer, voice mode, finance charts, editable data, reset.");
+assert.ok(css.includes("overflow-x:hidden"),"Mobile pages must not overflow horizontally");
+assert.ok(css.includes(".chat-actions"),"Assistant clarification choices must wrap responsively");
+console.log("NARA UI contract passed: smart choices, responsive wrap, scrollable intro, fixed composer, account footer and editable data.");
