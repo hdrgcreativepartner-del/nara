@@ -88,8 +88,8 @@ function financeType(t){
 }
 function reminderIntent(t){
   const s=t.toLowerCase();
-  if(/ingatkan|pengingat|reminder|meeting|rapat|jadwal|deadline|janji|jemput|berangkat|telepon|hubungi|kirim|loading|pemasangan|pasang|review|temui|nemui/.test(s))return true;
-  return looksLikeSchedule(t)||/\b(besok|lusa|tanggal\s+\d+)\b/.test(s)&&/\b(pergi|ke|bayar|beli|ambil|antar|datang|ketemu|temu|kerja|acara)\b/.test(s);
+  if(/ingatkan|pengingat|reminder|jadwal|deadline|janji/.test(s))return true;
+  return looksLikeSchedule(t);
 }
 function noteIntent(t){return /catat|note|ide|gagasan|jangan lupa bahwa/.test(t.toLowerCase())}
 function habitIntent(t){return /rutin|habit|kebiasaan|kali seminggu|setiap hari|olahraga|sholat|salat|belajar hal baru|belajar\s+\d+\s*menit/.test(t.toLowerCase())}
@@ -170,7 +170,7 @@ function paraphraseNote(text){
   return s;
 }
 function looksLikeSchedule(text){
-  const s=String(text).toLowerCase(),temporal=/\b(hari ini|besok|lusa|nanti|pagi|siang|sore|malam|tanggal\s+\d+)\b/.test(s);
+  const s=String(text).toLowerCase(),temporal=/\b(hari ini|besok|lusa|nanti|pagi|siang|sore|malam|tanggal\s+\d+)\b/.test(s)||!!parseTime(text);
   const activity=/\b(ke|pergi|berangkat|temui|nemui|nemuin|ketemu|meeting|rapat|review|loading|pasang|pemasangan|acara|jemput|antar|kirim|bayar|ambil|datang|kerja)\b/.test(s);
   return temporal&&activity;
 }
