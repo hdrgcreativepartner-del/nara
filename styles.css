@@ -437,3 +437,22 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .agenda-row.done{opacity:.72}.agenda-row.done .rowmain strong{text-decoration:line-through;color:#69716c}.agenda-check.done{background:#2563eb;color:#fff;border-color:#2563eb}.agenda-check.done svg{stroke:#fff}
 .target-card{display:block!important;padding:15px 0}.target-card-head{display:flex;align-items:flex-start;gap:10px}.target-card-head .target-main{flex:1}.target-steps{display:grid;grid-template-columns:1fr;gap:6px;margin:12px 0}.target-step{display:flex;align-items:center;gap:9px;border:0;background:#f7f8fa;border-radius:11px;padding:8px 10px;text-align:left;color:#4b5350}.target-step span{width:24px;height:24px;border:1px solid #cbd1cd;border-radius:8px;display:grid;place-items:center;font-size:9px;flex:0 0 auto}.target-step b{font-size:10px;font-weight:700}.target-step.done{background:#eef4ff;color:#2155bd}.target-step.done span{background:#2563eb;border-color:#2563eb;color:#fff}.target-done-button{width:100%;border:0;background:#173f24;color:#fff;border-radius:12px;padding:11px;font-size:11px;font-weight:850;margin-top:4px}.target-done-button.done{background:#e9eef8;color:#2454b8}
 @media(max-width:620px){.liability-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* NARA v5.6 — user-defined target steps */
+.target-card{display:block!important}
+.target-card-head{display:flex;align-items:flex-start;gap:8px}
+.target-card-head .target-main{flex:1;min-width:0}
+.target-steps{display:grid;gap:7px;margin:12px 0}
+.target-empty-steps{font-size:10px;color:var(--muted);padding:10px 2px}
+.target-step-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:9px;align-items:center;background:#f7f8fa;border-radius:12px;padding:8px 9px}
+.target-step-row.done{background:#eef4ff;color:#2454b8}
+.target-step-check{border:0;background:transparent;padding:0}
+.target-step-check span{width:26px;height:26px;border:1px solid #cbd1cd;border-radius:8px;display:grid;place-items:center;font-size:9px;background:#fff}
+.target-step-row.done .target-step-check span{background:#2563eb;border-color:#2563eb;color:#fff}
+.target-step-copy{font-size:11px;font-weight:700;overflow-wrap:anywhere}
+.target-step-delete{border:0;background:transparent;color:#a4aaa6;font-size:18px;padding:3px 5px}
+.target-add-step{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;margin:10px 0}
+.target-add-step input{min-width:0;border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px 11px;font-size:11px;outline:0}
+.target-add-step input:focus{border-color:#9eb9f3;box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+.target-add-step button{border:0;border-radius:11px;background:#eef3ff;color:#2454b8;font-size:10px;font-weight:850;padding:0 12px;white-space:nowrap}
+@media(max-width:420px){.target-add-step{grid-template-columns:minmax(0,1fr)}.target-add-step button{height:38px}}

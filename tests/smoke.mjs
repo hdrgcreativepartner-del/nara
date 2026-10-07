@@ -217,5 +217,20 @@ assert.equal(get("cashBalance()"),-50000);
 
 reset();
 run("Target bulan ini, menyelesaikan Portofolio HDRG Creative Partner");
-assert.equal(get("state.goals[0].steps.length"),7);
+assert.equal(get("state.goals[0].steps.length"),0);
 assert.equal(get("state.goals[0].title"),"Menyelesaikan Portofolio HDRG Creative Partner");
+
+reset();
+run("Target bulan ini, menyelesaikan Portofolio HDRG Creative Partner");
+assert.equal(get("state.goals[0].title"),"Menyelesaikan Portofolio HDRG Creative Partner");
+assert.equal(get("state.goals[0].steps.length"),0);
+
+const saturday=vm.runInContext(`parseDate("Sabtu depan")`,context);
+assert.equal(saturday,"2026-10-10");
+
+reset();
+run("Sabtu depan jam 9 malam meeting dengan Andi");
+assert.equal(get("state.reminders.length"),1);
+assert.equal(get("state.reminders[0].date"),"2026-10-10");
+assert.equal(get("state.reminders[0].time"),"21:00");
+assert.match(get("state.reminders[0].title"),/Meeting dengan Andi/i);
