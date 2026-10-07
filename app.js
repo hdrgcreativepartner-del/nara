@@ -649,7 +649,15 @@ function closeConfirm(){confirmAction=null;if($("#confirmDialog").open)$("#confi
 
 function openAgendaSheet(id){
   const r=state.reminders.find(x=>x.id===id);if(!r)return;
-  agendaSheetId=id;$("#agendaSheetTitle").textContent=r.title;$("#agendaSheet").showModal();
+  agendaSheetId=id;$("#agendaSheetTitle").textContent=r.title;
+  const doneBtn=document.querySelector('[data-sheet-action="done"]');
+  if(doneBtn){
+    const label=doneBtn.querySelector("span"),hint=doneBtn.querySelector("small");
+    if(label)label.textContent=r.done?"Buka kembali":"Tandai selesai";
+    if(hint)hint.textContent=r.done?"Kembalikan agenda ke status aktif":"Tandai agenda ini sebagai selesai";
+  }
+  if($("#agendaSheet").open)$("#agendaSheet").close();
+  $("#agendaSheet").showModal();
 }
 function closeAgendaSheet(){agendaSheetId=null;if($("#agendaSheet").open)$("#agendaSheet").close()}
 function runAgendaSheetAction(action){
@@ -660,6 +668,8 @@ function runAgendaSheetAction(action){
 }
 
 function openEditor(kind,id){
+  if($("#agendaSheet")&&$("#agendaSheet").open)$("#agendaSheet").close();
+  if($("#confirmDialog")&&$("#confirmDialog").open)$("#confirmDialog").close();
   let item=null;
   if(kind==="note")item=state.notes.find(x=>x.id===id);
   if(kind==="tx")item=state.transactions.find(x=>x.id===id);

@@ -46,4 +46,5 @@ assert.ok(css.includes("dialog.action-sheet-dialog")&&css.includes("margin:auto!
 assert.ok(css.includes("rgba(10,15,24,.80)"),"Modal backdrop must use an 80% dim layer");
 assert.ok(css.includes("@media(prefers-reduced-motion:reduce)"),"Motion must respect reduced-motion preference");
 assert.ok(css.includes("--tap:44px"),"Core controls must preserve comfortable touch targets");
-console.log("NARA UI contract passed: centered floating modals, 80% backdrop, accessible motion, touch targets, minimized targets, Median contrast.");
+assert.ok(js.includes('r.done?"Buka kembali":"Tandai selesai"'),"Agenda action must reflect completion state");
+console.log("NARA UI contract passed: centered floating modals, contextual agenda action, 80% backdrop, accessible motion, touch targets, minimized targets, Median contrast.");
