@@ -719,7 +719,7 @@ function renderAccount(){
 function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile();renderAccount();renderSettings()}
 
 function go(page){
-  $$(".page").forEach(x=>x.classList.toggle("active",x.id===`page-${page}`));$$(".navbtn[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
+  $(".page").forEach(x=>x.classList.toggle("active",x.id===`page-${page}`));$(".navbtn[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));updatePageFabVisibility();
   const pageNames={chat:"NARA",today:"Hari ini",finance:"Keuangan",notes:"Catatan",goals:"Target",account:"Akun"};$("#pageTitle").textContent=pageNames[page]||"NARA";
   const main=$(".main");if(main&&innerWidth>=980)main.scrollTo({top:0,behavior:"smooth"});else window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -970,19 +970,37 @@ document.addEventListener("click",e=>{
   const delHabit=e.target.closest(".delete-habit");if(delHabit){const h=state.habits.find(x=>x.id===delHabit.dataset.id);if(h){state.habits=state.habits.filter(x=>x.id!==h.id);state.goals=state.goals.filter(g=>g.habitName!==h.name);save()}}
   const dot=e.target.closest(".daydot");if(dot){const h=state.habits.find(x=>x.id===dot.dataset.habit),d=dot.dataset.date;if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
 });
-function initPageFabs(){
+function activePageName(){
+  const p=document.querySelector(".page.active");
+  return p&&p.id?p.id.replace(/^page-/,""):"chat";
+}
+function updatePageFabVisibility(){
   if(typeof document==="undefined")return;
+  const active=activePageName();
+  document.querySelectorAll("body > .page-fab").forEach(fab=>{
+    const owner=fab.dataset.pageOwner||"";
+    fab.hidden=owner!==active;
+    fab.setAttribute("aria-hidden",owner===active?"false":"true");
+  });
+}
+function initPageFabs(){
+  if(typeof document==="undefined"||!document.body)return;
   document.querySelectorAll(".page-fab").forEach(fab=>{
+    if(!fab.dataset.pageOwner){
+      const ownerPage=fab.closest(".page");
+      if(ownerPage)fab.dataset.pageOwner=ownerPage.id.replace(/^page-/,"");
+    }
+    if(fab.parentElement!==document.body)document.body.appendChild(fab);
     if(fab.dataset.fabReady==="1")return;
     fab.dataset.fabReady="1";
-    let dragging=false,moved=false,startX=0,startY=0,baseRect=null,lastX=0,lastY=0;
+    let dragging=false,moved=false,startX=0,startY=0,baseRect=null;
 
     const home=()=>{
       fab.classList.remove("dragging");
       fab.classList.add("returning");
-      fab.style.transform="translate3d(0,0,0)";
+      fab.style.transform="translate3d(0,0,0) scale(1)";
       setTimeout(()=>fab.classList.remove("returning"),420);
-      dragging=false;lastX=0;lastY=0;
+      dragging=false;
     };
 
     fab.addEventListener("pointerdown",e=>{
@@ -1001,8 +1019,7 @@ function initPageFabs(){
       const edge=10,vw=(window.innerWidth||document.documentElement.clientWidth||360),vh=(window.innerHeight||document.documentElement.clientHeight||800);
       dx=clamp(dx,-baseRect.left+edge,vw-baseRect.right-edge);
       dy=clamp(dy,-baseRect.top+edge,vh-baseRect.bottom-edge);
-      lastX=dx;lastY=dy;
-      fab.style.transform=`translate3d(${dx}px,${dy}px,0) scale(1.04)`;
+      fab.style.transform=`translate3d(${dx}px,${dy}px,0) scale(1.06)`;
       e.preventDefault();
     });
 
@@ -1013,13 +1030,11 @@ function initPageFabs(){
     };
     fab.addEventListener("pointerup",finish);
     fab.addEventListener("pointercancel",finish);
-
     fab.addEventListener("click",e=>{
-      if(moved){
-        e.preventDefault();e.stopImmediatePropagation();moved=false;
-      }
+      if(moved){e.preventDefault();e.stopImmediatePropagation();moved=false}
     },true);
   });
+  updatePageFabVisibility();
 }
 
 document.addEventListener("submit",e=>{const f=e.target.closest("[data-goal-form]");if(!f)return;e.preventDefault();const id=f.dataset.goalForm,g=state.goals.find(x=>x.id===id),input=f.querySelector("[data-goal-input]"),title=(input&&input.value||"").trim();if(g&&title){g.steps=g.steps||[];g.steps.push({id:uid(),title:sentenceCase(naturalizeText(title)),done:false});g.completed=false;g.progress=goalProgress(g);save()}})
