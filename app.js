@@ -18,7 +18,7 @@ function financeFabOffset(){const n=Number(localStorage.getItem(FINANCE_FAB_OFFS
 function setFinanceFabOffset(value,persist=false){
   const fab=$("#financeFab");if(!fab)return;
   const v=clamp(Number(value)||0,0,Math.max(0,viewportHeight()-220));
-  fab.style.setProperty("--finance-fab-offset",v+"px");
+  if(fab.style&&typeof fab.style.setProperty==="function")fab.style.setProperty("--finance-fab-offset",v+"px");
   if(persist)localStorage.setItem(FINANCE_FAB_OFFSET_KEY,String(Math.round(v)));
 }
 function initFinanceFab(){
