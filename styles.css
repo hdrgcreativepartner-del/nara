@@ -1010,3 +1010,19 @@ dialog.action-sheet-dialog[open] .action-sheet{
 @media(min-width:980px){
   #financeFab{right:30px;bottom:30px}
 }
+
+/* NARA v6.2.3 — neutral chat composer focus */
+#chatForm.composer,
+#chatForm.composer:focus,
+#chatForm.composer:focus-within{
+  border-color:var(--line)!important;
+  outline:none!important;
+  box-shadow:0 16px 40px rgba(17,24,39,.12)!important;
+}
+#chatForm.composer textarea,
+#chatForm.composer textarea:focus,
+#chatForm.composer textarea:focus-visible{
+  outline:none!important;
+  box-shadow:none!important;
+  border-color:transparent!important;
+}

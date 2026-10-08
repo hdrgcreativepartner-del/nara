@@ -66,4 +66,5 @@ assert.ok(js.includes('kind==="finance-choice"'),"Unknown money input must ask i
 assert.ok(html.includes('id="financeFab"'),"Finance add action must be a floating FAB");
 assert.ok(js.includes("initFinanceFab")&&js.includes("nara-finance-fab-y"),"Finance FAB must support persisted vertical dragging");
 assert.ok(css.includes("#page-chat .send")&&css.includes("background:#111915!important"),"Chat send button must not use the blue frame/fill");
+assert.ok(css.includes("#chatForm.composer:focus-within"),"Chat composer must stay neutral without a blue frame");
 console.log("NARA UI contract passed: income intelligence, colloquial language normalization, bottom finance CTA, custom edit date picker.");
