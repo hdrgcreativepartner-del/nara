@@ -79,4 +79,7 @@ assert.ok(html.includes('id="testReminder"'),"Notification settings must provide
 assert.ok(js.includes("initPageFabs")&&js.includes("setPointerCapture")&&js.includes("page-fab"),"All page FABs must support drag gestures");
 assert.ok(js.includes('classList.add("returning")')&&css.includes(".page-fab.returning"),"FABs must spring back to their fixed home position");
 assert.ok(css.includes("touch-action:none!important"),"FAB dragging must not scroll the page underneath");
+assert.ok(js.includes("document.body.appendChild(fab)")&&js.includes("updatePageFabVisibility"),"Page FABs must be moved to the body viewport layer");
+assert.ok(css.includes("body>.page-fab")&&css.includes("position:fixed!important"),"Page FABs must stay fixed while content scrolls");
+assert.ok(css.includes("cubic-bezier(.22,1.28,.36,1)"),"Dragged FABs must spring back on release");
 console.log("NARA UI contract passed: unified fixed FABs, profile photo, income intelligence, colloquial language normalization, custom edit date picker.");
