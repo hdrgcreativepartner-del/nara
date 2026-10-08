@@ -137,3 +137,32 @@ reset();run('aku mau beli laptop 5 juta');assert.equal(get('state.transactions.l
 reset();run('catat ide: desain logo');run('bayar bensin 20rb');run('ubah judul catatan desain logo jadi identitas brand');assert.equal(get('state.notes[0].title'),'Identitas brand');assert.equal(get('state.transactions[0].amount'),20000);
 reset();const queuedTimers=[];context.setTimeout=fn=>queuedTimers.push(fn);vm.runInContext("voiceSession=true;sendText('bayar komisi');voiceSession=false;sendText('50rb');sendText('ralat 75rb')",context);while(queuedTimers.length)queuedTimers.shift()();assert.equal(get('state.transactions.length'),1);assert.equal(get('state.transactions[0].amount'),75000);
 console.log('NARA contextual conversations passed: followups, corrections, language, summaries, topic changes, ambiguous references and stale context.');
+
+// Explicit notes preserve their entire body and never create financial side effects.
+reset();
+const noteInput='Tolong catat, untuk membuat web aplikasi seperti median.co yang bisa merubah web ke apk android, dan web ke exe software windows';
+const noteReply=run(noteInput);
+assert.equal(get('state.notes.length'),1);
+assert.equal(get('state.notes[0].sourceText'),noteInput);
+assert.match(get('state.notes[0].body'),/median\.co.*apk android, dan web ke exe software windows/i);
+assert.doesNotMatch(noteReply.text,/belum yakin/);
+assert.equal(get('state.pending'),null);
+reset();
+run('Catat: video untuk proyek, biaya beli laptop 15 juta. Besok rapat jam 10.');
+assert.equal(get('state.notes.length'),1);
+assert.match(get('state.notes[0].body'),/^Video untuk proyek, biaya beli laptop 15 juta\. Besok rapat jam 10\./);
+assert.equal(get('state.transactions.length'),0);
+assert.equal(get('state.reminders.length'),0);
+reset();
+run('Jadikan catatan');
+assert.equal(get('state.notes.length'),0);
+assert.equal(get('state.pending.kind'),'note-content');
+run('Kalau beli laptop, jangan bayar dahulu.\nBandingkan video ulasan.');
+assert.equal(get('state.notes.length'),1);
+assert.match(get('state.notes[0].body'),/dahulu\.\nBandingkan video/);
+reset();
+run('Aku berencana beli laptop');
+run('Jadikan catatan');
+assert.equal(get('state.notes.length'),1);
+assert.match(get('state.notes[0].body'),/laptop/);
+console.log('Explicit note regression checks passed');

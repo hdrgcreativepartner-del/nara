@@ -335,18 +335,22 @@ function naturalizeText(text){
     .replace(/\bphoto\b/gi,"foto")
     .replace(/\s+/g," ").trim();
 }
+function noteContent(text){
+  return String(text).trim().replace(/^(?:(?:tolong|mohon)\s+)?(?:jadikan\s+catatan|simpan(?:\s+sebagai)?\s+catatan|catat(?:kan)?|catatan|note|ide|gagasan|jangan lupa bahwa)\b[\s,:-]*/i, "").replace(/^(?:ide|gagasan)\b[\s,:-]*/i, "").trim();
+}
+function startsNoteCommand(text){
+  return /^(?:(?:tolong|mohon)\s+)?(?:jadikan\s+catatan|simpan(?:\s+sebagai)?\s+catatan|catat(?:kan)?|catatan|note|ide|gagasan|jangan lupa bahwa)\b/i.test(String(text).trim());
+}
 function paraphraseNote(text){
-  let s=naturalizeText(text).trim()
-    .replace(/^.*?(?:tolong\s+)?(?:catat(?:kan)?|note|ide)\s*:?[\s-]*/i,"")
-    .replace(/^(?:ide|gagasan|catatan)\s*:?\s*/i,"")
-    .replace(/\bjangan lupa bahwa\b/gi,"")
-    .replace(/\baku\s+(?:harus|mau|akan|ingin)\b/gi,"")
-    .replace(/\bsaya\s+(?:harus|mau|akan|ingin)\b/gi,"")
-    .replace(/\bnemuin\b/gi,"temui").replace(/\bnemui\b/gi,"temui")
+  const content=noteContent(text);
+  let s=content.split(/\n/).map(line=>naturalizeText(line)
+    .replace(/^aku\s+(?:harus|mau|akan|ingin)\s+/i, "")
+    .replace(/^saya\s+(?:harus|mau|akan|ingin)\s+/i, "")
     .replace(/\bketemu(?:an)?\s+(?:sama|dengan)?\s*/gi,"bertemu dengan ")
-    .replace(/\s+/g," ").trim();
-  s=s.replace(/^(kemudian|terus|habis itu|lalu)\s+/i,"").replace(/\bmas\s+([a-z])/g,(m,c)=>"Mas "+c.toUpperCase()).replace(/\bpak\s+([a-z])/g,(m,c)=>"Pak "+c.toUpperCase()).replace(/\bphoto\b/gi,"Foto");
-  s=sentenceCase(s||text);
+    .replace(/\bmas\s+([a-z])/g,(m,c)=>"Mas "+c.toUpperCase())
+    .replace(/\bpak\s+([a-z])/g,(m,c)=>"Pak "+c.toUpperCase())
+  ).join("\n").trim();
+  s=sentenceCase(s);
   if(s&&!/[.!?]$/.test(s))s+=".";
   return s;
 }
@@ -497,9 +501,12 @@ function beginAgendaClarification(text){
   return null;
 }
 function saveExplicitNote(source){
-  const body=paraphraseNote(source),title=body.replace(/[.!?]$/,"").slice(0,56),id=uid();
+  const body=paraphraseNote(source);
+  if(!body){state.pending={kind:"note-content",updatedAt:Date.now()};return{text:"Apa yang ingin kamu simpan sebagai catatan? Kirim isi lengkapnya ya.",actions:[]}}
+  const title=body.replace(/[.!?]$/,"").slice(0,56),id=uid();
   state.notes.push({id,title,body,sourceText:source,date:localISO(),createdAt:new Date().toISOString()});
   state.lastCreated={type:"note",ids:[id],at:Date.now()};
+  rememberFocus([{type:"note",id}]);
   return{text:`Oke, aku rapikan dan simpan sebagai catatan: “${body}”`,actions:[]};
 }
 function unknownIntentPrompt(text){
@@ -606,6 +613,15 @@ function contextualFollowup(text){
 }
 function smartResponse(input){
   const text=normalizeUserLanguage(input),s=text.toLowerCase();
+  const noteChoice=/^jadikan catatan[.!]?$/i.test(text);
+  if(startsNoteCommand(input)&&!noteChoice){state.pending=null;return saveExplicitNote(String(input).trim())}
+  if(noteChoice){
+    const source=state.pending?.kind==="intent-choice"?state.pending.source:"";
+    state.pending=null;return saveExplicitNote(source);
+  }
+  if(state.pending?.kind==="note-content"&&!/^(?:batal|batalkan|cancel|lupakan)$/i.test(text)){
+    state.pending=null;return saveExplicitNote("Catat: "+String(input).trim());
+  }
   if(/^(?:batal|batalkan|cancel|lupakan|ganti topik|topik baru)(?:\s+(?:saja|aja|dulu|yang tadi))?[.!]?$/i.test(s)){state.pending=null;state.conversation=null;return{text:'Oke, pembahasan yang belum selesai aku batalkan. Catatan yang sudah tersimpan tetap ada. Mau lanjut membahas apa?',actions:[]}}
   const query=state.pending&&!/^(?:berapa|cek|lihat|tampilkan|rekap|ringkas|apa|ada|daftar)\b/.test(s)?null:conversationQuery(text);if(query)return query;
   if(/^(?:hai|halo|hello|hi|ass?alamu.?alaikum|pagi|siang|sore|malam)(?:\s+nara)?[.!?]*$/i.test(s))return{text:`${/alaikum/.test(s)?'Waalaikumsalam. ':''}${greeting()}${firstName()?', '+firstName():''}. Cerita saja; aku bisa membantu mencatat uang, agenda, ide, atau targetmu.`,actions:[]};
