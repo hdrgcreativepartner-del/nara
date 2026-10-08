@@ -1112,3 +1112,39 @@ dialog.action-sheet-dialog[open] .action-sheet{
   cursor:grabbing!important;
 }
 .page-fab{will-change:transform}
+
+/* NARA v6.2.5 — spring-back interactive FABs */
+.page-fab,
+#financeFab.page-fab{
+  position:fixed!important;
+  right:16px!important;
+  bottom:calc(94px + env(safe-area-inset-bottom))!important;
+  top:auto!important;
+  left:auto!important;
+  z-index:80!important;
+  touch-action:none!important;
+  cursor:grab!important;
+  transform:translate3d(0,0,0);
+  transition:transform .18s ease,box-shadow .18s ease!important;
+  will-change:transform;
+}
+.page-fab.dragging,
+#financeFab.page-fab.dragging{
+  cursor:grabbing!important;
+  transition:none!important;
+  box-shadow:0 22px 52px rgba(17,25,21,.30)!important;
+}
+.page-fab.returning,
+#financeFab.page-fab.returning{
+  transition:transform .38s cubic-bezier(.18,.89,.28,1.18),box-shadow .28s ease!important;
+  box-shadow:0 14px 34px rgba(17,25,21,.22)!important;
+}
+@media(min-width:521px){
+  .page-fab,#financeFab.page-fab{right:18px!important}
+}
+@media(min-width:980px){
+  .page-fab,#financeFab.page-fab{
+    right:30px!important;
+    bottom:30px!important;
+  }
+}

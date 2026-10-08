@@ -76,4 +76,7 @@ assert.ok(js.includes("resizeProfileImage")&&js.includes("state.profile.photo"),
 assert.ok(js.includes("initPageFabs")&&js.includes("pointermove")&&js.includes("translate3d(0,0,0)"),"All page FABs must be draggable temporarily and snap back home");
 assert.ok(median.includes("waitForBridge")&&median.includes("enableForegroundNotifications(true)"),"Median OneSignal bridge must wait for native readiness and enable foreground pushes");
 assert.ok(html.includes('id="testReminder"'),"Notification settings must provide a local popup test");
+assert.ok(js.includes("initPageFabs")&&js.includes("setPointerCapture")&&js.includes("page-fab"),"All page FABs must support drag gestures");
+assert.ok(js.includes('classList.add("returning")')&&css.includes(".page-fab.returning"),"FABs must spring back to their fixed home position");
+assert.ok(css.includes("touch-action:none!important"),"FAB dragging must not scroll the page underneath");
 console.log("NARA UI contract passed: unified fixed FABs, profile photo, income intelligence, colloquial language normalization, custom edit date picker.");

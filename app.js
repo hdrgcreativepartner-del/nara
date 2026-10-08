@@ -973,36 +973,53 @@ document.addEventListener("click",e=>{
 function initPageFabs(){
   if(typeof document==="undefined")return;
   document.querySelectorAll(".page-fab").forEach(fab=>{
-    let dragging=false,startX=0,startY=0,dx=0,dy=0,moved=false;
-    const reset=()=>{
+    if(fab.dataset.fabReady==="1")return;
+    fab.dataset.fabReady="1";
+    let dragging=false,moved=false,startX=0,startY=0,baseRect=null,lastX=0,lastY=0;
+
+    const home=()=>{
       fab.classList.remove("dragging");
-      fab.style.transition="transform .28s cubic-bezier(.2,.85,.25,1)";
+      fab.classList.add("returning");
       fab.style.transform="translate3d(0,0,0)";
-      setTimeout(()=>{fab.style.transition=""},320);
-      dragging=false;dx=0;dy=0;
+      setTimeout(()=>fab.classList.remove("returning"),420);
+      dragging=false;lastX=0;lastY=0;
     };
+
     fab.addEventListener("pointerdown",e=>{
       if(e.button!==undefined&&e.button!==0)return;
       dragging=true;moved=false;startX=e.clientX;startY=e.clientY;
+      baseRect=fab.getBoundingClientRect();
       fab.classList.add("dragging");
-      fab.style.transition="none";
+      fab.classList.remove("returning");
       try{fab.setPointerCapture(e.pointerId)}catch{}
     });
+
     fab.addEventListener("pointermove",e=>{
-      if(!dragging)return;
-      dx=e.clientX-startX;dy=e.clientY-startY;
-      if(Math.hypot(dx,dy)>6)moved=true;
-      const pad=10,rect=fab.getBoundingClientRect();
-      const minX=-rect.left+pad,maxX=(window.innerWidth||360)-rect.right-pad;
-      const minY=-rect.top+pad,maxY=(window.innerHeight||800)-rect.bottom-pad;
-      dx=clamp(dx,minX,maxX);dy=clamp(dy,minY,maxY);
-      fab.style.transform=`translate3d(${dx}px,${dy}px,0)`;
+      if(!dragging||!baseRect)return;
+      let dx=e.clientX-startX,dy=e.clientY-startY;
+      if(Math.hypot(dx,dy)>7)moved=true;
+      const edge=10,vw=(window.innerWidth||document.documentElement.clientWidth||360),vh=(window.innerHeight||document.documentElement.clientHeight||800);
+      dx=clamp(dx,-baseRect.left+edge,vw-baseRect.right-edge);
+      dy=clamp(dy,-baseRect.top+edge,vh-baseRect.bottom-edge);
+      lastX=dx;lastY=dy;
+      fab.style.transform=`translate3d(${dx}px,${dy}px,0) scale(1.04)`;
       e.preventDefault();
     });
-    const end=e=>{if(!dragging)return;try{fab.releasePointerCapture(e.pointerId)}catch{};reset()};
-    fab.addEventListener("pointerup",end);fab.addEventListener("pointercancel",end);
-    fab.addEventListener("click",e=>{if(moved){e.preventDefault();e.stopImmediatePropagation();moved=false}},true);
-  })
+
+    const finish=e=>{
+      if(!dragging)return;
+      try{fab.releasePointerCapture(e.pointerId)}catch{}
+      home();
+    };
+    fab.addEventListener("pointerup",finish);
+    fab.addEventListener("pointercancel",finish);
+
+    fab.addEventListener("click",e=>{
+      if(moved){
+        e.preventDefault();e.stopImmediatePropagation();moved=false;
+      }
+    },true);
+  });
 }
 
 document.addEventListener("submit",e=>{const f=e.target.closest("[data-goal-form]");if(!f)return;e.preventDefault();const id=f.dataset.goalForm,g=state.goals.find(x=>x.id===id),input=f.querySelector("[data-goal-input]"),title=(input&&input.value||"").trim();if(g&&title){g.steps=g.steps||[];g.steps.push({id:uid(),title:sentenceCase(naturalizeText(title)),done:false});g.completed=false;g.progress=goalProgress(g);save()}})
