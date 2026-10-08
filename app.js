@@ -706,9 +706,11 @@ function renderProfile(){
 function renderAccount(){
   const name=(state.profile&&state.profile.name)||"Kamu",initial=(name.trim()[0]||"N").toUpperCase();
   if($("#accountDisplayName"))$("#accountDisplayName").textContent=name;
-  if($("#accountAvatar"))$("#accountAvatar").textContent=initial;
+  const photo=state.profile.photo||"";
+  if($("#accountAvatar")){$("#accountAvatar").textContent=initial;$("#accountAvatar").hidden=!!photo}
+  if($("#accountAvatarImage")){$("#accountAvatarImage").hidden=!photo;if(photo)$("#accountAvatarImage").src=photo}
   if($("#accountName"))$("#accountName").value=name==="Kamu"?"":name;
-  if($("#topAvatar"))$("#topAvatar").textContent=initial;
+  if($("#topAvatar")){$("#topAvatar").textContent=photo?"":initial;$("#topAvatar").style.backgroundImage=photo?"url("+photo+")":"";$("#topAvatar").classList.toggle("has-photo",!!photo)}
   if($("#backupTxCount"))$("#backupTxCount").textContent=state.transactions.length;
   if($("#backupNoteCount"))$("#backupNoteCount").textContent=state.notes.length;
   if($("#backupReminderCount"))$("#backupReminderCount").textContent=state.reminders.length;
@@ -969,7 +971,8 @@ $("#chatInput").addEventListener("input",e=>{e.target.style.height="auto";e.targ
 $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#chatForm").requestSubmit()}});
 $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
-$("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",submitVoice);$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});
+function resizeProfileImage(file,maxSize=512,quality=.82){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=reject;reader.onload=()=>{const img=new Image();img.onerror=reject;img.onload=()=>{const scale=Math.min(1,maxSize/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;const ctx=canvas.getContext("2d");ctx.drawImage(img,0,0,w,h);resolve(canvas.toDataURL("image/jpeg",quality))};img.src=reader.result};reader.readAsDataURL(file)})}
+$("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",submitVoice);$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});$("#accountAvatarButton").addEventListener("click",()=>$("#accountAvatarInput").click());$("#accountAvatarInput").addEventListener("change",async e=>{const file=e.target.files&&e.target.files[0];if(!file)return;if(!file.type.startsWith("image/")){alert("Pilih file gambar.");return}try{state.profile.photo=await resizeProfileImage(file);save()}catch{alert("Foto profil belum bisa diproses. Coba gambar lain.")}e.target.value=""});
 $("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());
 $("#openEditDatePicker").addEventListener("click",openEditDatePicker);
 $("#closeDatePicker").addEventListener("click",closeEditDatePicker);

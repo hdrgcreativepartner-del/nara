@@ -159,8 +159,13 @@
   <div class="account-layout">
     <article class="card account-profile-card">
       <div class="account-identity">
-        <span class="account-avatar" id="accountAvatar">N</span>
-        <div><small>PROFIL</small><h3 id="accountDisplayName">Kamu</h3><p>Nama ini dipakai NARA saat menyapamu.</p></div>
+        <button class="account-avatar account-avatar-button" id="accountAvatarButton" type="button" aria-label="Ubah foto profil">
+          <img id="accountAvatarImage" alt="" hidden>
+          <span id="accountAvatar">N</span>
+          <i aria-hidden="true">+</i>
+        </button>
+        <input id="accountAvatarInput" type="file" accept="image/*" hidden>
+        <div><small>PROFIL</small><h3 id="accountDisplayName">Kamu</h3><p>Nama dan foto ini dipakai NARA saat menyapamu.</p></div>
       </div>
       <form id="accountNameForm" class="account-form">
         <label for="accountName">Nama atau panggilan</label>

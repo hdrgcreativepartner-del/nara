@@ -70,4 +70,6 @@ assert.ok(css.includes("#chatForm.composer:focus-within"),"Chat composer must st
 assert.ok(css.includes("bottom:calc(94px + env(safe-area-inset-bottom))"),"Finance FAB must stay fixed above bottom navigation");
 assert.ok(html.includes('id="todayFab"')&&html.includes('id="notesFab"')&&html.includes('id="goalsFab"'),"Today, Notes, and Goals pages must use the same fixed FAB pattern");
 assert.ok(css.includes(".page-fab")&&css.includes("position:fixed!important"),"Primary page add actions must use a shared fixed FAB style");
-console.log("NARA UI contract passed: unified fixed FABs, income intelligence, colloquial language normalization, custom edit date picker.");
+assert.ok(html.includes('id="accountAvatarInput"')&&html.includes('id="accountAvatarImage"'),"Account page must support profile photo upload");
+assert.ok(js.includes("resizeProfileImage")&&js.includes("state.profile.photo"),"Profile photos must be compressed and persisted locally");
+console.log("NARA UI contract passed: unified fixed FABs, profile photo, income intelligence, colloquial language normalization, custom edit date picker.");
