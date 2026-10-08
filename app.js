@@ -21,12 +21,12 @@ function firstName(){return ((state.profile&&state.profile.name)||"").trim().spl
 function greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
 
 function parseAmount(t){
-  let s=timeWordToNumber(t).replace(/rp\.?\s?/g,"").replace(/(\d)\.(?=\d{3}\b)/g,"$1").replace(/(\d),(?=\d{3}\b)/g,"$1");
+  let s=timeWordToNumber(normalizeUserLanguage(t)).replace(/rp\.?\s?/g,"").replace(/(\d)\.(?=\d{3}\b)/g,"$1").replace(/(\d),(?=\d{3}\b)/g,"$1");
   s=s
     .replace(/\b(?:(?:jam|pukul)\s+)?setengah\s+\d{1,2}\s*(?:pagi|siang|sore|malam)?\b/g," ")
     .replace(/\b(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/g," ")
     .replace(/\b\d{1,2}[.:]\d{2}\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/g," ");
-  const m=s.match(/(\d+(?:[.,]\d+)?)\s*(juta|jt|ribu|rb|k)\b/i)||s.match(/(?:sebesar|senilai|pengeluaran|pemasukan|bayar|beli|makan|bensin|transfer|dapat|terima)\D{0,16}(\d[\d.]*)/i);
+  const m=s.match(/(\d+(?:[.,]\d+)?)\s*(juta|ribu|k)\b/i)||s.match(/(?:sebesar|senilai|pengeluaran|pemasukan|pendapatan|bayaran|dibayar|fee|honor|gaji|bayar|beli|makan|minum|bensin|transfer|dapat|terima)\D{0,24}(\d[\d.]*)/i);
   if(!m)return null;
   let n=Number(String(m[1]).replace(/\./g,"").replace(",","."));
   const unit=(m[2]||"").toLowerCase();
@@ -120,11 +120,35 @@ function splitClauses(text){
     .replace(/\s+(?:kemudian|lalu)\s+(?=(?:pukul|jam|\d{1,2}[.:]\d{2}))/gi,", ")
     .split(/[;\n]+|[.!?]\s+|,\s+(?=\S)/).map(x=>x.trim()).filter(Boolean);
 }
+function normalizeUserLanguage(text){
+  return String(text||"").toLowerCase()
+    .replace(/\bnggak\b|\bgak\b|\bga\b|\bgk\b|\bora\b/g,"tidak")
+    .replace(/\bpengen\b|\bpingin\b|\bkepingin\b/g,"ingin")
+    .replace(/\bentuk\b|\bentukno\b/g,"dapat")
+    .replace(/\boleh\s+(duit|uang|bayaran)\b/g,"dapat $1")
+    .replace(/\btak\s+entuk\b/g,"aku dapat")
+    .replace(/\bwis\b/g,"sudah")
+    .replace(/\bsakiki\b|\bsaiki\b/g,"sekarang")
+    .replace(/\bmengko\b/g,"nanti")
+    .replace(/\bsesuk\b/g,"besok")
+    .replace(/\bmangan\b/g,"makan")
+    .replace(/\bngombe\b/g,"minum")
+    .replace(/\btuku\b/g,"beli")
+    .replace(/\bmbayar\b/g,"bayar")
+    .replace(/\bgawe\b|\bgarap\b|\bngerjain\b|\bngerjakno\b/g,"kerjakan")
+    .replace(/\bduit\b/g,"uang")
+    .replace(/\brb\b/g,"ribu")
+    .replace(/\bjt\b/g,"juta")
+    .replace(/\s+/g," ").trim();
+}
 function financeType(t){
-  const s=t.toLowerCase();
+  const raw=String(t||"").toLowerCase(),s=normalizeUserLanguage(t);
+  if(/\b(dibayar|kebayar|terbayar)\b/.test(raw))return"income";
+  if(/\b(dapat|dapet|dpt|terima|nerima|menerima)\b.{0,28}\b(bayaran|pembayaran|fee|honor|uang|transfer|pendapatan|gaji)\b/.test(s))return"income";
+  if(/\b(bayaran|pembayaran|fee|honor|gaji|pendapatan|pemasukan|cuan)\b.{0,24}\b(masuk|cair|dapat|terima)?\b/.test(s))return"income";
   if(/(?:client|klien|customer|pelanggan).{0,24}(?:bayar|transfer)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
-  if(/pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|gajian|fee masuk/.test(s))return"income";
-  if(/pengeluaran|expense|keluar|bayar|beli|makan|bensin|belanja|parkir|kopi/.test(s))return"expense";
+  if(/pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|dapat bayaran|dapet bayaran|gajian|fee masuk|honor masuk|uang masuk|bayaran masuk|cair/.test(s))return"income";
+  if(/pengeluaran|expense|keluar|bayar|beli|makan|minum|bensin|belanja|parkir|kopi/.test(s))return"expense";
   if(/\bfee\b|\bhonor\b/.test(s))return"income";
   return null;
 }
@@ -249,7 +273,7 @@ function smartTitle(text){
   return sentenceCase(naturalizeText(s)||"Agenda");
 }
 function naturalizeText(text){
-  return String(text||"")
+  return normalizeUserLanguage(String(text||""))
     .replace(/\baku tuh\b|\bsaya tuh\b/gi,"")
     .replace(/\baku pengen\b|\baku pingin\b|\bsaya pengen\b|\bpengen\b|\bpingin\b/gi,"ingin")
     .replace(/\bselesaiin\b/gi,"selesaikan")
@@ -700,6 +724,22 @@ function runAgendaSheetAction(action){
   if(action==="delete"){closeAgendaSheet();askConfirm("Hapus agenda?","Agenda ini akan dihapus permanen.","Hapus",()=>{state.reminders=state.reminders.filter(x=>x.id!==id);save()})}
 }
 
+let datePickerTarget=null,datePickerCursor=new Date(),datePickerValue="";
+function isoToDate(iso){const m=String(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?new Date(+m[1],+m[2]-1,+m[3]):new Date()}
+function datePickerLabel(iso){return new Intl.DateTimeFormat("id-ID",{weekday:"short",day:"numeric",month:"short",year:"numeric"}).format(isoToDate(iso))}
+function renderDatePicker(){
+  const month=datePickerCursor.getMonth(),year=datePickerCursor.getFullYear();
+  $("#datePickerMonthLabel").textContent=new Intl.DateTimeFormat("id-ID",{month:"long",year:"numeric"}).format(new Date(year,month,1));
+  $("#datePickerSelectedLabel").textContent=datePickerValue?datePickerLabel(datePickerValue):"Pilih tanggal";
+  const first=new Date(year,month,1),offset=(first.getDay()+6)%7,last=new Date(year,month+1,0).getDate(),cells=[];
+  for(let i=0;i<offset;i++)cells.push('<span class="date-empty"></span>');
+  for(let day=1;day<=last;day++){const iso=localISO(new Date(year,month,day)),sel=iso===datePickerValue,today=iso===localISO();cells.push(`<button type="button" data-date-value="${iso}" class="${sel?"selected":""} ${today?"today":""}">${day}</button>`)}
+  $("#datePickerGrid").innerHTML=cells.join("");
+}
+function openDatePicker(input){
+  datePickerTarget=input;datePickerValue=input.value||localISO();datePickerCursor=isoToDate(datePickerValue);renderDatePicker();$("#datePickerDialog").showModal();
+}
+function closeDatePicker(){datePickerTarget=null;if($("#datePickerDialog").open)$("#datePickerDialog").close()}
 function openEditor(kind,id){
   if($("#agendaSheet")&&$("#agendaSheet").open)$("#agendaSheet").close();
   if($("#confirmDialog")&&$("#confirmDialog").open)$("#confirmDialog").close();
@@ -862,6 +902,8 @@ document.addEventListener("click",e=>{
   if(trigger){e.stopPropagation();openAgendaSheet(trigger.dataset.id);return}
   const sheetAction=e.target.closest("[data-sheet-action]");
   if(sheetAction){runAgendaSheetAction(sheetAction.dataset.sheetAction);return}
+  const dateInput=e.target.closest(".nara-date-input");if(dateInput){openDatePicker(dateInput);return}
+  const dateChoice=e.target.closest("[data-date-value]");if(dateChoice){datePickerValue=dateChoice.dataset.dateValue;renderDatePicker();return}
   const rangeBtn=e.target.closest("[data-agenda-range]");if(rangeBtn){state.settings.agendaRange=rangeBtn.dataset.agendaRange;save();return}
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);const en=e.target.closest(".edit-note");if(en)openEditor("note",en.dataset.id);const et=e.target.closest(".edit-tx");if(et)openEditor("tx",et.dataset.id);const er=e.target.closest(".edit-reminder");if(er)openEditor("reminder",er.dataset.id);const eh=e.target.closest(".edit-habit");if(eh)openEditor("habit",eh.dataset.id);const eg=e.target.closest(".edit-target");if(eg)openEditor("target",eg.dataset.id);
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}const choice=e.target.closest("[data-chat-choice]");if(choice)sendText(choice.dataset.chatChoice);
@@ -885,7 +927,12 @@ $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){
 $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
 $("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",submitVoice);$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});
-$("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());$("#confirmCancel").addEventListener("click",closeConfirm);$("#confirmOk").addEventListener("click",()=>{const fn=confirmAction;closeConfirm();if(typeof fn==="function")fn()});$("#confirmDialog").addEventListener("click",e=>{if(e.target===$("#confirmDialog"))closeConfirm()});$("#closeAgendaSheet").addEventListener("click",closeAgendaSheet);$("#agendaSheet").addEventListener("click",e=>{if(e.target===$("#agendaSheet"))closeAgendaSheet()});$("#closeVoiceMode").addEventListener("click",cancelVoice);$("#voiceCancel").addEventListener("click",cancelVoice);$("#voiceDone").addEventListener("click",submitVoice);$("#dismissReminderToast").addEventListener("click",()=>$("#reminderToast").hidden=true);
+$("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());
+$("#closeDatePicker").addEventListener("click",closeDatePicker);$("#datePickerCancel").addEventListener("click",closeDatePicker);
+$("#datePrevMonth").addEventListener("click",()=>{datePickerCursor.setMonth(datePickerCursor.getMonth()-1);renderDatePicker()});
+$("#dateNextMonth").addEventListener("click",()=>{datePickerCursor.setMonth(datePickerCursor.getMonth()+1);renderDatePicker()});
+$("#datePickerDone").addEventListener("click",()=>{if(datePickerTarget&&datePickerValue){datePickerTarget.value=datePickerValue;datePickerTarget.dispatchEvent(new Event("change",{bubbles:true}))}closeDatePicker()});
+$("#datePickerDialog").addEventListener("click",e=>{if(e.target===$("#datePickerDialog"))closeDatePicker()});$("#confirmCancel").addEventListener("click",closeConfirm);$("#confirmOk").addEventListener("click",()=>{const fn=confirmAction;closeConfirm();if(typeof fn==="function")fn()});$("#confirmDialog").addEventListener("click",e=>{if(e.target===$("#confirmDialog"))closeConfirm()});$("#closeAgendaSheet").addEventListener("click",closeAgendaSheet);$("#agendaSheet").addEventListener("click",e=>{if(e.target===$("#agendaSheet"))closeAgendaSheet()});$("#closeVoiceMode").addEventListener("click",cancelVoice);$("#voiceCancel").addEventListener("click",cancelVoice);$("#voiceDone").addEventListener("click",submitVoice);$("#dismissReminderToast").addEventListener("click",()=>$("#reminderToast").hidden=true);
 $("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});
 $("#profilePromptSkip").addEventListener("click",()=>{$("#profilePromptForm").hidden=true});
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
