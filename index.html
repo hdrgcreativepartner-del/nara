@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=6.1.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=6.2.0">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=6.1.0">
+  <link rel="stylesheet" href="./styles.css?v=6.2.0">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -116,7 +116,7 @@
     </section>
 
     <section class="page" id="page-finance">
-      <div class="sectionhead"><div><small>KEUANGAN PRIBADI</small><h2>Keuangan</h2></div><button data-action="transaction">+ Transaksi</button></div>
+      <div class="sectionhead"><div><small>KEUANGAN PRIBADI</small><h2>Keuangan</h2></div></div>
       <article class="financehero"><small>Total saldo tercatat</small><strong id="balanceTotal">Rp0</strong><div><span><small>Pemasukan bulan ini</small><b id="monthIncome">Rp0</b></span><span><small>Pengeluaran bulan ini</small><b id="monthExpense">Rp0</b></span></div></article>
       <div class="liability-grid">
         <article class="card liability-card"><div><small>KEWAJIBAN</small><h3>Hutang aktif</h3></div><strong id="liabilityTotal">Rp0</strong><span id="liabilityCount">0 hutang</span><div id="liabilityList" class="mini-ledger empty">Belum ada hutang aktif.</div></article>
@@ -137,6 +137,7 @@
         <article class="card"><div class="cardhead"><h3>Pengeluaran per kategori</h3></div><div id="categoryBreakdown" class="category empty">Belum ada data.</div></article>
         <article class="card"><div class="cardhead"><h3>Transaksi terbaru</h3></div><div id="transactionList" class="list empty">Belum ada transaksi.</div></article>
       </div>
+      <div class="finance-add-dock"><button type="button" data-action="transaction"><span>＋</span> Tambah transaksi</button></div>
     </section>
 
     <section class="page" id="page-notes">
@@ -196,7 +197,7 @@
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.1</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.2</small></div><span>Beta</span></div>
     </article>
   </div>
   <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
@@ -264,7 +265,7 @@
   <label id="editBodyWrap">Isi catatan<textarea id="editBody" rows="5"></textarea></label>
   <div class="formrow">
     <label id="editAmountWrap">Nominal<input id="editAmount" inputmode="numeric"></label>
-    <label id="editDateWrap">Tanggal<input id="editDate" type="date"></label>
+    <label id="editDateWrap">Tanggal<div class="date-control"><input id="editDate" readonly aria-label="Tanggal"><button id="openEditDatePicker" type="button">Pilih</button></div></label>
   </div>
   <div class="formrow">
     <label id="editTimeWrap">Jam<input id="editTime" type="time"></label>
@@ -273,6 +274,16 @@
   </div>
   <button class="primary" type="submit">Simpan perubahan</button>
 </form>
+</dialog>
+
+<dialog id="datePickerDialog" class="center-dialog">
+  <div class="modal date-picker-modal">
+    <div class="modalhead"><div><small>PILIH TANGGAL</small><h3 id="datePickerHeading">Oktober 2026</h3></div><button type="button" class="square" id="closeDatePicker">×</button></div>
+    <div class="date-picker-nav"><button id="datePrevMonth" type="button" aria-label="Bulan sebelumnya">‹</button><strong id="datePickerMonth">Oktober 2026</strong><button id="dateNextMonth" type="button" aria-label="Bulan berikutnya">›</button></div>
+    <div class="date-weekdays"><span>S</span><span>S</span><span>R</span><span>K</span><span>J</span><span>S</span><span>M</span></div>
+    <div id="datePickerGrid" class="date-picker-grid"></div>
+    <div class="date-picker-actions"><button id="dateToday" type="button">Hari ini</button><button id="dateCancel" type="button">Batal</button><button id="dateDone" class="date-done" type="button">Selesai</button></div>
+  </div>
 </dialog>
 
 <dialog id="quickDialog" class="center-dialog">
@@ -288,8 +299,8 @@
 </form>
 </dialog>
 
-<script src="./median-bridge.js?v=6.1.0"></script>
-<script src="./app.js?v=6.1.0"></script>
+<script src="./median-bridge.js?v=6.2.0"></script>
+<script src="./app.js?v=6.2.0"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");

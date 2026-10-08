@@ -273,3 +273,30 @@ state.reminders.push(
 )`,context);
 assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext(`[...state.reminders].sort(agendaSort).map(x=>x.id)`,context))),["b","a","c"]);
 assert.equal(vm.runInContext(`agendaInRange(state.reminders[0],"today")`,context),true);
+
+reset();
+run("aku dapat bayaran ngerjain desain senilai 500rb");
+assert.equal(get("state.transactions.length"),1);
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),500000);
+assert.match(get("state.transactions[0].title"),/Mengerjakan desain/i);
+
+reset();
+run("dapet fee desain 350rb");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),350000);
+
+reset();
+run("aku entuk bayaran nggarap desain 200rb");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),200000);
+
+reset();
+run("aku bingung iki");
+assert.equal(get("state.pending.kind"),"intent-choice");
+run("Pendapatan 500 rb");
+assert.equal(get("state.transactions.length"),1);
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.pending"),null);
+
+assert.equal(vm.runInContext(`normalizeUserLanguage("sesuk bengi jam sanga")`,context),"besok malam jam sanga");
