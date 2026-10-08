@@ -296,3 +296,10 @@ assert.equal(get("state.transactions[0].type"),"expense");
 assert.equal(get("state.transactions[0].amount"),15000);
 
 assert.equal(vm.runInContext(`normalizeUserLanguage("sesuk aku tuku bensin")`,context),"besok aku beli bensin");
+
+reset();
+run("sesuk jam sanga bengi neng gudang loading LED");
+assert.equal(get("state.reminders[0].date"),"2026-10-09");
+assert.equal(get("state.reminders[0].time"),"21:00");
+
+assert.match(vm.runInContext(`naturalizeText("ngerjain Portofolio HDRG")`,context),/Portofolio HDRG/);

@@ -26,7 +26,7 @@ function parseAmount(t){
     .replace(/\b(?:(?:jam|pukul)\s+)?setengah\s+\d{1,2}\s*(?:pagi|siang|sore|malam)?\b/g," ")
     .replace(/\b(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/g," ")
     .replace(/\b\d{1,2}[.:]\d{2}\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/g," ");
-  const m=s.match(/(\d+(?:[.,]\d+)?)\s*(juta|ribu|k)\b/i)||s.match(/(?:sebesar|senilai|pengeluaran|pemasukan|pendapatan|bayaran|dibayar|fee|honor|gaji|bayar|beli|makan|minum|bensin|transfer|dapat|terima)\D{0,24}(\d[\d.]*)/i);
+  const m=s.match(/(\d+(?:[.,]\d+)?)\s*(juta|jt|ribu|rb|k)\b/i)||s.match(/(?:sebesar|senilai|pengeluaran|pemasukan|pendapatan|bayaran|dibayar|fee|honor|gaji|bayar|beli|makan|minum|bensin|transfer|dapat|terima)\D{0,24}(\d[\d.]*)/i);
   if(!m)return null;
   let n=Number(String(m[1]).replace(/\./g,"").replace(",","."));
   const unit=(m[2]||"").toLowerCase();
@@ -54,7 +54,7 @@ function normalizeClock(hour,minute,part){
   return `${pad(Math.max(0,Math.min(23,h)))}:${pad(Math.max(0,Math.min(59,m)))}`;
 }
 function parseTime(t){
-  let s=timeWordToNumber(t);
+  let s=timeWordToNumber(normalizeUserLanguage(t));
   const part=(s.match(/\b(pagi|siang|sore|malam)\b/)||[])[1]||"";
   let m=s.match(/(?:(?:jam|pukul)\s+)?setengah\s+(\d{1,2})/);
   if(m){
@@ -77,7 +77,7 @@ function nextWeekdayDate(name,forceNext=false){
   const d=new Date(now);d.setDate(now.getDate()+delta);return localISO(d);
 }
 function parseDate(t){
-  const s=t.toLowerCase();
+  const s=normalizeUserLanguage(t);
   if(/\bhari ini\b|\btadi\b|\bbarusan\b/.test(s))return localISO();
   if(/\blusa\b/.test(s))return addDays(2);
   if(/\bbesok\b/.test(s))return addDays(1);
@@ -130,7 +130,16 @@ function normalizeUserLanguage(text){
     .replace(/\bwis\b/g,"sudah")
     .replace(/\bsakiki\b|\bsaiki\b/g,"sekarang")
     .replace(/\bmengko\b/g,"nanti")
-    .replace(/\bsesuk\b/g,"besok")
+    .replace(/\bsesuk\b|\bmbesuk\b/g,"besok")
+    .replace(/\bdino iki\b/g,"hari ini")
+    .replace(/\besuk\b/g,"pagi")
+    .replace(/\bbengi\b/g,"malam")
+    .replace(/\bawan\b/g,"siang")
+    .replace(/\bneng\b|\bmenyang\b|\bmarang\b/g,"ke")
+    .replace(/\barep\b/g,"akan")
+    .replace(/\bsiji\b/g,"satu").replace(/\bloro\b/g,"dua").replace(/\btelu\b/g,"tiga")
+    .replace(/\bpapat\b/g,"empat").replace(/\benem\b/g,"enam").replace(/\bpitu\b/g,"tujuh")
+    .replace(/\bwolu\b/g,"delapan").replace(/\bsanga\b/g,"sembilan")
     .replace(/\bmangan\b/g,"makan")
     .replace(/\bngombe\b/g,"minum")
     .replace(/\btuku\b/g,"beli")
@@ -273,15 +282,21 @@ function smartTitle(text){
   return sentenceCase(naturalizeText(s)||"Agenda");
 }
 function naturalizeText(text){
-  return normalizeUserLanguage(String(text||""))
+  return String(text||"")
     .replace(/\baku tuh\b|\bsaya tuh\b/gi,"")
-    .replace(/\baku pengen\b|\baku pingin\b|\bsaya pengen\b|\bpengen\b|\bpingin\b/gi,"ingin")
-    .replace(/\bselesaiin\b/gi,"selesaikan")
-    .replace(/\bbikin\b/gi,"buat")
-    .replace(/\bngurus\b/gi,"mengurus")
-    .replace(/\bnggak\b|\bgak\b|\bga\b/gi,"tidak")
-    .replace(/\bnemuin\b|\bnemui\b/gi,"temui")
-    .replace(/\bketemuan\b/gi,"bertemu")
+    .replace(/\baku pengen\b|\baku pingin\b|\bsaya pengen\b|\bpengen\b|\bpingin\b|\bkepingin\b/gi,"ingin")
+    .replace(/\bnggak\b|\bgak\b|\bga\b|\bgk\b|\bora\b/gi,"tidak")
+    .replace(/\bsesuk\b|\bmbesuk\b/gi,"besok")
+    .replace(/\bdino iki\b/gi,"hari ini")
+    .replace(/\bbengi\b/gi,"malam").replace(/\besuk\b/gi,"pagi").replace(/\bawan\b/gi,"siang")
+    .replace(/\bneng\b|\bmenyang\b|\bmarang\b/gi,"ke")
+    .replace(/\barep\b/gi,"akan")
+    .replace(/\bentuk\b/gi,"dapat").replace(/\boleh\s+(duit|uang|bayaran)\b/gi,"dapat $1")
+    .replace(/\bwis\b/gi,"sudah").replace(/\bsaiki\b|\bsakiki\b/gi,"sekarang").replace(/\bmengko\b/gi,"nanti")
+    .replace(/\btuku\b/gi,"beli").replace(/\bmbayar\b/gi,"bayar").replace(/\bmangan\b/gi,"makan").replace(/\bngombe\b/gi,"minum")
+    .replace(/\bgawe\b|\bgarap\b|\bngerjain\b|\bngerjakno\b/gi,"kerjakan")
+    .replace(/\bselesaiin\b/gi,"selesaikan").replace(/\bbikin\b/gi,"buat").replace(/\bngurus\b/gi,"mengurus")
+    .replace(/\bnemuin\b|\bnemui\b/gi,"temui").replace(/\bketemuan\b/gi,"bertemu")
     .replace(/\bphoto\b/gi,"foto")
     .replace(/\s+/g," ").trim();
 }
@@ -300,7 +315,7 @@ function paraphraseNote(text){
   return s;
 }
 function looksLikeSchedule(text){
-  const s=String(text).toLowerCase(),temporal=/\b(hari ini|besok|lusa|nanti|pagi|siang|sore|malam|tanggal\s+\d+)\b/.test(s)||!!parseTime(text);
+  const s=normalizeUserLanguage(text),temporal=/\b(hari ini|besok|lusa|nanti|pagi|siang|sore|malam|tanggal\s+\d+)\b/.test(s)||!!parseTime(text);
   const activity=/\b(ke|pergi|berangkat|temui|nemui|nemuin|ketemu|meeting|rapat|review|loading|pasang|pemasangan|acara|jemput|antar|kirim|bayar|ambil|datang|kerja)\b/.test(s);
   return temporal&&activity;
 }
@@ -398,7 +413,7 @@ function addTargetFromText(t){
 }
 function explicitNoteIntent(t){return /\b(catat|catatkan|note|jadikan catatan|simpan catatan|ide|gagasan|jangan lupa bahwa)\b/i.test(t)}
 function explicitAgendaIntent(t){return /\b(ingatkan|pengingat|reminder|jadwal|agenda|deadline|janji)\b/i.test(t)}
-function activityIntent(t){return /\b(ke|pergi|berangkat|temui|nemui|nemuin|ketemu|bertemu|meeting|rapat|review|loading|pasang|pemasangan|acara|jemput|antar|kirim|bayar|ambil|datang|kerja|kontrol|periksa)\b/i.test(t)}
+function activityIntent(t){return /\b(ke|pergi|berangkat|temui|nemui|nemuin|ketemu|bertemu|meeting|rapat|review|loading|pasang|pemasangan|acara|jemput|antar|kirim|bayar|ambil|datang|kerja|kontrol|periksa)\b/i.test(normalizeUserLanguage(t))}
 function hasDateContext(t){return /\b(hari ini|besok|lusa|nanti|tanggal\s+\d+|(?:minggu|pekan)\s+depan(?:\s+hari)?\s+(?:senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)(?:\s+depan)?\b/i.test(t)}
 function hasTimeContext(t){return !!parseTime(t)||/\b(pagi|siang|sore|malam|habis magrib|setelah magrib|sehabis magrib)\b/i.test(t)}
 function classifyIntent(text){
@@ -929,8 +944,8 @@ $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
 $("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",submitVoice);$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});
 $("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());
 $("#closeDatePicker").addEventListener("click",closeDatePicker);$("#datePickerCancel").addEventListener("click",closeDatePicker);
-$("#datePrevMonth").addEventListener("click",()=>{datePickerCursor.setMonth(datePickerCursor.getMonth()-1);renderDatePicker()});
-$("#dateNextMonth").addEventListener("click",()=>{datePickerCursor.setMonth(datePickerCursor.getMonth()+1);renderDatePicker()});
+$("#datePrevMonth").addEventListener("click",()=>{datePickerCursor.setDate(1);datePickerCursor.setMonth(datePickerCursor.getMonth()-1);renderDatePicker()});
+$("#dateNextMonth").addEventListener("click",()=>{datePickerCursor.setDate(1);datePickerCursor.setMonth(datePickerCursor.getMonth()+1);renderDatePicker()});
 $("#datePickerDone").addEventListener("click",()=>{if(datePickerTarget&&datePickerValue){datePickerTarget.value=datePickerValue;datePickerTarget.dispatchEvent(new Event("change",{bubbles:true}))}closeDatePicker()});
 $("#datePickerDialog").addEventListener("click",e=>{if(e.target===$("#datePickerDialog"))closeDatePicker()});$("#confirmCancel").addEventListener("click",closeConfirm);$("#confirmOk").addEventListener("click",()=>{const fn=confirmAction;closeConfirm();if(typeof fn==="function")fn()});$("#confirmDialog").addEventListener("click",e=>{if(e.target===$("#confirmDialog"))closeConfirm()});$("#closeAgendaSheet").addEventListener("click",closeAgendaSheet);$("#agendaSheet").addEventListener("click",e=>{if(e.target===$("#agendaSheet"))closeAgendaSheet()});$("#closeVoiceMode").addEventListener("click",cancelVoice);$("#voiceCancel").addEventListener("click",cancelVoice);$("#voiceDone").addEventListener("click",submitVoice);$("#dismissReminderToast").addEventListener("click",()=>$("#reminderToast").hidden=true);
 $("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});

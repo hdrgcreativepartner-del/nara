@@ -980,3 +980,14 @@ dialog.action-sheet-dialog[open] .action-sheet{
   .finance-fab{width:100%;position:sticky;bottom:calc(78px + env(safe-area-inset-bottom));}
   .date-picker-card{padding:17px;border-radius:24px}
 }
+
+#page-finance.active .finance-fab{
+  position:fixed!important;
+  right:18px;
+  bottom:calc(86px + env(safe-area-inset-bottom))!important;
+  width:auto!important;
+  margin:0!important;
+}
+@media(min-width:980px){
+  #page-finance.active .finance-fab{right:28px;bottom:28px!important}
+}
