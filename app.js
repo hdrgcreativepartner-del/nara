@@ -961,27 +961,11 @@ document.addEventListener("click",e=>{
 });
 function initFinanceFab(){
   const fab=$("#financeFab");if(!fab)return;
-  const key="nara-finance-fab-y";
-  const clamp=y=>Math.max(92,Math.min(window.innerHeight-160,y));
-  const saved=Number(localStorage.getItem(key));
-  if(Number.isFinite(saved)&&saved>0){fab.style.top=clamp(saved)+"px";fab.style.bottom="auto"}
-  let dragging=false,startY=0,startTop=0,moved=false;
-  fab.addEventListener("pointerdown",e=>{
-    dragging=true;moved=false;startY=e.clientY;
-    const rect=fab.getBoundingClientRect();startTop=rect.top;
-    fab.setPointerCapture&&fab.setPointerCapture(e.pointerId);fab.classList.add("dragging");
-  });
-  fab.addEventListener("pointermove",e=>{
-    if(!dragging)return;const dy=e.clientY-startY;if(Math.abs(dy)>4)moved=true;
-    const y=clamp(startTop+dy);fab.style.top=y+"px";fab.style.bottom="auto";
-  });
-  fab.addEventListener("pointerup",e=>{
-    if(!dragging)return;dragging=false;fab.classList.remove("dragging");
-    const y=clamp(fab.getBoundingClientRect().top);localStorage.setItem(key,String(Math.round(y)));
-    if(moved){e.preventDefault();e.stopPropagation()}
-  });
-  window.addEventListener("resize",()=>{if(fab.style.top){const y=clamp(parseFloat(fab.style.top));fab.style.top=y+"px"}});
+  localStorage.removeItem("nara-finance-fab-y");
+  fab.style.removeProperty("top");
+  fab.style.removeProperty("bottom");
 }
+
 document.addEventListener("submit",e=>{const f=e.target.closest("[data-goal-form]");if(!f)return;e.preventDefault();const id=f.dataset.goalForm,g=state.goals.find(x=>x.id===id),input=f.querySelector("[data-goal-input]"),title=(input&&input.value||"").trim();if(g&&title){g.steps=g.steps||[];g.steps.push({id:uid(),title:sentenceCase(naturalizeText(title)),done:false});g.completed=false;g.progress=goalProgress(g);save()}})
 $("#chatForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#chatInput");voiceSession=false;sendText(i.value);i.value="";i.style.height="auto"});
 $("#chatInput").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,112)+"px";syncChatSafeArea();scrollChatToBottom(false)});

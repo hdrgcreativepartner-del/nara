@@ -1026,3 +1026,29 @@ dialog.action-sheet-dialog[open] .action-sheet{
   box-shadow:none!important;
   border-color:transparent!important;
 }
+
+/* NARA v6.2.4 — fixed finance FAB, aligned with primary chat action */
+#financeFab{
+  position:fixed!important;
+  right:18px!important;
+  bottom:calc(94px + env(safe-area-inset-bottom))!important;
+  top:auto!important;
+  z-index:70!important;
+  cursor:pointer!important;
+  touch-action:manipulation!important;
+  user-select:none;
+  -webkit-user-select:none;
+}
+#financeFab.dragging{transform:none!important}
+@media(max-width:520px){
+  #financeFab{
+    right:16px!important;
+    bottom:calc(94px + env(safe-area-inset-bottom))!important;
+  }
+}
+@media(min-width:980px){
+  #financeFab{
+    right:30px!important;
+    bottom:30px!important;
+  }
+}
