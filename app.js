@@ -165,12 +165,12 @@ function splitClauses(text){
 }
 function financeType(t){
   const raw=String(t||"").toLowerCase(),s=normalizeUserLanguage(t).toLowerCase();
-  // Action/verb has priority over the noun. "bayar komisi" = expense,
-  // "dapat komisi" / "komisi masuk" = income.
+  // Counterparty context wins first: "client bayar" means money coming in.
+  if(/(?:client|klien|customer|pelanggan).{0,30}(?:bayar|transfer|lunasi)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
+  // Then distinguish paid-out compensation from received compensation.
   if(/\b(bayar|membayar|mbayar|transfer ke|kirim)\b.{0,36}\b(komisi|fee|honor|bonus|upah|gaji|jasa)\b/.test(s))return"expense";
   if(/\b(pengeluaran|expense|uang keluar|bayar|beli|makan|bensin|belanja|parkir|kopi|minum|ongkir|sewa)\b/.test(s))return"expense";
   if(/\b(dibayar|kebayar|terbayar)\b/.test(raw))return"income";
-  if(/(?:client|klien|customer|pelanggan).{0,30}(?:bayar|transfer|lunasi)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
   if(/\b(dapat|terima|menerima)\b.{0,24}\b(komisi|fee|honor|bonus|upah|gaji|bayaran|pembayaran|uang)\b/.test(s))return"income";
   if(/\b(komisi|fee|honor|bonus|upah|gaji)\b.{0,20}\b(masuk|cair|diterima)\b/.test(s))return"income";
   if(/\b(pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|dapat bayaran|dapat uang|gajian|gaji masuk|fee masuk|honor masuk|bayaran|hasil kerja|orderan cair)\b/.test(s))return"income";
