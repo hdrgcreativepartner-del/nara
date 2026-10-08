@@ -1,5 +1,6 @@
 const KEY="nara-mvp-v1";
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
 const pad=n=>String(n).padStart(2,"0");
 const localISO=(d=new Date())=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
@@ -719,7 +720,7 @@ function renderAccount(){
 function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile();renderAccount();renderSettings()}
 
 function go(page){
-  $(".page").forEach(x=>x.classList.toggle("active",x.id===`page-${page}`));$(".navbtn[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));updatePageFabVisibility();
+  $$(".page").forEach(x=>x.classList.toggle("active",x.id===`page-${page}`));$$(".navbtn[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));updatePageFabVisibility();
   const pageNames={chat:"NARA",today:"Hari ini",finance:"Keuangan",notes:"Catatan",goals:"Target",account:"Akun"};$("#pageTitle").textContent=pageNames[page]||"NARA";
   const main=$(".main");if(main&&innerWidth>=980)main.scrollTo({top:0,behavior:"smooth"});else window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -1030,6 +1031,7 @@ function initPageFabs(){
     };
     fab.addEventListener("pointerup",finish);
     fab.addEventListener("pointercancel",finish);
+    fab.addEventListener("lostpointercapture",()=>{if(dragging)home()});
     fab.addEventListener("click",e=>{
       if(moved){e.preventDefault();e.stopImmediatePropagation();moved=false}
     },true);

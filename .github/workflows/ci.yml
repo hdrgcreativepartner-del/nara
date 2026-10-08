@@ -20,6 +20,8 @@ jobs:
         run: node tests/smoke.mjs
       - name: First-run UI contract
         run: node tests/ui-contract.mjs
+      - name: Navigation and FAB behavior
+        run: node tests/navigation-fab.mjs
       - name: Required files
         run: |
           test -f index.html
