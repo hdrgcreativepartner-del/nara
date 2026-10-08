@@ -1112,3 +1112,26 @@ dialog.action-sheet-dialog[open] .action-sheet{
   cursor:grabbing!important;
 }
 .page-fab{will-change:transform}
+
+/* NARA v6.2.6 — viewport portal FABs with snap-back motion */
+body>.page-fab{
+  position:fixed!important;
+  right:16px!important;
+  bottom:calc(94px + env(safe-area-inset-bottom))!important;
+  top:auto!important;
+  left:auto!important;
+  z-index:120!important;
+  contain:layout style paint;
+  will-change:transform;
+}
+body>.page-fab[hidden]{display:none!important}
+body>.page-fab.dragging{
+  cursor:grabbing!important;
+  box-shadow:0 22px 48px rgba(17,25,21,.34)!important;
+}
+body>.page-fab.returning{
+  pointer-events:none;
+}
+@media(min-width:980px){
+  body>.page-fab{right:30px!important;bottom:30px!important}
+}
