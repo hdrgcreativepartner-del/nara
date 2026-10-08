@@ -65,7 +65,7 @@ assert.ok(html.includes('id="dateDone"')&&html.includes('id="dateCancel"'),"Edit
 assert.ok(html.includes("finance-add-dock"),"Finance add action must stay at the bottom of the finance page");
 assert.ok(js.includes('kind==="finance-choice"'),"Unknown money input must ask income vs expense");
 assert.ok(html.includes('id="financeFab"'),"Finance add action must be a floating FAB");
-assert.ok(js.includes("initFinanceFab")&&!js.includes("setPointerCapture"),"Finance FAB must stay fixed and must not be draggable");
+assert.ok(js.includes("initPageFabs")&&js.includes("setPointerCapture")&&js.includes("translate3d(0,0,0)"),"Page FABs must be temporarily draggable and snap back to their fixed home position");
 assert.ok(css.includes("#page-chat .send")&&css.includes("background:#111915!important"),"Chat send button must not use the blue frame/fill");
 assert.ok(css.includes("#chatForm.composer:focus-within"),"Chat composer must stay neutral without a blue frame");
 assert.ok(css.includes("bottom:calc(94px + env(safe-area-inset-bottom))"),"Finance FAB must stay fixed above bottom navigation");
