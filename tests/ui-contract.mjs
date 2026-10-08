@@ -57,11 +57,9 @@ assert.ok(js.includes("showVoiceReview")&&js.includes("submitVoice"),"Voice capt
 assert.ok(html.includes("median-bridge.js"),"Median bridge must load before the main app");
 assert.ok(js.includes("voiceListening")&&js.includes("if(voiceListening&&recognition)"),"Voice review must process immediately after recognition has ended");
 assert.ok(js.includes("initMedianNotifications")&&js.includes("queueReminderForPush"),"App must initialize Median push and sync reminders");
-assert.ok(html.includes("finance-add-dock"),"Finance add transaction CTA must sit near the bottom");
 assert.ok(html.includes('id="datePickerDialog"')&&html.includes('id="dateDone"'),"Edit date must use a custom picker with an explicit Done action");
 assert.ok(js.includes("normalizeUserLanguage")&&js.includes("dapat bayaran"),"Language engine must normalize slang/Javanese and understand income");
 assert.ok(html.includes('id="dateDone"')&&html.includes('id="dateCancel"'),"Edit date picker must have explicit Selesai/Batal actions");
-assert.ok(html.includes("finance-add-dock"),"Finance add action must stay at the bottom of the finance page");
 assert.ok(js.includes('kind==="finance-choice"'),"Unknown money input must ask income vs expense");
 assert.ok(html.includes('id="financeFab"')&&html.includes("finance-fab-mini"),"Finance add control must be a compact floating action button");
 assert.ok(js.includes("initFinanceFab")&&js.includes("FINANCE_FAB_OFFSET_KEY"),"Finance FAB must support persisted vertical dragging");
