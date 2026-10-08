@@ -124,8 +124,11 @@ function normalizeUserLanguage(text){
   return String(text||"").toLowerCase()
     .replace(/\bnggak\b|\bgak\b|\bga\b|\bgk\b|\bora\b/g,"tidak")
     .replace(/\bpengen\b|\bpingin\b|\bkepingin\b/g,"ingin")
-    .replace(/\bentuk\b|\bentukno\b/g,"dapat")
-    .replace(/\boleh\s+(duit|uang|bayaran)\b/g,"dapat $1")
+    .replace(/\bentuk\b|\bentukno\b|\bentuk'e\b/g,"dapat")
+    .replace(/\boleh\s+(duit|uang|bayaran|honor|fee)\b/g,"dapat $1")
+    .replace(/\boleh\b(?=\s*\d)/g,"dapat")
+    .replace(/\bwes\s+dibayar\b/g,"sudah dibayar")
+    .replace(/\bketiban\s+(?:rezeki|duit|uang)\b/g,"dapat uang")
     .replace(/\btak\s+entuk\b/g,"aku dapat")
     .replace(/\bwis\b/g,"sudah")
     .replace(/\bsakiki\b|\bsaiki\b/g,"sekarang")
@@ -146,19 +149,27 @@ function normalizeUserLanguage(text){
     .replace(/\bmbayar\b/g,"bayar")
     .replace(/\bgawe\b|\bgarap\b|\bngerjain\b|\bngerjakno\b/g,"kerjakan")
     .replace(/\bduit\b/g,"uang")
+    .replace(/(\d)\s*rb\b/g,"$1 ribu")
+    .replace(/(\d)\s*jt\b/g,"$1 juta")
     .replace(/\brb\b/g,"ribu")
     .replace(/\bjt\b/g,"juta")
     .replace(/\s+/g," ").trim();
 }
 function financeType(t){
   const raw=String(t||"").toLowerCase(),s=normalizeUserLanguage(t);
-  if(/\b(dibayar|kebayar|terbayar)\b/.test(raw))return"income";
-  if(/\b(dapat|dapet|dpt|terima|nerima|menerima)\b.{0,28}\b(bayaran|pembayaran|fee|honor|uang|transfer|pendapatan|gaji)\b/.test(s))return"income";
-  if(/\b(bayaran|pembayaran|fee|honor|gaji|pendapatan|pemasukan|cuan)\b.{0,24}\b(masuk|cair|dapat|terima)?\b/.test(s))return"income";
-  if(/(?:client|klien|customer|pelanggan).{0,24}(?:bayar|transfer)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
-  if(/pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|dapat bayaran|dapet bayaran|gajian|fee masuk|honor masuk|uang masuk|bayaran masuk|cair/.test(s))return"income";
-  if(/pengeluaran|expense|keluar|bayar|beli|makan|minum|bensin|belanja|parkir|kopi/.test(s))return"expense";
-  if(/\bfee\b|\bhonor\b/.test(s))return"income";
+  const incomeStrong=[
+    /\b(dibayar|kebayar|terbayar|sudah dibayar)\b/,
+    /\b(dapat|terima|menerima)\b.{0,40}\b(bayaran|pembayaran|fee|honor|uang|transfer|pendapatan|gaji|upah)\b/,
+    /\b(bayaran|pembayaran|fee|honor|gaji|upah|pendapatan|pemasukan|cuan)\b.{0,35}\b(masuk|cair|dapat|terima|desain|proyek|project|kerja|freelance)?\b/,
+    /\b(client|klien|customer|pelanggan)\b.{0,35}\b(bayar|transfer|ngasih|memberi)\b/,
+    /\b(bayaran|pembayaran|fee|honor|upah)\s+dari\b/,
+    /\b(uang|duit)\s+masuk\b/,
+    /\b(transfer|bayaran|fee|honor)\s+masuk\b/,
+    /\b(gajian|cair|pemasukan|pendapatan|income)\b/
+  ];
+  if(incomeStrong.some(r=>r.test(s))||/\b(dibayar|kebayar)\b/.test(raw))return"income";
+  const expenseStrong=[/\b(pengeluaran|expense|uang keluar)\b/,/\b(bayar|beli|makan|minum|bensin|belanja|parkir|kopi|tiket|ongkir|sewa)\b/];
+  if(expenseStrong.some(r=>r.test(s)))return"expense";
   return null;
 }
 function debtIntent(t){
@@ -330,6 +341,13 @@ function resolvePending(text){
   const p=state.pending;if(!p)return null;
   const raw=String(text||"").trim(),low=raw.toLowerCase();
 
+  if(p.kind==="finance-choice"){
+    if(/pemasukan|pendapatan|income|masuk/.test(low)){const title=smartFinanceTitle(p.source,"Pemasukan");state.transactions.push({id:uid(),type:"income",amount:p.amount,title,category:categoryFor(p.source),date:parseDate(p.source),createdAt:new Date().toISOString()});state.pending=null;return{text:`Siap. Pemasukan ${rupiah(p.amount)} aku catat sebagai “${title}”.`,actions:[]}}
+    if(/pengeluaran|expense|keluar/.test(low)){const title=smartFinanceTitle(p.source,"Pengeluaran");state.transactions.push({id:uid(),type:"expense",amount:p.amount,title,category:categoryFor(p.source),date:parseDate(p.source),createdAt:new Date().toISOString()});state.pending=null;return{text:`Siap. Pengeluaran ${rupiah(p.amount)} aku catat sebagai “${title}”.`,actions:[]}}
+    if(/bukan transaksi|tidak|bukan/.test(low)){state.pending=null;return{text:"Oke, tidak aku catat sebagai transaksi.",actions:[]}}
+    return{text:"Nominal ini masuk uang atau keluar uang?",actions:["Pemasukan","Pengeluaran","Bukan transaksi"]}
+  }
+
   if(p.kind==="debt-kind"){
     if(/pinjaman masuk kas|masuk kas|terima uang/.test(low)){const d=createLiability(p.source,p.amount,"cash-loan");state.pending=null;return{text:`Siap. ${d.title} ${rupiah(d.amount)} dicatat sebagai kewajiban. Kas bertambah, tetapi tidak dihitung sebagai pendapatan.`,actions:[]}}
     if(/hutang pembelian|beli|pembelian/.test(low)){const d=createLiability(p.source,p.amount,"credit-purchase");state.pending=null;return{text:`Siap. ${d.title} ${rupiah(d.amount)} dicatat sebagai kewajiban dan pembelian dicatat sebagai beban tanpa mengurangi kas saat ini.`,actions:[]}}
@@ -414,7 +432,7 @@ function addTargetFromText(t){
 function explicitNoteIntent(t){return /\b(catat|catatkan|note|jadikan catatan|simpan catatan|ide|gagasan|jangan lupa bahwa)\b/i.test(t)}
 function explicitAgendaIntent(t){return /\b(ingatkan|pengingat|reminder|jadwal|agenda|deadline|janji)\b/i.test(t)}
 function activityIntent(t){return /\b(ke|pergi|berangkat|temui|nemui|nemuin|ketemu|bertemu|meeting|rapat|review|loading|pasang|pemasangan|acara|jemput|antar|kirim|bayar|ambil|datang|kerja|kontrol|periksa)\b/i.test(normalizeUserLanguage(t))}
-function hasDateContext(t){return /\b(hari ini|besok|lusa|nanti|tanggal\s+\d+|(?:minggu|pekan)\s+depan(?:\s+hari)?\s+(?:senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)(?:\s+depan)?\b/i.test(t)}
+function hasDateContext(t){t=normalizeUserLanguage(t);return /\b(hari ini|besok|lusa|nanti|tanggal\s+\d+|(?:minggu|pekan)\s+depan(?:\s+hari)?\s+(?:senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)(?:\s+depan)?\b/i.test(t)}
 function hasTimeContext(t){return !!parseTime(t)||/\b(pagi|siang|sore|malam|habis magrib|setelah magrib|sehabis magrib)\b/i.test(t)}
 function classifyIntent(text){
   const debt=debtIntent(text),rawAmount=parseAmount(text),ft=financeType(text),amount=ft?rawAmount:null;
@@ -449,6 +467,11 @@ function saveExplicitNote(source){
   return{text:`Oke, aku rapikan dan simpan sebagai catatan: “${body}”`,actions:[]};
 }
 function unknownIntentPrompt(text){
+  const amount=parseAmount(text);
+  if(amount){
+    state.pending={kind:"finance-choice",source:text,amount};
+    return{text:`Aku menangkap nominal ${rupiah(amount)}. Ini pemasukan atau pengeluaran?`,actions:["Pemasukan","Pengeluaran","Bukan transaksi"]};
+  }
   state.pending={kind:"intent-choice",source:text};
   return{text:"Aku belum yakin kamu ingin aku melakukan apa dengan kalimat itu. Mau aku jadikan catatan, agenda, target, atau tidak perlu disimpan?",actions:["Jadikan catatan","Buat agenda","Jadikan target","Tidak perlu disimpan"]};
 }

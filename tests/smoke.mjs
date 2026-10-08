@@ -303,3 +303,39 @@ assert.equal(get("state.reminders[0].date"),"2026-10-09");
 assert.equal(get("state.reminders[0].time"),"21:00");
 
 assert.match(vm.runInContext(`naturalizeText("ngerjain Portofolio HDRG")`,context),/Portofolio HDRG/);
+
+reset();
+run("aku dapat bayaran ngerjain desain senilai 500rb");
+assert.equal(get("state.transactions.length"),1);
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),500000);
+
+reset();
+run("pendapatan 500 rb dari desain");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),500000);
+
+reset();
+run("entuk bayaran 350rb teko desain");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),350000);
+
+reset();
+run("wes dibayar client 750rb");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),750000);
+
+reset();
+run("tuku bensin 20rb");
+assert.equal(get("state.transactions[0].type"),"expense");
+assert.equal(get("state.transactions[0].amount"),20000);
+
+reset();
+run("sesuk jam 9 budal ke Jember");
+assert.equal(get("state.reminders[0].date"),"2026-10-09");
+assert.equal(get("state.reminders[0].time"),"09:00");
+
+reset();
+const moneyUnknown=run("500rb iki kanggo sesuatu");
+assert.equal(get("state.pending.kind"),"finance-choice");
+assert.match(moneyUnknown.text,/pemasukan atau pengeluaran/i);
