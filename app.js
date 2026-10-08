@@ -960,10 +960,7 @@ document.addEventListener("click",e=>{
   const dot=e.target.closest(".daydot");if(dot){const h=state.habits.find(x=>x.id===dot.dataset.habit),d=dot.dataset.date;if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
 });
 function initFinanceFab(){
-  const fab=$("#financeFab");if(!fab)return;
   if(localStorage&&typeof localStorage.removeItem==="function")localStorage.removeItem("nara-finance-fab-y");
-  fab.style.removeProperty("top");
-  fab.style.removeProperty("bottom");
 }
 
 document.addEventListener("submit",e=>{const f=e.target.closest("[data-goal-form]");if(!f)return;e.preventDefault();const id=f.dataset.goalForm,g=state.goals.find(x=>x.id===id),input=f.querySelector("[data-goal-input]"),title=(input&&input.value||"").trim();if(g&&title){g.steps=g.steps||[];g.steps.push({id:uid(),title:sentenceCase(naturalizeText(title)),done:false});g.completed=false;g.progress=goalProgress(g);save()}})
