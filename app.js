@@ -20,7 +20,43 @@ function msg(role,text,result="",actions=[]){state.messages.push({id:uid(),role,
 function firstName(){return ((state.profile&&state.profile.name)||"").trim().split(/\s+/)[0]||""}
 function greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
 
+function normalizeUserLanguage(text){
+  let s=String(text||"");
+  const replacements=[
+    [/\bdapet\b|\bdpt\b/gi,"dapat"],
+    [/\bngerjain\b|\bngerjakan\b|\bnggarap\b|\bgarap\b/gi,"mengerjakan"],
+    [/\bduit\b|\bduwit\b/gi,"uang"],
+    [/\bentuk\b|\boleh\b(?=\s+(?:bayaran|uang|transfer|fee|honor))/gi,"dapat"],
+    [/\btuku\b/gi,"beli"],
+    [/\bmbayar\b/gi,"bayar"],
+    [/\bmangan\b/gi,"makan"],
+    [/\bngombe\b/gi,"minum"],
+    [/\bsesuk\b/gi,"besok"],
+    [/\bmengko\b/gi,"nanti"],
+    [/\bbengi\b/gi,"malam"],
+    [/\besuk\b/gi,"pagi"],
+    [/\bawan\b/gi,"siang"],
+    [/\bsaiki\b/gi,"hari ini"],
+    [/\bsenen\b/gi,"senin"],
+    [/\bseloso\b/gi,"selasa"],
+    [/\brebo\b/gi,"rabu"],
+    [/\bkemis\b/gi,"kamis"],
+    [/\bjemuwah\b/gi,"jumat"],
+    [/\bsetu\b/gi,"sabtu"],
+    [/\bwes\b|\bwis\b/gi,"sudah"],
+    [/\bra\b|\bgak\b|\bga\b|\bnggak\b/gi,"tidak"],
+    [/\bnyatet\b|\bnyatetno\b/gi,"catat"],
+    [/\belingno\b|\bingetno\b/gi,"ingatkan"],
+    [/\bkerjo\b/gi,"kerja"],
+    [/\bmrene\b/gi,"ke sini"],
+    [/\bmrono\b/gi,"ke sana"],
+    [/\bcuan\b/gi,"pendapatan"]
+  ];
+  replacements.forEach(([re,to])=>{s=s.replace(re,to)});
+  return s.replace(/\s+/g," ").trim();
+}
 function parseAmount(t){
+  t=normalizeUserLanguage(t);
   let s=timeWordToNumber(t).replace(/rp\.?\s?/g,"").replace(/(\d)\.(?=\d{3}\b)/g,"$1").replace(/(\d),(?=\d{3}\b)/g,"$1");
   s=s
     .replace(/\b(?:(?:jam|pukul)\s+)?setengah\s+\d{1,2}\s*(?:pagi|siang|sore|malam)?\b/g," ")
@@ -54,7 +90,7 @@ function normalizeClock(hour,minute,part){
   return `${pad(Math.max(0,Math.min(23,h)))}:${pad(Math.max(0,Math.min(59,m)))}`;
 }
 function parseTime(t){
-  let s=timeWordToNumber(t);
+  t=normalizeUserLanguage(t);let s=timeWordToNumber(t);
   const part=(s.match(/\b(pagi|siang|sore|malam)\b/)||[])[1]||"";
   let m=s.match(/(?:(?:jam|pukul)\s+)?setengah\s+(\d{1,2})/);
   if(m){
@@ -77,7 +113,7 @@ function nextWeekdayDate(name,forceNext=false){
   const d=new Date(now);d.setDate(now.getDate()+delta);return localISO(d);
 }
 function parseDate(t){
-  const s=t.toLowerCase();
+  t=normalizeUserLanguage(t);const s=t.toLowerCase();
   if(/\bhari ini\b|\btadi\b|\bbarusan\b/.test(s))return localISO();
   if(/\blusa\b/.test(s))return addDays(2);
   if(/\bbesok\b/.test(s))return addDays(1);
@@ -98,7 +134,7 @@ function parseDate(t){
 }
 function categoryLabel(c){return ({Transport:"Transportasi",Food:"Makan & minum",Bills:"Tagihan",Family:"Keluarga",Work:"Pekerjaan",Shopping:"Belanja",Other:"Lainnya"})[c]||c}
 function categoryFor(t){
-  const s=t.toLowerCase();
+  const s=normalizeUserLanguage(t).toLowerCase();
   if(/bensin|parkir|tol|ojek|grab|gojek|transport/.test(s))return"Transport";
   if(/makan|minum|kopi|sarapan|lunch|dinner|warung/.test(s))return"Food";
   if(/internet|listrik|air|pulsa|tagihan|bill|hosting/.test(s))return"Bills";
@@ -108,24 +144,23 @@ function categoryFor(t){
   return"Other";
 }
 function cleanTitle(t){
-  return t.replace(/\b(hari ini|tadi|barusan|besok|lusa|pengeluaran|pemasukan|sebesar|senilai|catat(?:kan)?|ingatkan(?: saya)?|tolong|aku|saya|bayar|tanggal)\b/gi," ")
+  t=naturalizeText(t);return t.replace(/\b(hari ini|tadi|barusan|besok|lusa|pengeluaran|pemasukan|sebesar|senilai|catat(?:kan)?|ingatkan(?: saya)?|tolong|aku|saya|bayar|tanggal)\b/gi," ")
     .replace(/\b(?:rp\.?\s?)?\d[\d.,]*\s*(?:juta|jt|ribu|rb|k)?\b/gi," ")
     .replace(/\b(?:jam|pukul)\s*(?:setengah\s+)?(?:\d{1,2}|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas)(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/gi," ")
     .replace(/\s+/g," ").replace(/^[:\-\s]+|[:\-\s]+$/g,"").trim();
 }
 function splitClauses(text){
-  return text
+  text=normalizeUserLanguage(text);return text
     .replace(/\s+dan\s+(?=(?:besok|lusa|hari ini|tadi|catat|ingatkan|meeting|rapat|bayar|terima|dapat)\b)/gi,", ")
     .replace(/\s+dan\s+(?=[^,;.!?]{0,36}\b\d+(?:[.,]\d+)?\s*(?:juta|jt|ribu|rb|k)\b)/gi,", ")
     .replace(/\s+(?:kemudian|lalu)\s+(?=(?:pukul|jam|\d{1,2}[.:]\d{2}))/gi,", ")
     .split(/[;\n]+|[.!?]\s+|,\s+(?=\S)/).map(x=>x.trim()).filter(Boolean);
 }
 function financeType(t){
-  const s=t.toLowerCase();
-  if(/(?:client|klien|customer|pelanggan).{0,24}(?:bayar|transfer)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
-  if(/pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|gajian|fee masuk/.test(s))return"income";
-  if(/pengeluaran|expense|keluar|bayar|beli|makan|bensin|belanja|parkir|kopi/.test(s))return"expense";
-  if(/\bfee\b|\bhonor\b/.test(s))return"income";
+  const s=normalizeUserLanguage(t).toLowerCase();
+  if(/(?:client|klien|customer|pelanggan).{0,30}(?:bayar|transfer|lunasi)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
+  if(/\b(pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|dapat bayaran|dapat uang|gajian|gaji masuk|fee(?:\s+masuk)?|honor(?:\s+masuk)?|komisi|bonus|upah|bayaran|hasil kerja|orderan cair)\b/.test(s))return"income";
+  if(/\b(pengeluaran|expense|uang keluar|bayar|beli|makan|bensin|belanja|parkir|kopi|minum|ongkir|sewa)\b/.test(s))return"expense";
   return null;
 }
 function debtIntent(t){
@@ -174,7 +209,12 @@ function receiveReceivableFromText(text){
   return {item,received};
 }
 function smartFinanceTitle(text,fallback="Transaksi"){
-  let s=String(text).replace(/\b(aku|saya|tadi|hari ini|sebesar|senilai|rp)\b/gi," ").replace(/\b\d+(?:[.,]\d+)?\s*(?:ribu|rb|k|juta|jt)?\b/gi," ").replace(/\s+/g," ").trim();
+  let s=naturalizeText(text)
+    .replace(/\b(aku|saya|tadi|hari ini|sebesar|senilai|rp|pemasukan|pendapatan|income|pengeluaran|expense)\b/gi," ")
+    .replace(/\b(dapat|terima)\s+(?:bayaran|pembayaran|uang)?\b/gi," ")
+    .replace(/\b\d+(?:[.,]\d+)?\s*(?:ribu|rb|k|juta|jt)?\b/gi," ")
+    .replace(/\s+/g," ").trim();
+  if(/mengerjakan\s+/i.test(s))s=s.replace(/^.*?mengerjakan\s+/i,"Mengerjakan ");
   return sentenceCase(s||fallback);
 }
 function reminderIntent(t){
@@ -249,7 +289,7 @@ function smartTitle(text){
   return sentenceCase(naturalizeText(s)||"Agenda");
 }
 function naturalizeText(text){
-  return String(text||"")
+  return normalizeUserLanguage(text)
     .replace(/\baku tuh\b|\bsaya tuh\b/gi,"")
     .replace(/\baku pengen\b|\baku pingin\b|\bsaya pengen\b|\bpengen\b|\bpingin\b/gi,"ingin")
     .replace(/\bselesaiin\b/gi,"selesaikan")
@@ -298,6 +338,8 @@ function resolvePending(text){
   }
 
   if(p.kind==="intent-choice"){
+    const ft=financeType(raw),amount=ft?parseAmount(raw):null;
+    if(ft&&amount){state.pending=null;const lines=process(raw);return{text:lines.join("\n"),actions:[]}}
     if(/jadikan catatan|catatan|note/.test(low)){const source=p.source;state.pending=null;return saveExplicitNote(source)}
     if(/buat agenda|agenda|jadwal|ingatkan/.test(low)){const source=p.source;state.pending=null;return beginAgendaClarification(source)||{text:"Kapan agendanya?",actions:agendaDateChoices()}}
     if(/jadikan target|buat target|target/.test(low)){const source=p.source;state.pending=null;const g=addTargetFromText("Target bulan ini "+source);return{text:`Oke, aku jadikan target bulan ini: “${g.title}”.`,actions:[]}}
@@ -415,7 +457,7 @@ function unknownIntentPrompt(text){
 }
 
 function smartResponse(text){
-  const pending=resolvePending(text);if(pending)return pending;
+  text=normalizeUserLanguage(text);const pending=resolvePending(text);if(pending)return pending;
   const corrected=correctRecent(text);if(corrected)return corrected;
   const debtPaid=payLiabilityFromText(text);
   if(debtPaid)return{text:`Pembayaran hutang ${rupiah(debtPaid.paid)} sudah dicatat. Sisa hutang: ${rupiah(debtPaid.item.remaining||0)}.`,actions:[]};
@@ -449,7 +491,7 @@ function smartResponse(text){
 }
 
 function process(text){
-  const monthly=/bulan ini|target bulan/.test(text.toLowerCase());
+  text=normalizeUserLanguage(text);const monthly=/bulan ini|target bulan/.test(text.toLowerCase());
   const paidBill=markPaidBillFromText(text);
   if(paidBill)return [`Sip, tagihan “${paidBill.title}” sudah lunas. ${rupiah(paidBill.amount)} juga sudah masuk ke pengeluaran.`];
   const completed=markHabitFromText(text);
@@ -464,7 +506,7 @@ function process(text){
     const ft=financeType(clause),amount=ft?parseAmount(clause):null;
     if(explicitTargetIntent(clause)){const g=addTargetFromText(clause);results.push(`Target ${g.period==="weekly"?"minggu":"bulan"} ini ditambahkan: “${g.title}”.`);continue;}
     if(ft&&amount){
-      const category=categoryFor(clause),date=parseDate(clause),title=cleanTitle(clause)||category;
+      const category=categoryFor(clause),date=parseDate(clause),title=smartFinanceTitle(clause,categoryLabel(category));
       const futureBill=ft==="expense"&&/(bayar|tagihan)/i.test(clause)&&/(besok|lusa|tanggal)/i.test(clause)&&date!==localISO();
       if(futureBill){
         state.reminders.push({id:uid(),title:title||"Tagihan",date,time:parseTime(clause),done:false,kind:"bill",amount,category,leadMinutes:state.settings.reminderLead||30,notified:false});
@@ -472,7 +514,7 @@ function process(text){
         continue;
       }
       state.transactions.push({id:uid(),type:ft,amount,category,title,date,createdAt:new Date().toISOString()});
-      results.push(`Sudah, ${ft==="income"?"pemasukan":"pengeluaran"} ${rupiah(amount)} untuk ${categoryLabel(category)} aku catat.`);
+      results.push(ft==="income"?`Siap. Pemasukan ${rupiah(amount)} dari “${title}” sudah aku catat.`:`Siap. Pengeluaran ${rupiah(amount)} untuk “${title}” sudah aku catat.`);
       continue;
     }
     if(habitIntent(clause)){
@@ -700,6 +742,20 @@ function runAgendaSheetAction(action){
   if(action==="delete"){closeAgendaSheet();askConfirm("Hapus agenda?","Agenda ini akan dihapus permanen.","Hapus",()=>{state.reminders=state.reminders.filter(x=>x.id!==id);save()})}
 }
 
+let datePickerView=new Date(),datePickerSelected="";
+function renderDatePicker(){
+  const y=datePickerView.getFullYear(),m=datePickerView.getMonth(),names=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  $("#datePickerHeading").textContent=names[m]+" "+y;$("#datePickerMonth").textContent=names[m]+" "+y;
+  const first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),offset=(first.getDay()+6)%7;
+  let html="";for(let i=0;i<offset;i++)html+='<span class="date-empty"></span>';
+  for(let d=1;d<=days;d++){const iso=`${y}-${pad(m+1)}-${pad(d)}`,today=iso===localISO(),sel=iso===datePickerSelected;html+=`<button type="button" class="date-day ${today?"today":""} ${sel?"selected":""}" data-date-value="${iso}">${d}</button>`}
+  $("#datePickerGrid").innerHTML=html;
+}
+function openEditDatePicker(){
+  const current=$("#editDate").value||localISO();datePickerSelected=current;datePickerView=new Date(current+"T12:00:00");renderDatePicker();$("#datePickerDialog").showModal();
+}
+function closeEditDatePicker(){if($("#datePickerDialog").open)$("#datePickerDialog").close()}
+function commitEditDate(){if(datePickerSelected)$("#editDate").value=datePickerSelected;closeEditDatePicker()}
 function openEditor(kind,id){
   if($("#agendaSheet")&&$("#agendaSheet").open)$("#agendaSheet").close();
   if($("#confirmDialog")&&$("#confirmDialog").open)$("#confirmDialog").close();
@@ -885,7 +941,16 @@ $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){
 $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
 $("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",submitVoice);$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});
-$("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());$("#confirmCancel").addEventListener("click",closeConfirm);$("#confirmOk").addEventListener("click",()=>{const fn=confirmAction;closeConfirm();if(typeof fn==="function")fn()});$("#confirmDialog").addEventListener("click",e=>{if(e.target===$("#confirmDialog"))closeConfirm()});$("#closeAgendaSheet").addEventListener("click",closeAgendaSheet);$("#agendaSheet").addEventListener("click",e=>{if(e.target===$("#agendaSheet"))closeAgendaSheet()});$("#closeVoiceMode").addEventListener("click",cancelVoice);$("#voiceCancel").addEventListener("click",cancelVoice);$("#voiceDone").addEventListener("click",submitVoice);$("#dismissReminderToast").addEventListener("click",()=>$("#reminderToast").hidden=true);
+$("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());
+$("#openEditDatePicker").addEventListener("click",openEditDatePicker);
+$("#closeDatePicker").addEventListener("click",closeEditDatePicker);
+$("#dateCancel").addEventListener("click",closeEditDatePicker);
+$("#dateDone").addEventListener("click",commitEditDate);
+$("#dateToday").addEventListener("click",()=>{datePickerSelected=localISO();datePickerView=new Date();renderDatePicker()});
+$("#datePrevMonth").addEventListener("click",()=>{datePickerView.setMonth(datePickerView.getMonth()-1);renderDatePicker()});
+$("#dateNextMonth").addEventListener("click",()=>{datePickerView.setMonth(datePickerView.getMonth()+1);renderDatePicker()});
+$("#datePickerGrid").addEventListener("click",e=>{const b=e.target.closest("[data-date-value]");if(b){datePickerSelected=b.dataset.dateValue;renderDatePicker()}});
+$("#datePickerDialog").addEventListener("click",e=>{if(e.target===$("#datePickerDialog"))closeEditDatePicker()});$("#confirmCancel").addEventListener("click",closeConfirm);$("#confirmOk").addEventListener("click",()=>{const fn=confirmAction;closeConfirm();if(typeof fn==="function")fn()});$("#confirmDialog").addEventListener("click",e=>{if(e.target===$("#confirmDialog"))closeConfirm()});$("#closeAgendaSheet").addEventListener("click",closeAgendaSheet);$("#agendaSheet").addEventListener("click",e=>{if(e.target===$("#agendaSheet"))closeAgendaSheet()});$("#closeVoiceMode").addEventListener("click",cancelVoice);$("#voiceCancel").addEventListener("click",cancelVoice);$("#voiceDone").addEventListener("click",submitVoice);$("#dismissReminderToast").addEventListener("click",()=>$("#reminderToast").hidden=true);
 $("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});
 $("#profilePromptSkip").addEventListener("click",()=>{$("#profilePromptForm").hidden=true});
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
