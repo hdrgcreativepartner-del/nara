@@ -68,4 +68,6 @@ assert.ok(js.includes("initFinanceFab")&&!js.includes("setPointerCapture"),"Fina
 assert.ok(css.includes("#page-chat .send")&&css.includes("background:#111915!important"),"Chat send button must not use the blue frame/fill");
 assert.ok(css.includes("#chatForm.composer:focus-within"),"Chat composer must stay neutral without a blue frame");
 assert.ok(css.includes("bottom:calc(94px + env(safe-area-inset-bottom))"),"Finance FAB must stay fixed above bottom navigation");
-console.log("NARA UI contract passed: fixed finance FAB, income intelligence, colloquial language normalization, custom edit date picker.");
+assert.ok(html.includes('id="todayFab"')&&html.includes('id="notesFab"')&&html.includes('id="goalsFab"'),"Today, Notes, and Goals pages must use the same fixed FAB pattern");
+assert.ok(css.includes(".page-fab")&&css.includes("position:fixed!important"),"Primary page add actions must use a shared fixed FAB style");
+console.log("NARA UI contract passed: unified fixed FABs, income intelligence, colloquial language normalization, custom edit date picker.");

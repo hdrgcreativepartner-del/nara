@@ -98,7 +98,7 @@
     </section>
 
     <section class="page" id="page-today">
-      <div class="sectionhead"><div><small>Daily overview</small><h2 id="todayHeading">Hari ini</h2></div><button data-action="quick">+ Tambah</button></div>
+      <div class="sectionhead"><div><small>Daily overview</small><h2 id="todayHeading">Hari ini</h2></div></div>
       <article class="hero"><div><label>Fokus hari ini</label><h3 id="focusText">Belum ada agenda mendesak.</h3></div><div id="dateBadge" class="datebadge"></div></article>
       <div class="twocol">
         <article class="card agenda-card">
@@ -113,6 +113,7 @@
         <article class="card"><div class="cardhead"><h3>Kebiasaan</h3><span id="habitCount">0</span></div><div id="todayHabits" class="list empty">Belum ada kebiasaan yang kamu pantau.</div></article>
       </div>
       <article class="card"><div class="cardhead"><h3>Uang hari ini</h3><span id="todayNet">Rp0</span></div><div class="moneygrid"><div><small>Pemasukan</small><strong id="todayIncome">Rp0</strong></div><div><small>Pengeluaran</small><strong id="todayExpense">Rp0</strong></div></div></article>
+      <button id="todayFab" class="page-fab" type="button" data-action="quick" aria-label="Tambah agenda" title="Tambah agenda"><span aria-hidden="true">＋</span></button>
     </section>
 
     <section class="page" id="page-finance">
@@ -137,19 +138,21 @@
         <article class="card"><div class="cardhead"><h3>Pengeluaran per kategori</h3></div><div id="categoryBreakdown" class="category empty">Belum ada data.</div></article>
         <article class="card"><div class="cardhead"><h3>Transaksi terbaru</h3></div><div id="transactionList" class="list empty">Belum ada transaksi.</div></article>
       </div>
-      <div class="finance-add-dock"><button id="financeFab" type="button" data-action="transaction" aria-label="Tambah transaksi" title="Tambah transaksi"><span aria-hidden="true">＋</span></button></div>
+      <div class="finance-add-dock"><button id="financeFab" class="page-fab" type="button" data-action="transaction" aria-label="Tambah transaksi" title="Tambah transaksi"><span aria-hidden="true">＋</span></button></div>
     </section>
 
     <section class="page" id="page-notes">
-      <div class="sectionhead"><div><small>Capture ideas</small><h2>Catatan</h2></div><button data-action="note">+ Catatan</button></div>
+      <div class="sectionhead"><div><small>Capture ideas</small><h2>Catatan</h2></div></div>
       <div class="search"><span>⌕</span><input id="noteSearch" placeholder="Cari catatan…"></div>
       <div id="notesGrid" class="notes"></div>
+      <button id="notesFab" class="page-fab" type="button" data-action="note" aria-label="Tambah catatan" title="Tambah catatan"><span aria-hidden="true">＋</span></button>
     </section>
 
     <section class="page" id="page-goals">
-      <div class="sectionhead"><div><small>PELAN-PELAN, TETAP MAJU</small><h2>Target &amp; Kebiasaan</h2></div><div class="section-actions"><button data-action="target">+ Target</button><button data-action="habit">+ Kebiasaan</button></div></div>
+      <div class="sectionhead"><div><small>PELAN-PELAN, TETAP MAJU</small><h2>Target &amp; Kebiasaan</h2></div></div>
       <article class="card"><div class="cardhead"><h3>Target bulan ini</h3><span id="goalMonth"></span></div><div id="goalsList" class="goals empty">Belum ada target bulan ini.</div></article>
-      <article class="card"><div class="cardhead"><h3>Pelacak kebiasaan</h3><span id="habitWeek"></span></div><div id="habitTracker" class="habits empty">Tambahkan kebiasaan lewat obrolan atau tombol + Kebiasaan.</div></article>
+      <article class="card"><div class="cardhead"><h3>Pelacak kebiasaan</h3><span id="habitWeek"></span></div><div id="habitTracker" class="habits empty">Tambahkan kebiasaan lewat obrolan atau tombol +.</div></article>
+      <button id="goalsFab" class="page-fab" type="button" data-action="target" aria-label="Tambah target atau kebiasaan" title="Tambah target atau kebiasaan"><span aria-hidden="true">＋</span></button>
     </section>
 <section class="page" id="page-account">
   <div class="sectionhead account-heading"><div><small>AKUN &amp; SETELAN</small><h2>Ruangmu di NARA</h2><p>Atur nama dan simpan salinan datamu kapan saja.</p></div></div>

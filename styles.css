@@ -1052,3 +1052,49 @@ dialog.action-sheet-dialog[open] .action-sheet{
     bottom:30px!important;
   }
 }
+
+/* NARA v6.2.4 — unified fixed FAB language across primary pages */
+.page-fab{
+  position:fixed!important;
+  right:18px!important;
+  bottom:calc(94px + env(safe-area-inset-bottom))!important;
+  top:auto!important;
+  z-index:70!important;
+  width:56px!important;
+  height:56px!important;
+  min-width:56px!important;
+  min-height:56px!important;
+  border:0!important;
+  border-radius:50%!important;
+  padding:0!important;
+  background:#111915!important;
+  color:#fff!important;
+  display:grid!important;
+  place-items:center!important;
+  box-shadow:0 14px 34px rgba(17,25,21,.22)!important;
+  cursor:pointer!important;
+  touch-action:manipulation!important;
+  user-select:none!important;
+  -webkit-user-select:none!important;
+  transition:transform .16s ease,box-shadow .16s ease!important;
+}
+.page-fab span{
+  margin:0!important;
+  font-size:28px!important;
+  line-height:1!important;
+  font-weight:400!important;
+  transform:translateY(-1px);
+}
+.page-fab:active{transform:scale(.96)}
+@media(max-width:520px){
+  .page-fab{
+    right:16px!important;
+    bottom:calc(94px + env(safe-area-inset-bottom))!important;
+  }
+}
+@media(min-width:980px){
+  .page-fab{
+    right:30px!important;
+    bottom:30px!important;
+  }
+}
