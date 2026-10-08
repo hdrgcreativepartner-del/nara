@@ -231,11 +231,25 @@ function createReceivable(source,amount){
 }
 function payLiabilityFromText(text){
   const s=String(text).toLowerCase();if(!/\b(bayar|melunasi|lunas)\b.*\b(hutang|utang)\b|\b(hutang|utang)\b.*\b(bayar|lunas)\b/.test(s))return null;
-  const amount=parseAmount(text),open=state.liabilities.filter(x=>!x.done);if(!open.length)return null;
-  const creditor=counterpartyFromText(text).toLowerCase(),item=(creditor&&open.find(x=>(x.creditor||"").toLowerCase().includes(creditor)))||open[0];
-  const paid=Math.min(amount||item.remaining||item.amount,item.remaining||item.amount);item.remaining=Math.max(0,(item.remaining??item.amount)-paid);if(item.remaining===0){item.done=true;item.paidAt=new Date().toISOString()}
-  state.transactions.push({id:uid(),type:"debt_payment",amount:paid,title:`Pembayaran ${item.title}`,category:"Debt",date:localISO(),cashImpact:-paid,createdAt:new Date().toISOString(),linkedDebtId:item.id});
-  return {item,paid};
+  const amount=parseAmount(text),open=state.liabilities.filter(x=>!x.done&&(x.remaining??x.amount)>0);
+  const creditor=counterpartyFromText(text).toLowerCase().trim();
+  let items=creditor?open.filter(x=>(x.creditor||"").toLowerCase().trim()===creditor):open;
+  if(!items.length)return {reply:creditor?`Aku tidak menemukan hutang aktif kepada ${sentenceCase(creditor)}. Pembayaran belum dicatat.`:"Tidak ada hutang aktif yang perlu dibayar. Pembayaran belum dicatat."};
+  const parties=new Set(items.map(x=>(x.creditor||x.title).toLowerCase().trim()));
+  if(parties.size>1)return {reply:"Pembayaran ini untuk hutang kepada siapa? Sebutkan namanya agar aku tidak mengurangi hutang orang lain."};
+  items=items.slice().sort((a,b)=>(a.createdAt||a.date||"").localeCompare(b.createdAt||b.date||""));
+  const total=items.reduce((sum,x)=>sum+(x.remaining??x.amount),0),requested=amount||total;
+  let available=Math.min(requested,total),paid=0;const allocations=[];
+  for(const item of items){
+    if(!available)break;
+    const part=Math.min(available,item.remaining??item.amount);
+    item.remaining=(item.remaining??item.amount)-part;
+    if(item.remaining===0){item.done=true;item.paidAt=new Date().toISOString()}
+    state.transactions.push({id:uid(),type:"debt_payment",amount:part,title:`Pembayaran ${item.title}`,category:"Debt",date:parseDate(text),cashImpact:-part,createdAt:new Date().toISOString(),linkedDebtId:item.id,sourceText:text});
+    allocations.push({id:item.id,amount:part});available-=part;paid+=part;
+  }
+  const remaining=total-paid,party=items[0].creditor||"";
+  return {item:items[0],paid,remaining,allocations,reply:`Pembayaran hutang${party?" kepada "+party:""} ${rupiah(paid)} sudah dicatat${allocations.length>1?" untuk "+allocations.length+" hutang":""}. Sisa seluruh hutang${party?" kepada "+party:""}: ${rupiah(remaining)}.${requested>total?" Nominal yang kamu sebutkan melebihi sisa hutang sebesar "+rupiah(requested-total)+"; kelebihannya belum dicatat.":""}`};
 }
 function receiveReceivableFromText(text){
   const s=String(text).toLowerCase();if(!/\b(bayar|dibayar|mengembalikan|balikin|lunas)\b/.test(s)||!state.receivables.some(x=>!x.done))return null;
@@ -670,7 +684,7 @@ function coreSmartResponse(text){
   text=normalizeUserLanguage(text);const pending=resolvePending(text);if(pending)return pending;
   const corrected=correctRecent(text);if(corrected)return corrected;
   const debtPaid=payLiabilityFromText(text);
-  if(debtPaid)return{text:`Pembayaran hutang ${rupiah(debtPaid.paid)} sudah dicatat. Sisa hutang: ${rupiah(debtPaid.item.remaining||0)}.`,actions:[]};
+  if(debtPaid)return{text:debtPaid.reply,actions:[]};
   const receivablePaid=receiveReceivableFromText(text);
   if(receivablePaid)return{text:`Pembayaran piutang ${rupiah(receivablePaid.received)} sudah masuk kas. Sisa piutang: ${rupiah(receivablePaid.item.remaining||0)}.`,actions:[]};
   const paidBill=markPaidBillFromText(text);
