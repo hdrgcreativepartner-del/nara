@@ -181,3 +181,17 @@ vm.runInContext('state.pending={kind:"intent-choice",source:"Topik lain"}',conte
 vm.runInContext('smartResponse("Jadikan catatan","Ide asli dari pesan sebelumnya")',context);
 assert.match(get('state.notes[1].body'),/Asli dari pesan sebelumnya/i);
 console.log('Note aliases, continued context and source-bound actions passed');
+
+for(const input of ['Beli rokok, biskuit, korek 38 rb','Aku beli rokok, biskuit, dan korek seharga 38 rb']){
+  reset();const reply=run(input);
+  assert.equal(get('state.transactions.length'),1);
+  assert.equal(get('state.transactions[0].type'),'expense');
+  assert.equal(get('state.transactions[0].amount'),38000);
+  assert.match(get('state.transactions[0].title'),/rokok.*biskuit.*korek/i);
+  assert.doesNotMatch(reply.text,/belum yakin/);
+}
+reset();run('Beli rokok dan korek 38rb, bayar bensin 20rb');
+assert.equal(get('state.transactions.length'),2);
+assert.equal(get('state.transactions[0].amount'),38000);
+assert.equal(get('state.transactions[1].amount'),20000);
+console.log('Shopping lists with one total and independent transactions passed');

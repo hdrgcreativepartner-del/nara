@@ -176,11 +176,14 @@ function cleanTitle(t){
     .replace(/\s+/g," ").replace(/^[:\-\s]+|[:\-\s]+$/g,"").trim();
 }
 function splitClauses(text){
-  text=normalizeUserLanguage(text);return text
+  text=normalizeUserLanguage(text);
+  if(habitIntent(text)&&!financeType(text))return text.split(/[;,]+/).map(x=>x.trim()).filter(Boolean);
+  return text
     .replace(/\s+dan\s+(?=(?:besok|lusa|hari ini|tadi|catat|ingatkan|meeting|rapat|bayar|terima|dapat)\b)/gi,", ")
-    .replace(/\s+dan\s+(?=[^,;.!?]{0,36}\b\d+(?:[.,]\d+)?\s*(?:juta|jt|ribu|rb|k)\b)/gi,", ")
+    .replace(/\s+dan\s+(?=[^,;.!?]{0,36}\b\d+(?:[.,]\d+)?\s*(?:juta|jt|ribu|rb|k)\b)/gi,(match,offset,source)=>parseAmount(source.slice(0,offset))?", ":match)
     .replace(/\s+(?:kemudian|lalu)\s+(?=(?:pukul|jam|\d{1,2}[.:]\d{2}))/gi,", ")
-    .split(/[;\n]+|[.!?]\s+|,\s+(?=\S)/).map(x=>x.trim()).filter(Boolean);
+    .replace(/,\s+(?=[^,;.!?]{0,60}\b\d+(?:[.,]\d+)?\s*(?:juta|jt|ribu|rb|k)\b)/gi,(match,offset,source)=>parseAmount(source.slice(0,offset))?"; ":match)
+    .split(/[;\n]+|[.!?]\s+|,\s+(?=(?:(?:aku|saya|dan|lalu|kemudian)\s+)*(?:beli|bayar|membayar|terima|dapat|pemasukan|pengeluaran|catat|catatkan|ingatkan|besok|lusa|hari ini|tadi|rapat|meeting|target|bulan ini|jam|pukul)\b)/i).map(x=>x.trim()).filter(Boolean);
 }
 function financeType(t){
   const raw=String(t||"").toLowerCase(),s=normalizeUserLanguage(t).toLowerCase();
