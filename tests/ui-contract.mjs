@@ -60,4 +60,7 @@ assert.ok(js.includes("initMedianNotifications")&&js.includes("queueReminderForP
 assert.ok(html.includes("finance-add-dock"),"Finance add transaction CTA must sit near the bottom");
 assert.ok(html.includes('id="datePickerDialog"')&&html.includes('id="dateDone"'),"Edit date must use a custom picker with an explicit Done action");
 assert.ok(js.includes("normalizeUserLanguage")&&js.includes("dapat bayaran"),"Language engine must normalize slang/Javanese and understand income");
+assert.ok(html.includes('id="dateDone"')&&html.includes('id="dateCancel"'),"Edit date picker must have explicit Selesai/Batal actions");
+assert.ok(html.includes("finance-add-dock"),"Finance add action must stay at the bottom of the finance page");
+assert.ok(js.includes('kind==="finance-choice"'),"Unknown money input must ask income vs expense");
 console.log("NARA UI contract passed: income intelligence, colloquial language normalization, bottom finance CTA, custom edit date picker.");

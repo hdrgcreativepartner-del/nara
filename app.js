@@ -44,6 +44,12 @@ function normalizeUserLanguage(text){
     [/\bjemuwah\b/gi,"jumat"],
     [/\bsetu\b/gi,"sabtu"],
     [/\bwes\b|\bwis\b/gi,"sudah"],
+    [/\bbudal\b/gi,"berangkat"],
+    [/\bmenyang\b/gi,"ke"],
+    [/\bmulih\b/gi,"pulang"],
+    [/\barep\b/gi,"akan"],
+    [/\bteko\b/gi,"dari"],
+    [/\bnyambut gawe\b/gi,"kerja"],
     [/\bra\b|\bgak\b|\bga\b|\bnggak\b/gi,"tidak"],
     [/\bnyatet\b|\bnyatetno\b/gi,"catat"],
     [/\belingno\b|\bingetno\b/gi,"ingatkan"],
@@ -53,6 +59,7 @@ function normalizeUserLanguage(text){
     [/\bcuan\b/gi,"pendapatan"]
   ];
   replacements.forEach(([re,to])=>{s=s.replace(re,to)});
+  s=s.replace(/(\d)\s*rb\b/gi,"$1 ribu").replace(/(\d)\s*jt\b/gi,"$1 juta");
   return s.replace(/\s+/g," ").trim();
 }
 function parseAmount(t){
@@ -157,7 +164,8 @@ function splitClauses(text){
     .split(/[;\n]+|[.!?]\s+|,\s+(?=\S)/).map(x=>x.trim()).filter(Boolean);
 }
 function financeType(t){
-  const s=normalizeUserLanguage(t).toLowerCase();
+  const raw=String(t||"").toLowerCase(),s=normalizeUserLanguage(t).toLowerCase();
+  if(/\b(dibayar|kebayar|terbayar)\b/.test(raw))return"income";
   if(/(?:client|klien|customer|pelanggan).{0,30}(?:bayar|transfer|lunasi)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
   if(/\b(pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|dapat bayaran|dapat uang|gajian|gaji masuk|fee(?:\s+masuk)?|honor(?:\s+masuk)?|komisi|bonus|upah|bayaran|hasil kerja|orderan cair)\b/.test(s))return"income";
   if(/\b(pengeluaran|expense|uang keluar|bayar|beli|makan|bensin|belanja|parkir|kopi|minum|ongkir|sewa)\b/.test(s))return"expense";
@@ -331,6 +339,13 @@ function resolvePending(text){
   const p=state.pending;if(!p)return null;
   const raw=String(text||"").trim(),low=raw.toLowerCase();
 
+  if(p.kind==="finance-choice"){
+    if(/pemasukan|pendapatan|income|masuk/.test(low)){const title=smartFinanceTitle(p.source,"Pemasukan");state.transactions.push({id:uid(),type:"income",amount:p.amount,title,category:categoryFor(p.source),date:parseDate(p.source),createdAt:new Date().toISOString()});state.pending=null;return{text:`Siap. Pemasukan ${rupiah(p.amount)} aku catat sebagai “${title}”.`,actions:[]}}
+    if(/pengeluaran|expense|keluar/.test(low)){const title=smartFinanceTitle(p.source,"Pengeluaran");state.transactions.push({id:uid(),type:"expense",amount:p.amount,title,category:categoryFor(p.source),date:parseDate(p.source),createdAt:new Date().toISOString()});state.pending=null;return{text:`Siap. Pengeluaran ${rupiah(p.amount)} aku catat sebagai “${title}”.`,actions:[]}}
+    if(/bukan transaksi|bukan|tidak/.test(low)){state.pending=null;return{text:"Oke, tidak aku catat sebagai transaksi.",actions:[]}}
+    return{text:"Nominal ini masuk uang atau keluar uang?",actions:["Pemasukan","Pengeluaran","Bukan transaksi"]}
+  }
+
   if(p.kind==="debt-kind"){
     if(/pinjaman masuk kas|masuk kas|terima uang/.test(low)){const d=createLiability(p.source,p.amount,"cash-loan");state.pending=null;return{text:`Siap. ${d.title} ${rupiah(d.amount)} dicatat sebagai kewajiban. Kas bertambah, tetapi tidak dihitung sebagai pendapatan.`,actions:[]}}
     if(/hutang pembelian|beli|pembelian/.test(low)){const d=createLiability(p.source,p.amount,"credit-purchase");state.pending=null;return{text:`Siap. ${d.title} ${rupiah(d.amount)} dicatat sebagai kewajiban dan pembelian dicatat sebagai beban tanpa mengurangi kas saat ini.`,actions:[]}}
@@ -452,6 +467,11 @@ function saveExplicitNote(source){
   return{text:`Oke, aku rapikan dan simpan sebagai catatan: “${body}”`,actions:[]};
 }
 function unknownIntentPrompt(text){
+  const amount=parseAmount(text);
+  if(amount){
+    state.pending={kind:"finance-choice",source:text,amount};
+    return{text:`Aku menangkap nominal ${rupiah(amount)}. Ini pemasukan atau pengeluaran?`,actions:["Pemasukan","Pengeluaran","Bukan transaksi"]};
+  }
   state.pending={kind:"intent-choice",source:text};
   return{text:"Aku belum yakin kamu ingin aku melakukan apa dengan kalimat itu. Mau aku jadikan catatan, agenda, target, atau tidak perlu disimpan?",actions:["Jadikan catatan","Buat agenda","Jadikan target","Tidak perlu disimpan"]};
 }
