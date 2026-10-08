@@ -1158,7 +1158,7 @@ body>.page-fab{
   z-index:120!important;
   will-change:transform;
 }
-body>.page-fab[hidden]{display:none!important}
+body>.page-fab[hidden],#financeFab[hidden]{display:none!important}
 body>.page-fab.dragging{
   transition:none!important;
   box-shadow:0 22px 48px rgba(17,25,21,.34)!important;
