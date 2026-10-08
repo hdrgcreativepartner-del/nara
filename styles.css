@@ -1039,7 +1039,6 @@ dialog.action-sheet-dialog[open] .action-sheet{
   user-select:none;
   -webkit-user-select:none;
 }
-#financeFab.dragging{transform:none!important}
 @media(max-width:520px){
   #financeFab{
     right:16px!important;
