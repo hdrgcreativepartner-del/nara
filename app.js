@@ -20,8 +20,32 @@ function msg(role,text,result="",actions=[]){state.messages.push({id:uid(),role,
 function firstName(){return ((state.profile&&state.profile.name)||"").trim().split(/\s+/)[0]||""}
 function greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
 
+function normalizeUnderstandingText(text){
+  return String(text||"")
+    .toLowerCase()
+    .replace(/\bdapet\b|\bdapetnya\b|\bentuk\b|\boleh\s+(?=bayaran|duit|uang|honor|fee)/g,"dapat")
+    .replace(/\bdibayar(?:in)?\b|\bmbayar\b/g,"dibayar")
+    .replace(/\bbayaran\b/g,"pembayaran")
+    .replace(/\bduit\b|\bduwet\b/g,"uang")
+    .replace(/\btuku\b/g,"beli")
+    .replace(/\bmangan\b/g,"makan")
+    .replace(/\bngombe\b/g,"minum")
+    .replace(/\bsesuk\b/g,"besok")
+    .replace(/\bmengko\b/g,"nanti")
+    .replace(/\bbengi\b/g,"malam")
+    .replace(/\besuk\b/g,"pagi")
+    .replace(/\bwingi\b/g,"kemarin")
+    .replace(/\bra\b|\boro\b|\bgak\b|\bga\b|\bnggak\b/g,"tidak")
+    .replace(/\bgawe\b|\bngerjain\b|\bnggarap\b/g,"mengerjakan")
+    .replace(/\bproject\b/g,"proyek")
+    .replace(/\bclient\b/g,"klien")
+    .replace(/\b500rb\b/g,"500 ribu")
+    .replace(/(\d+)rb\b/g,"$1 ribu")
+    .replace(/(\d+)jt\b/g,"$1 juta")
+    .replace(/\s+/g," ").trim();
+}
 function parseAmount(t){
-  let s=timeWordToNumber(t).replace(/rp\.?\s?/g,"").replace(/(\d)\.(?=\d{3}\b)/g,"$1").replace(/(\d),(?=\d{3}\b)/g,"$1");
+  let s=timeWordToNumber(normalizeUnderstandingText(t)).replace(/rp\.?\s?/g,"").replace(/(\d)\.(?=\d{3}\b)/g,"$1").replace(/(\d),(?=\d{3}\b)/g,"$1");
   s=s
     .replace(/\b(?:(?:jam|pukul)\s+)?setengah\s+\d{1,2}\s*(?:pagi|siang|sore|malam)?\b/g," ")
     .replace(/\b(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/g," ")
@@ -54,7 +78,7 @@ function normalizeClock(hour,minute,part){
   return `${pad(Math.max(0,Math.min(23,h)))}:${pad(Math.max(0,Math.min(59,m)))}`;
 }
 function parseTime(t){
-  let s=timeWordToNumber(t);
+  let s=timeWordToNumber(normalizeUnderstandingText(t));
   const part=(s.match(/\b(pagi|siang|sore|malam)\b/)||[])[1]||"";
   let m=s.match(/(?:(?:jam|pukul)\s+)?setengah\s+(\d{1,2})/);
   if(m){
@@ -77,7 +101,7 @@ function nextWeekdayDate(name,forceNext=false){
   const d=new Date(now);d.setDate(now.getDate()+delta);return localISO(d);
 }
 function parseDate(t){
-  const s=t.toLowerCase();
+  const s=normalizeUnderstandingText(t);
   if(/\bhari ini\b|\btadi\b|\bbarusan\b/.test(s))return localISO();
   if(/\blusa\b/.test(s))return addDays(2);
   if(/\bbesok\b/.test(s))return addDays(1);
@@ -98,7 +122,7 @@ function parseDate(t){
 }
 function categoryLabel(c){return ({Transport:"Transportasi",Food:"Makan & minum",Bills:"Tagihan",Family:"Keluarga",Work:"Pekerjaan",Shopping:"Belanja",Other:"Lainnya"})[c]||c}
 function categoryFor(t){
-  const s=t.toLowerCase();
+  const s=normalizeUnderstandingText(t);
   if(/bensin|parkir|tol|ojek|grab|gojek|transport/.test(s))return"Transport";
   if(/makan|minum|kopi|sarapan|lunch|dinner|warung/.test(s))return"Food";
   if(/internet|listrik|air|pulsa|tagihan|bill|hosting/.test(s))return"Bills";
@@ -108,7 +132,7 @@ function categoryFor(t){
   return"Other";
 }
 function cleanTitle(t){
-  return t.replace(/\b(hari ini|tadi|barusan|besok|lusa|pengeluaran|pemasukan|sebesar|senilai|catat(?:kan)?|ingatkan(?: saya)?|tolong|aku|saya|bayar|tanggal)\b/gi," ")
+  return naturalizeText(t).replace(/\b(hari ini|tadi|barusan|besok|lusa|pengeluaran|pemasukan|sebesar|senilai|catat(?:kan)?|ingatkan(?: saya)?|tolong|aku|saya|bayar|tanggal)\b/gi," ")
     .replace(/\b(?:rp\.?\s?)?\d[\d.,]*\s*(?:juta|jt|ribu|rb|k)?\b/gi," ")
     .replace(/\b(?:jam|pukul)\s*(?:setengah\s+)?(?:\d{1,2}|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas)(?:[.:]\d{2})?\s*(?:wib|wita|wit)?\s*(?:pagi|siang|sore|malam)?\b/gi," ")
     .replace(/\s+/g," ").replace(/^[:\-\s]+|[:\-\s]+$/g,"").trim();
@@ -121,10 +145,12 @@ function splitClauses(text){
     .split(/[;\n]+|[.!?]\s+|,\s+(?=\S)/).map(x=>x.trim()).filter(Boolean);
 }
 function financeType(t){
-  const s=t.toLowerCase();
-  if(/(?:client|klien|customer|pelanggan).{0,24}(?:bayar|transfer)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
-  if(/pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|gajian|fee masuk/.test(s))return"income";
-  if(/pengeluaran|expense|keluar|bayar|beli|makan|bensin|belanja|parkir|kopi/.test(s))return"expense";
+  const s=normalizeUnderstandingText(t);
+  if(/(?:klien|customer|pelanggan).{0,32}(?:bayar|transfer|mengirim)|(?:pembayaran|honor|fee)\s+dari/.test(s))return"income";
+  if(/\b(dapat|terima|menerima)\s+(?:pembayaran|uang|honor|fee|gaji|pendapatan)\b/.test(s))return"income";
+  if(/\b(dibayar|ditransfer|transfer masuk|uang masuk|saldo masuk|gajian|pemasukan|pendapatan|income|fee masuk|honor masuk)\b/.test(s))return"income";
+  if(/\b(pembayaran|bayaran)\b.{0,32}\b(desain|proyek|freelance|kerjaan|pekerjaan|jasa)\b/.test(s))return"income";
+  if(/\b(pengeluaran|expense|uang keluar|keluar uang|habis|bayar|beli|makan|bensin|belanja|parkir|kopi|minum)\b/.test(s))return"expense";
   if(/\bfee\b|\bhonor\b/.test(s))return"income";
   return null;
 }
@@ -174,7 +200,7 @@ function receiveReceivableFromText(text){
   return {item,received};
 }
 function smartFinanceTitle(text,fallback="Transaksi"){
-  let s=String(text).replace(/\b(aku|saya|tadi|hari ini|sebesar|senilai|rp)\b/gi," ").replace(/\b\d+(?:[.,]\d+)?\s*(?:ribu|rb|k|juta|jt)?\b/gi," ").replace(/\s+/g," ").trim();
+  let s=naturalizeText(text).replace(/\b(aku|saya|tadi|hari ini|sebesar|senilai|rp)\b/gi," ").replace(/\b\d+(?:[.,]\d+)?\s*(?:ribu|rb|k|juta|jt)?\b/gi," ").replace(/\s+/g," ").trim();
   return sentenceCase(s||fallback);
 }
 function reminderIntent(t){
@@ -249,7 +275,7 @@ function smartTitle(text){
   return sentenceCase(naturalizeText(s)||"Agenda");
 }
 function naturalizeText(text){
-  return String(text||"")
+  return normalizeUnderstandingText(text)
     .replace(/\baku tuh\b|\bsaya tuh\b/gi,"")
     .replace(/\baku pengen\b|\baku pingin\b|\bsaya pengen\b|\bpengen\b|\bpingin\b/gi,"ingin")
     .replace(/\bselesaiin\b/gi,"selesaikan")
@@ -378,7 +404,7 @@ function activityIntent(t){return /\b(ke|pergi|berangkat|temui|nemui|nemuin|kete
 function hasDateContext(t){return /\b(hari ini|besok|lusa|nanti|tanggal\s+\d+|(?:minggu|pekan)\s+depan(?:\s+hari)?\s+(?:senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)(?:\s+depan)?\b/i.test(t)}
 function hasTimeContext(t){return !!parseTime(t)||/\b(pagi|siang|sore|malam|habis magrib|setelah magrib|sehabis magrib)\b/i.test(t)}
 function classifyIntent(text){
-  const debt=debtIntent(text),rawAmount=parseAmount(text),ft=financeType(text),amount=ft?rawAmount:null;
+  const understood=normalizeUnderstandingText(text),debt=debtIntent(understood),rawAmount=parseAmount(understood),ft=financeType(understood),amount=ft?rawAmount:null;
   if(debt&&rawAmount)return{type:debt,confidence:.99,amount:rawAmount};
   if(ft&&amount)return{type:"finance",confidence:.98};
   if(explicitTargetIntent(text))return{type:"target",confidence:.98};
@@ -656,12 +682,36 @@ function go(page){
 }
 function openQuick(type){
   if(type)$("#quickType").value=type;
-  $("#quickDate").value=localISO();syncQuick();$("#quickDialog").showModal();setTimeout(()=>$("#quickTitle").focus(),60);
+  $("#quickDate").value=localISO();syncDateLabel("quickDate");syncQuick();$("#quickDialog").showModal();setTimeout(()=>$("#quickTitle").focus(),60);
 }
 function syncQuick(){
   const t=$("#quickType").value,finance=["expense","income"].includes(t),rem=t==="reminder",habit=t==="habit",target=t==="target";
   $("#amountWrap").classList.toggle("hidden",!finance);$("#dateWrap").classList.toggle("hidden",!(finance||rem));$("#timeWrap").classList.toggle("hidden",!rem);$("#reminderLeadWrap").classList.toggle("hidden",!rem);$("#targetPeriodWrap").classList.toggle("hidden",!target);$("#freqWrap").classList.toggle("hidden",!habit);
 }
+let datePickerTarget=null;
+function dateLabel(iso){
+  if(!iso)return"Pilih tanggal";
+  try{return new Intl.DateTimeFormat("id-ID",{weekday:"short",day:"numeric",month:"short",year:"numeric"}).format(new Date(iso+"T12:00:00"))}catch{return iso}
+}
+function syncDateLabel(id){
+  const input=$("#"+id),label=$("#"+id+"Label");if(input&&label)label.textContent=dateLabel(input.value);
+}
+function daysInMonth(year,month){return new Date(year,month,0).getDate()}
+function fillDatePicker(){
+  const d=$("#datePickerDay"),m=$("#datePickerMonth"),y=$("#datePickerYear"),months=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"],now=new Date();
+  m.innerHTML=months.map((x,i)=>`<option value="${i+1}">${x}</option>`).join("");
+  y.innerHTML=Array.from({length:9},(_,i)=>now.getFullYear()-2+i).map(v=>`<option value="${v}">${v}</option>`).join("");
+}
+function refreshDateDays(){
+  const y=+$("#datePickerYear").value,m=+$("#datePickerMonth").value,current=+$("#datePickerDay").value||1,max=daysInMonth(y,m);
+  $("#datePickerDay").innerHTML=Array.from({length:max},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join("");$("#datePickerDay").value=String(Math.min(current,max));refreshDatePreview();
+}
+function selectedPickerISO(){return `${$("#datePickerYear").value}-${pad($("#datePickerMonth").value)}-${pad($("#datePickerDay").value)}`}
+function refreshDatePreview(){const iso=selectedPickerISO(),d=new Date(iso+"T12:00:00");$("#datePickerWeekday").textContent=new Intl.DateTimeFormat("id-ID",{weekday:"long"}).format(d);$("#datePickerPreview").textContent=new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"long",year:"numeric"}).format(d)}
+function openDatePicker(targetId){
+  datePickerTarget=targetId;const iso=$("#"+targetId).value||localISO(),[y,m,d]=iso.split("-").map(Number);fillDatePicker();$("#datePickerYear").value=String(y);$("#datePickerMonth").value=String(m);refreshDateDays();$("#datePickerDay").value=String(d);refreshDatePreview();$("#dateDialog").showModal();
+}
+function closeDatePicker(){datePickerTarget=null;if($("#dateDialog").open)$("#dateDialog").close()}
 function quickSubmit(e){
   e.preventDefault();const type=$("#quickType").value,title=$("#quickTitle").value.trim();if(!title)return;
   if(["expense","income"].includes(type)){const amount=Number($("#quickAmount").value.replace(/\D/g,""));if(!amount)return alert("Masukkan nominal.");state.transactions.push({id:uid(),type,amount,category:categoryFor(title),title,date:$("#quickDate").value||localISO(),createdAt:new Date().toISOString()})}
@@ -669,7 +719,7 @@ function quickSubmit(e){
   if(type==="note")state.notes.push({id:uid(),title:title.slice(0,48),body:title,date:localISO(),createdAt:new Date().toISOString()});
   if(type==="target")state.goals.push({id:uid(),title:targetTitle(title),target:0,progress:0,kind:"manual",period:$("#quickTargetPeriod").value||"monthly",month:localISO().slice(0,7),completed:false,steps:[],createdAt:new Date().toISOString()});
   if(type==="habit"){const f=$("#quickFrequency").value,spec={name:title,period:f==="daily"?"daily":"weekly",target:f==="3-week"?3:1};addHabit(spec,true)}
-  $("#quickForm").reset();$("#quickDate").value=localISO();$("#quickDialog").close();save();
+  $("#quickForm").reset();$("#quickDate").value=localISO();syncDateLabel("quickDate");$("#quickDialog").close();save();
 }
 
 
@@ -711,7 +761,7 @@ function openEditor(kind,id){
   if(kind==="target")item=state.goals.find(x=>x.id===id);
   if(!item)return;editContext={kind,id};
   $("#editKind").value=kind;$("#editId").value=id;$("#editTitle").value=item.title||item.name||"";$("#editBody").value=item.body||"";
-  $("#editAmount").value=item.amount||"";$("#editDate").value=item.date||localISO();$("#editTime").value=item.time||"";$("#editLead").value=String(item.leadMinutes||state.settings.reminderLead||30);if($("#editTargetPeriod"))$("#editTargetPeriod").value=item.period||"monthly";
+  $("#editAmount").value=item.amount||"";$("#editDate").value=item.date||localISO();syncDateLabel("editDate");$("#editTime").value=item.time||"";$("#editLead").value=String(item.leadMinutes||state.settings.reminderLead||30);if($("#editTargetPeriod"))$("#editTargetPeriod").value=item.period||"monthly";
   $("#editBodyWrap").classList.toggle("hidden",kind!=="note");$("#editAmountWrap").classList.toggle("hidden",kind!=="tx");$("#editDateWrap").classList.toggle("hidden",!["tx","reminder"].includes(kind));$("#editTimeWrap").classList.toggle("hidden",kind!=="reminder");$("#editLeadWrap").classList.toggle("hidden",kind!=="reminder");$("#editTargetPeriodWrap").classList.toggle("hidden",kind!=="target");
   $("#editHeading").textContent={note:"Edit catatan",tx:"Edit transaksi",reminder:"Edit pengingat",habit:"Edit kebiasaan",target:"Edit target"}[kind];$("#editDialog").showModal();
 }
@@ -878,6 +928,10 @@ document.addEventListener("click",e=>{
   const delHabit=e.target.closest(".delete-habit");if(delHabit){const h=state.habits.find(x=>x.id===delHabit.dataset.id);if(h){state.habits=state.habits.filter(x=>x.id!==h.id);state.goals=state.goals.filter(g=>g.habitName!==h.name);save()}}
   const dot=e.target.closest(".daydot");if(dot){const h=state.habits.find(x=>x.id===dot.dataset.habit),d=dot.dataset.date;if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
 });
+document.addEventListener("click",e=>{const dateOpen=e.target.closest("[data-date-open]");if(dateOpen){openDatePicker(dateOpen.dataset.dateOpen);return}});
+$("#datePickerMonth").addEventListener("change",refreshDateDays);$("#datePickerYear").addEventListener("change",refreshDateDays);$("#datePickerDay").addEventListener("change",refreshDatePreview);
+$("#closeDateDialog").addEventListener("click",closeDatePicker);$("#datePickerCancel").addEventListener("click",closeDatePicker);$("#datePickerForm").addEventListener("submit",e=>{e.preventDefault();if(datePickerTarget){$("#"+datePickerTarget).value=selectedPickerISO();syncDateLabel(datePickerTarget)}closeDatePicker()});
+$("#dateDialog").addEventListener("click",e=>{if(e.target===$("#dateDialog"))closeDatePicker()});
 document.addEventListener("submit",e=>{const f=e.target.closest("[data-goal-form]");if(!f)return;e.preventDefault();const id=f.dataset.goalForm,g=state.goals.find(x=>x.id===id),input=f.querySelector("[data-goal-input]"),title=(input&&input.value||"").trim();if(g&&title){g.steps=g.steps||[];g.steps.push({id:uid(),title:sentenceCase(naturalizeText(title)),done:false});g.completed=false;g.progress=goalProgress(g);save()}})
 $("#chatForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#chatInput");voiceSession=false;sendText(i.value);i.value="";i.style.height="auto"});
 $("#chatInput").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,112)+"px";syncChatSafeArea();scrollChatToBottom(false)});
@@ -889,7 +943,7 @@ $("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup"
 $("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});
 $("#profilePromptSkip").addEventListener("click",()=>{$("#profilePromptForm").hidden=true});
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
-$("#quickDate").value=localISO();renderAll();initMedianNotifications();
+$("#quickDate").value=localISO();syncDateLabel("quickDate");renderAll();initMedianNotifications();
 window.addEventListener("load",()=>{
   if("serviceWorker"in navigator)navigator.serviceWorker.getRegistrations().then(list=>list.forEach(reg=>reg.unregister())).catch(()=>{});
   if("caches"in window)caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key)))).catch(()=>{});

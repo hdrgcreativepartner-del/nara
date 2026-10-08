@@ -57,4 +57,8 @@ assert.ok(js.includes("showVoiceReview")&&js.includes("submitVoice"),"Voice capt
 assert.ok(html.includes("median-bridge.js"),"Median bridge must load before the main app");
 assert.ok(js.includes("voiceListening")&&js.includes("if(voiceListening&&recognition)"),"Voice review must process immediately after recognition has ended");
 assert.ok(js.includes("initMedianNotifications")&&js.includes("queueReminderForPush"),"App must initialize Median push and sync reminders");
-console.log("NARA UI contract passed: fixed voice review processing, Median OneSignal bridge, reminder sync hook, composer spacing.");
+assert.ok(html.includes("finance-add-cta"),"Finance add action must be thumb-reachable at the bottom");
+assert.ok(html.includes('id="dateDialog"')&&html.includes('>Selesai</button>'),"Date editing must use a controlled picker with explicit Done");
+assert.ok(js.includes("normalizeUnderstandingText"),"Language understanding must normalize slang and Javanese input");
+assert.ok(js.includes("dapat|terima|menerima")&&js.includes("dibayar"),"Income detection must understand natural payment language");
+console.log("NARA UI contract passed: natural income language, Indonesian/Javanese normalization, finance bottom CTA, controlled date picker, Median bridge.");
