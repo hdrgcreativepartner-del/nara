@@ -58,4 +58,5 @@ fab.emit('pointerdown',pointer);fab.emit('lostpointercapture');
 assert.equal(fab.style.transform,'translate3d(0,0,0) scale(1)');
 suppressed=false;fab.emit('pointerdown',pointer);fab.emit('pointerup',pointer);fab.emit('click',{preventDefault(){suppressed=true},stopImmediatePropagation(){}});
 assert.equal(suppressed,false,'A tap must still open the add dialog');
+fab.emit('pointerdown',pointer);fab.emit('pointermove',{...pointer,clientX:120,clientY:400});vm.runInContext("go('notes');go('finance')",context);assert.equal(fab.style.transform,'');assert.equal(fab.classList.contains('dragging'),false,'Changing pages during drag must reset the hidden button');
 console.log('NARA navigation and FAB behavior passed: all pages, visibility, drag, snap-back, cancellation and tap.');

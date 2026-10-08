@@ -1137,7 +1137,7 @@ document.addEventListener("click",e=>{
   const rangeBtn=e.target.closest("[data-agenda-range]");if(rangeBtn){state.settings.agendaRange=rangeBtn.dataset.agendaRange;save();return}
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);const en=e.target.closest(".edit-note");if(en)openEditor("note",en.dataset.id);const et=e.target.closest(".edit-tx");if(et)openEditor("tx",et.dataset.id);const er=e.target.closest(".edit-reminder");if(er)openEditor("reminder",er.dataset.id);const eh=e.target.closest(".edit-habit");if(eh)openEditor("habit",eh.dataset.id);const eg=e.target.closest(".edit-target");if(eg)openEditor("target",eg.dataset.id);
   const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}const choice=e.target.closest("[data-chat-choice]");if(choice)sendText(choice.dataset.chatChoice);
-  const act=e.target.closest("[data-action]");if(act){const map={quick:"expense",transaction:"expense",note:"note",target:"target",habit:"habit"};openQuick(map[act.dataset.action])}
+  const act=e.target.closest("[data-action]");if(act){const map={quick:"reminder",transaction:"expense",note:"note",target:"target",habit:"habit"};openQuick(map[act.dataset.action])}
   const ht=e.target.closest(".habit-toggle");if(ht){const h=state.habits.find(x=>x.id===ht.dataset.id),d=localISO();if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
   const done=e.target.closest(".reminder-done");if(done){const r=state.reminders.find(x=>x.id===done.dataset.id);if(r){r.done=!r.done;r.completedAt=r.done?new Date().toISOString():null;save()}}
   const delTx=e.target.closest(".delete-tx");if(delTx){state.transactions=state.transactions.filter(x=>x.id!==delTx.dataset.id);save()}
@@ -1159,6 +1159,7 @@ function updatePageFabVisibility(){
   const active=activePageName();
   document.querySelectorAll("body > .page-fab").forEach(fab=>{
     const owner=fab.dataset.pageOwner||"";
+    if(owner!==active&&typeof fab.cancelNaraDrag==="function")fab.cancelNaraDrag();
     fab.hidden=owner!==active;
     fab.setAttribute("aria-hidden",owner===active?"false":"true");
   });
@@ -1174,6 +1175,8 @@ function initPageFabs(){
     if(fab.dataset.fabReady==="1")return;
     fab.dataset.fabReady="1";
     let dragging=false,moved=false,startX=0,startY=0,baseRect=null;
+    fab.cancelNaraDrag=()=>{dragging=false;moved=false;baseRect=null;fab.classList.remove("dragging");fab.classList.remove("returning");fab.style.transform=""};
+    window.addEventListener("blur",fab.cancelNaraDrag);
 
     const home=()=>{
       fab.classList.remove("dragging");
