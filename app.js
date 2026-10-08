@@ -165,10 +165,15 @@ function splitClauses(text){
 }
 function financeType(t){
   const raw=String(t||"").toLowerCase(),s=normalizeUserLanguage(t).toLowerCase();
-  if(/\b(dibayar|kebayar|terbayar)\b/.test(raw))return"income";
+  // Counterparty context wins first: "client bayar" means money coming in.
   if(/(?:client|klien|customer|pelanggan).{0,30}(?:bayar|transfer|lunasi)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
-  if(/\b(pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|dapat bayaran|dapat uang|gajian|gaji masuk|fee(?:\s+masuk)?|honor(?:\s+masuk)?|komisi|bonus|upah|bayaran|hasil kerja|orderan cair)\b/.test(s))return"income";
+  // Then distinguish paid-out compensation from received compensation.
+  if(/\b(bayar|membayar|mbayar|transfer ke|kirim)\b.{0,36}\b(komisi|fee|honor|bonus|upah|gaji|jasa)\b/.test(s))return"expense";
   if(/\b(pengeluaran|expense|uang keluar|bayar|beli|makan|bensin|belanja|parkir|kopi|minum|ongkir|sewa)\b/.test(s))return"expense";
+  if(/\b(dibayar|kebayar|terbayar)\b/.test(raw))return"income";
+  if(/\b(dapat|terima|menerima)\b.{0,24}\b(komisi|fee|honor|bonus|upah|gaji|bayaran|pembayaran|uang)\b/.test(s))return"income";
+  if(/\b(komisi|fee|honor|bonus|upah|gaji)\b.{0,20}\b(masuk|cair|diterima)\b/.test(s))return"income";
+  if(/\b(pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|dapat bayaran|dapat uang|gajian|gaji masuk|fee masuk|honor masuk|bayaran|hasil kerja|orderan cair)\b/.test(s))return"income";
   return null;
 }
 function debtIntent(t){
@@ -954,6 +959,29 @@ document.addEventListener("click",e=>{
   const delHabit=e.target.closest(".delete-habit");if(delHabit){const h=state.habits.find(x=>x.id===delHabit.dataset.id);if(h){state.habits=state.habits.filter(x=>x.id!==h.id);state.goals=state.goals.filter(g=>g.habitName!==h.name);save()}}
   const dot=e.target.closest(".daydot");if(dot){const h=state.habits.find(x=>x.id===dot.dataset.habit),d=dot.dataset.date;if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
 });
+function initFinanceFab(){
+  const fab=$("#financeFab");if(!fab)return;
+  const key="nara-finance-fab-y";
+  const clamp=y=>Math.max(92,Math.min(window.innerHeight-160,y));
+  const saved=Number(localStorage.getItem(key));
+  if(Number.isFinite(saved)&&saved>0){fab.style.top=clamp(saved)+"px";fab.style.bottom="auto"}
+  let dragging=false,startY=0,startTop=0,moved=false;
+  fab.addEventListener("pointerdown",e=>{
+    dragging=true;moved=false;startY=e.clientY;
+    const rect=fab.getBoundingClientRect();startTop=rect.top;
+    fab.setPointerCapture&&fab.setPointerCapture(e.pointerId);fab.classList.add("dragging");
+  });
+  fab.addEventListener("pointermove",e=>{
+    if(!dragging)return;const dy=e.clientY-startY;if(Math.abs(dy)>4)moved=true;
+    const y=clamp(startTop+dy);fab.style.top=y+"px";fab.style.bottom="auto";
+  });
+  fab.addEventListener("pointerup",e=>{
+    if(!dragging)return;dragging=false;fab.classList.remove("dragging");
+    const y=clamp(fab.getBoundingClientRect().top);localStorage.setItem(key,String(Math.round(y)));
+    if(moved){e.preventDefault();e.stopPropagation()}
+  });
+  window.addEventListener("resize",()=>{if(fab.style.top){const y=clamp(parseFloat(fab.style.top));fab.style.top=y+"px"}});
+}
 document.addEventListener("submit",e=>{const f=e.target.closest("[data-goal-form]");if(!f)return;e.preventDefault();const id=f.dataset.goalForm,g=state.goals.find(x=>x.id===id),input=f.querySelector("[data-goal-input]"),title=(input&&input.value||"").trim();if(g&&title){g.steps=g.steps||[];g.steps.push({id:uid(),title:sentenceCase(naturalizeText(title)),done:false});g.completed=false;g.progress=goalProgress(g);save()}})
 $("#chatForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#chatInput");voiceSession=false;sendText(i.value);i.value="";i.style.height="auto"});
 $("#chatInput").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,112)+"px";syncChatSafeArea();scrollChatToBottom(false)});
@@ -974,7 +1002,7 @@ $("#datePickerDialog").addEventListener("click",e=>{if(e.target===$("#datePicker
 $("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});
 $("#profilePromptSkip").addEventListener("click",()=>{$("#profilePromptForm").hidden=true});
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
-$("#quickDate").value=localISO();renderAll();initMedianNotifications();
+$("#quickDate").value=localISO();renderAll();initMedianNotifications();initFinanceFab();
 window.addEventListener("load",()=>{
   if("serviceWorker"in navigator)navigator.serviceWorker.getRegistrations().then(list=>list.forEach(reg=>reg.unregister())).catch(()=>{});
   if("caches"in window)caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key)))).catch(()=>{});
