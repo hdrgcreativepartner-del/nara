@@ -273,3 +273,27 @@ state.reminders.push(
 )`,context);
 assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext(`[...state.reminders].sort(agendaSort).map(x=>x.id)`,context))),["b","a","c"]);
 assert.equal(vm.runInContext(`agendaInRange(state.reminders[0],"today")`,context),true);
+
+reset();
+run("aku dapat bayaran ngerjain desain senilai 500rb");
+assert.equal(get("state.transactions.length"),1);
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),500000);
+
+reset();
+run("aku dapet bayaran desain 250rb");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),250000);
+
+reset();
+run("entuk bayaran nggarap desain 300rb");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),300000);
+
+reset();
+run("tuku kopi 15rb");
+assert.equal(get("state.transactions[0].type"),"expense");
+assert.equal(get("state.transactions[0].amount"),15000);
+
+assert.equal(vm.runInContext(`parseDate("sesuk")`,context),vm.runInContext(`addDays(1)`,context));
+assert.equal(vm.runInContext(`parseTime("jam 9 bengi")`,context),"21:00");

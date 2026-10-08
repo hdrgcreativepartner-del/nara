@@ -939,3 +939,23 @@ dialog.action-sheet-dialog[open] .action-sheet{
   .voice-stage h2{font-size:24px!important;margin:8px 0!important}
   .voice-examples{margin-top:10px}
 }
+
+/* NARA v6.2 — finance reachability + controlled date picker */
+.finance-add-cta{
+  width:100%;min-height:62px;margin:2px 0 8px;border:0;border-radius:19px;
+  background:#111827;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;
+  text-align:left;box-shadow:0 12px 30px rgba(17,24,39,.12)
+}
+.finance-add-cta>span{width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.10);display:grid;place-items:center;font-size:22px;flex:0 0 auto}
+.finance-add-cta b,.finance-add-cta small{display:block}.finance-add-cta b{font-size:13px}.finance-add-cta small{font-size:9px;color:#cbd5e1;margin-top:3px}
+.date-field{
+  width:100%;min-height:48px;border:1px solid #d9dfe7;background:#f8fafc;color:#111827;
+  border-radius:16px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;text-align:left
+}
+.date-field span{font-size:14px}.date-field b{font-size:22px;color:#7b8480;font-weight:400}
+.date-picker-modal{max-width:430px}
+.date-picker-preview{background:#f5f8ff;border-radius:18px;padding:16px;margin:4px 0 14px}
+.date-picker-preview small,.date-picker-preview strong{display:block}.date-picker-preview small{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#2563eb;font-weight:900}.date-picker-preview strong{font-size:24px;letter-spacing:-.035em;margin-top:5px}
+.date-picker-grid{display:grid;grid-template-columns:.8fr 1.1fr 1fr;gap:8px}.date-picker-grid label{margin:0!important}.date-picker-grid select{min-width:0}
+.date-picker-actions{display:grid;grid-template-columns:1fr 1.2fr;gap:9px;margin-top:18px}.date-picker-actions button{min-height:48px;border-radius:15px;border:1px solid #dde2e8;background:#f7f9fb;font-weight:850}.date-picker-actions .primary{margin:0;border:0;background:#111827;color:#fff}
+@media(max-width:420px){.date-picker-grid{grid-template-columns:.72fr 1fr .9fr}.finance-add-cta{position:relative;z-index:1;margin-bottom:16px}}
