@@ -300,3 +300,31 @@ assert.equal(get("state.transactions[0].type"),"income");
 assert.equal(get("state.pending"),null);
 
 assert.equal(vm.runInContext(`normalizeUserLanguage("sesuk bengi jam sanga")`,context),"besok malam jam sanga");
+
+reset();
+run("wes dibayar client 750rb");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),750000);
+
+reset();
+run("entuk bayaran 350rb teko desain");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),350000);
+
+reset();
+run("tuku bensin 20rb");
+assert.equal(get("state.transactions[0].type"),"expense");
+assert.equal(get("state.transactions[0].amount"),20000);
+
+reset();
+run("sesuk jam 9 budal ke Jember");
+assert.equal(get("state.reminders[0].date"),"2026-10-09");
+assert.equal(get("state.reminders[0].time"),"09:00");
+
+reset();
+const unknownMoney=run("500rb iki kanggo sesuatu");
+assert.equal(get("state.pending.kind"),"finance-choice");
+assert.match(unknownMoney.text,/pemasukan atau pengeluaran/i);
+run("Pemasukan");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),500000);
