@@ -953,3 +953,60 @@ dialog.action-sheet-dialog[open] .action-sheet{
 .date-picker-grid{min-height:250px}.date-day,.date-empty{aspect-ratio:1/1}.date-day{border:0;background:transparent;border-radius:12px;font-size:12px;color:#222}.date-day.today{box-shadow:inset 0 0 0 1.5px #b9c9ee}.date-day.selected{background:#2563eb;color:#fff;font-weight:850;box-shadow:none}
 .date-picker-actions{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:8px;margin-top:16px}.date-picker-actions button{min-height:44px;border:1px solid #dfe4e1;border-radius:13px;background:#f5f7f6;color:#222;font-weight:800}.date-picker-actions .date-done{background:#2563eb;border-color:#2563eb;color:#fff}
 @media(max-width:520px){.finance-add-dock{bottom:calc(78px + env(safe-area-inset-bottom));margin-inline:0}.date-picker-grid{min-height:225px}.date-picker-modal{padding:17px!important}}
+
+/* NARA v6.2.2 — finance floating action + neutral chat send */
+#page-chat .send{
+  background:#111915!important;
+  color:#fff!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+}
+#page-chat .send:focus,
+#page-chat .send:focus-visible{
+  outline:none!important;
+  box-shadow:none!important;
+}
+.finance-add-dock{
+  position:static!important;
+  height:0!important;
+  margin:0!important;
+  padding:0!important;
+}
+#financeFab{
+  position:fixed;
+  right:18px;
+  bottom:calc(94px + env(safe-area-inset-bottom));
+  z-index:70;
+  width:56px!important;
+  height:56px!important;
+  min-width:56px!important;
+  min-height:56px!important;
+  border:0!important;
+  border-radius:50%!important;
+  padding:0!important;
+  background:#111915!important;
+  color:#fff!important;
+  display:grid!important;
+  place-items:center;
+  box-shadow:0 14px 34px rgba(17,25,21,.22)!important;
+  cursor:grab;
+  touch-action:none;
+  user-select:none;
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+#financeFab span{
+  margin:0!important;
+  font-size:28px!important;
+  line-height:1!important;
+  font-weight:400;
+  transform:translateY(-1px);
+}
+#financeFab:active,#financeFab.dragging{
+  cursor:grabbing;
+  transform:scale(.96);
+  box-shadow:0 9px 24px rgba(17,25,21,.18)!important;
+}
+@media(min-width:980px){
+  #financeFab{right:30px;bottom:30px}
+}

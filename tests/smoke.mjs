@@ -328,3 +328,14 @@ assert.match(unknownMoney.text,/pemasukan atau pengeluaran/i);
 run("Pemasukan");
 assert.equal(get("state.transactions[0].type"),"income");
 assert.equal(get("state.transactions[0].amount"),500000);
+
+reset();
+run("bayar komisi 50rb");
+assert.equal(get("state.transactions.length"),1);
+assert.equal(get("state.transactions[0].type"),"expense");
+assert.equal(get("state.transactions[0].amount"),50000);
+
+reset();
+run("dapat komisi 50rb");
+assert.equal(get("state.transactions[0].type"),"income");
+assert.equal(get("state.transactions[0].amount"),50000);

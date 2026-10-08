@@ -63,4 +63,7 @@ assert.ok(js.includes("normalizeUserLanguage")&&js.includes("dapat bayaran"),"La
 assert.ok(html.includes('id="dateDone"')&&html.includes('id="dateCancel"'),"Edit date picker must have explicit Selesai/Batal actions");
 assert.ok(html.includes("finance-add-dock"),"Finance add action must stay at the bottom of the finance page");
 assert.ok(js.includes('kind==="finance-choice"'),"Unknown money input must ask income vs expense");
+assert.ok(html.includes('id="financeFab"'),"Finance add action must be a floating FAB");
+assert.ok(js.includes("initFinanceFab")&&js.includes("nara-finance-fab-y"),"Finance FAB must support persisted vertical dragging");
+assert.ok(css.includes("#page-chat .send")&&css.includes("background:#111915!important"),"Chat send button must not use the blue frame/fill");
 console.log("NARA UI contract passed: income intelligence, colloquial language normalization, bottom finance CTA, custom edit date picker.");
