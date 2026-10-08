@@ -166,3 +166,18 @@ run('Jadikan catatan');
 assert.equal(get('state.notes.length'),1);
 assert.match(get('state.notes[0].body'),/laptop/);
 console.log('Explicit note regression checks passed');
+
+reset();
+run('Tolong simpan ini sebagai catatan: video aplikasi, Android dan Windows.');
+assert.match(get('state.notes[0].body'),/^Video aplikasi, Android dan Windows\./);
+run('tambahkan dukungan offline');
+assert.equal(get('state.notes.length'),1);
+assert.match(get('state.notes[0].body'),/Dukungan offline/);
+reset();
+run('Buatkan catatan tentang proyek web, biaya beli server 50rb.');
+assert.equal(get('state.notes.length'),1);
+assert.equal(get('state.transactions.length'),0);
+vm.runInContext('state.pending={kind:"intent-choice",source:"Topik lain"}',context);
+vm.runInContext('smartResponse("Jadikan catatan","Ide asli dari pesan sebelumnya")',context);
+assert.match(get('state.notes[1].body'),/Asli dari pesan sebelumnya/i);
+console.log('Note aliases, continued context and source-bound actions passed');

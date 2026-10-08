@@ -10,7 +10,7 @@ function element(id){
   return {id,dataset:{},hidden:false,style:{},value:'',textContent:'',innerHTML:'',
     classList:{toggle(c,on){on?classes.add(c):classes.delete(c)},add(c){classes.add(c)},remove(c){classes.delete(c)},contains(c){return classes.has(c)}},
     addEventListener(name,fn){listeners.set(name,fn)},emit(name,e={}){listeners.get(name)?.(e)},
-    setAttribute(){},focus(){},showModal(){},close(){},reset(){},scrollTo(){},closest(){return null},
+    setAttribute(){},focus(){},showModal(){this.openCount=(this.openCount||0)+1;this.open=true},close(){this.open=false},reset(){},scrollTo(){},closest(){return null},
     getBoundingClientRect(){return {left:318,right:374,top:650,bottom:706,width:56,height:56}},
     setPointerCapture(){},releasePointerCapture(){}
   };
@@ -57,6 +57,12 @@ assert.equal(fab.style.transform,'translate3d(0,0,0) scale(1)');
 fab.emit('pointerdown',pointer);fab.emit('lostpointercapture');
 assert.equal(fab.style.transform,'translate3d(0,0,0) scale(1)');
 suppressed=false;fab.emit('pointerdown',pointer);fab.emit('pointerup',pointer);fab.emit('click',{preventDefault(){suppressed=true},stopImmediatePropagation(){}});
-assert.equal(suppressed,false,'A tap must still open the add dialog');
+assert.equal(suppressed,true,'Pointer tap must consume its synthetic click to avoid opening twice');
+assert.equal(query('#quickDialog').openCount,1,'A tap opens the dialog immediately on pointerup');
+fab.emit('pointerdown',pointer);fab.emit('pointermove',{...pointer,clientX:345,clientY:685});fab.emit('pointerup',pointer);
+assert.equal(query('#quickDialog').openCount,2,'Small finger jitter is still a tap');
+fab.emit('pointerdown',pointer);fab.emit('pointermove',{...pointer,clientX:120,clientY:400});fab.emit('pointercancel',pointer);
+fab.emit('pointerdown',pointer);fab.emit('pointerup',pointer);
+assert.equal(query('#quickDialog').openCount,3,'First tap after cancelled drag must open immediately');
 fab.emit('pointerdown',pointer);fab.emit('pointermove',{...pointer,clientX:120,clientY:400});vm.runInContext("go('notes');go('finance')",context);assert.equal(fab.style.transform,'');assert.equal(fab.classList.contains('dragging'),false,'Changing pages during drag must reset the hidden button');
 console.log('NARA navigation and FAB behavior passed: all pages, visibility, drag, snap-back, cancellation and tap.');

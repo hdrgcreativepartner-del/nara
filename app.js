@@ -335,12 +335,11 @@ function naturalizeText(text){
     .replace(/\bphoto\b/gi,"foto")
     .replace(/\s+/g," ").trim();
 }
+const noteCommandPattern=/^(?:(?:tolong|mohon|nara)\s+)*(?:jadikan\s+(?:ini\s+)?catatan|simpan(?:\s+ini)?(?:\s+sebagai)?\s+catatan|buat(?:kan)?\s+catatan(?:\s+(?:tentang|mengenai))?|catat(?:kan)?(?:\s+ini)?|catatan|note|ide|gagasan|jangan lupa bahwa)\b[\s,:-]*/i;
 function noteContent(text){
-  return String(text).trim().replace(/^(?:(?:tolong|mohon)\s+)?(?:jadikan\s+catatan|simpan(?:\s+sebagai)?\s+catatan|catat(?:kan)?|catatan|note|ide|gagasan|jangan lupa bahwa)\b[\s,:-]*/i, "").replace(/^(?:ide|gagasan)\b[\s,:-]*/i, "").trim();
+  return String(text).trim().replace(noteCommandPattern, "").replace(/^(?:ide|gagasan)\b[\s,:-]*/i, "").trim();
 }
-function startsNoteCommand(text){
-  return /^(?:(?:tolong|mohon)\s+)?(?:jadikan\s+catatan|simpan(?:\s+sebagai)?\s+catatan|catat(?:kan)?|catatan|note|ide|gagasan|jangan lupa bahwa)\b/i.test(String(text).trim());
-}
+function startsNoteCommand(text){return noteCommandPattern.test(String(text).trim())}
 function paraphraseNote(text){
   const content=noteContent(text);
   let s=content.split(/\n/).map(line=>naturalizeText(line)
@@ -611,12 +610,12 @@ function contextualFollowup(text){
   if(changes.length){rememberFocus([item]);return{text:`Sudah kuperbarui “${row.title}”: ${changes.join(', ')}.`,actions:[]}}
   return{text:`Konteks terakhirku adalah “${row.title}”. Sebutkan perubahan yang kamu inginkan${item.type==='tx'?', misalnya “ralat 75rb” atau “itu pemasukan”':item.type==='reminder'?', misalnya “pindah ke besok jam 3 sore”':''}.`,actions:[]};
 }
-function smartResponse(input){
+function smartResponse(input,choiceSource=null){
   const text=normalizeUserLanguage(input),s=text.toLowerCase();
   const noteChoice=/^jadikan catatan[.!]?$/i.test(text);
   if(startsNoteCommand(input)&&!noteChoice){state.pending=null;return saveExplicitNote(String(input).trim())}
   if(noteChoice){
-    const source=state.pending?.kind==="intent-choice"?state.pending.source:"";
+    const source=choiceSource??(state.pending?.kind==="intent-choice"?state.pending.source:"");
     state.pending=null;return saveExplicitNote(source);
   }
   if(state.pending?.kind==="note-content"&&!/^(?:batal|batalkan|cancel|lupakan)$/i.test(text)){
@@ -775,18 +774,18 @@ function drainChatTurns(){
   const turn=chatTurnQueue.shift();
   setTimeout(()=>{
     try{
-      const response=smartResponse(turn.text),reply=response.text||"Coba ceritakan sedikit lebih lengkap ya.";
+      const response=smartResponse(turn.text,turn.choiceSource),reply=response.text||"Coba ceritakan sedikit lebih lengkap ya.";
       msg("assistant",reply,"",response.actions||[]);save();speak(reply,turn.voice);renderChat(chatTurnQueue.length>0);scrollChatToBottom(true);
     }finally{chatReplyBusy=false;drainChatTurns()}
   },turn.voice?420:180);
 }
-function sendText(text){
+function sendText(text,choiceSource=null){
   const t=text.trim();if(!t)return;
   msg("user",t);renderChat(true);scrollChatToBottom(true);
-  chatTurnQueue.push({text:t,voice:voiceSession});drainChatTurns();
+  chatTurnQueue.push({text:t,voice:voiceSession,choiceSource});drainChatTurns();
 }
 function renderChat(showTyping=false){
-  const s=$("#chatStream");s.innerHTML=state.messages.map(m=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}${m.actions&&m.actions.length?`<div class="chat-actions">${m.actions.map(a=>`<button type="button" data-chat-choice="${esc(a)}">${esc(a)}</button>`).join("")}</div>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing"><i></i><i></i><i></i></span></div>`:"");
+  const s=$("#chatStream");s.innerHTML=state.messages.map((m,index)=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}${m.actions&&m.actions.length?`<div class="chat-actions">${m.actions.map(a=>`<button type="button" data-chat-choice="${esc(a)}" data-source-message="${esc(state.messages.slice(0,index).findLast(x=>x.role==="user")?.id||"")}">${esc(a)}</button>`).join("")}</div>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing"><i></i><i></i><i></i></span></div>`:"");
   syncChatSafeArea();
 }
 function txTotals(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>{if(t.type==="income")a.income+=t.amount;if(t.type==="expense")a.expense+=t.amount;return a},{income:0,expense:0})}
@@ -1152,8 +1151,8 @@ document.addEventListener("click",e=>{
   if(sheetAction){runAgendaSheetAction(sheetAction.dataset.sheetAction);return}
   const rangeBtn=e.target.closest("[data-agenda-range]");if(rangeBtn){state.settings.agendaRange=rangeBtn.dataset.agendaRange;save();return}
   const nav=e.target.closest("[data-page]");if(nav)go(nav.dataset.page);const en=e.target.closest(".edit-note");if(en)openEditor("note",en.dataset.id);const et=e.target.closest(".edit-tx");if(et)openEditor("tx",et.dataset.id);const er=e.target.closest(".edit-reminder");if(er)openEditor("reminder",er.dataset.id);const eh=e.target.closest(".edit-habit");if(eh)openEditor("habit",eh.dataset.id);const eg=e.target.closest(".edit-target");if(eg)openEditor("target",eg.dataset.id);
-  const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}const choice=e.target.closest("[data-chat-choice]");if(choice)sendText(choice.dataset.chatChoice);
-  const act=e.target.closest("[data-action]");if(act){const map={quick:"reminder",transaction:"expense",note:"note",target:"target",habit:"habit"};openQuick(map[act.dataset.action])}
+  const chip=e.target.closest("[data-prompt]");if(chip){$("#chatInput").value=chip.dataset.prompt;$("#chatInput").focus()}const choice=e.target.closest("[data-chat-choice]");if(choice){const source=state.messages.find(m=>m.id===choice.dataset.sourceMessage&&m.role==="user");sendText(choice.dataset.chatChoice,source?.text??null)};
+  const act=e.target.closest("[data-action]");if(act){openFabAction(act)}
   const ht=e.target.closest(".habit-toggle");if(ht){const h=state.habits.find(x=>x.id===ht.dataset.id),d=localISO();if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
   const done=e.target.closest(".reminder-done");if(done){const r=state.reminders.find(x=>x.id===done.dataset.id);if(r){r.done=!r.done;r.completedAt=r.done?new Date().toISOString():null;save()}}
   const delTx=e.target.closest(".delete-tx");if(delTx){state.transactions=state.transactions.filter(x=>x.id!==delTx.dataset.id);save()}
@@ -1180,6 +1179,10 @@ function updatePageFabVisibility(){
     fab.setAttribute("aria-hidden",owner===active?"false":"true");
   });
 }
+function openFabAction(fab){
+  const map={quick:"reminder",transaction:"expense",note:"note",target:"target",habit:"habit"};
+  openQuick(map[fab.dataset.action]);
+}
 function initPageFabs(){
   if(typeof document==="undefined"||!document.body)return;
   document.querySelectorAll(".page-fab").forEach(fab=>{
@@ -1190,8 +1193,8 @@ function initPageFabs(){
     if(fab.parentElement!==document.body)document.body.appendChild(fab);
     if(fab.dataset.fabReady==="1")return;
     fab.dataset.fabReady="1";
-    let dragging=false,moved=false,startX=0,startY=0,baseRect=null;
-    fab.cancelNaraDrag=()=>{dragging=false;moved=false;baseRect=null;fab.classList.remove("dragging");fab.classList.remove("returning");fab.style.transform=""};
+    let dragging=false,moved=false,blockClick=false,activePointer=null,startX=0,startY=0,baseRect=null;
+    fab.cancelNaraDrag=()=>{dragging=false;moved=false;blockClick=false;activePointer=null;baseRect=null;fab.classList.remove("dragging");fab.classList.remove("returning");fab.style.transform=""};
     window.addEventListener("blur",fab.cancelNaraDrag);
 
     const home=()=>{
@@ -1204,7 +1207,8 @@ function initPageFabs(){
 
     fab.addEventListener("pointerdown",e=>{
       if(e.button!==undefined&&e.button!==0)return;
-      dragging=true;moved=false;startX=e.clientX;startY=e.clientY;
+      if(dragging)return;
+      dragging=true;moved=false;blockClick=false;activePointer=e.pointerId;startX=e.clientX;startY=e.clientY;
       baseRect=fab.getBoundingClientRect();
       fab.classList.add("dragging");
       fab.classList.remove("returning");
@@ -1212,9 +1216,10 @@ function initPageFabs(){
     });
 
     fab.addEventListener("pointermove",e=>{
-      if(!dragging||!baseRect)return;
+      if(!dragging||!baseRect||e.pointerId!==activePointer)return;
       let dx=e.clientX-startX,dy=e.clientY-startY;
-      if(Math.hypot(dx,dy)>7)moved=true;
+      if(Math.hypot(dx,dy)>12)moved=true;
+      if(!moved)return;
       const edge=10,vw=(window.innerWidth||document.documentElement.clientWidth||360),vh=(window.innerHeight||document.documentElement.clientHeight||800);
       dx=clamp(dx,-baseRect.left+edge,vw-baseRect.right-edge);
       dy=clamp(dy,-baseRect.top+edge,vh-baseRect.bottom-edge);
@@ -1223,15 +1228,19 @@ function initPageFabs(){
     });
 
     const finish=e=>{
-      if(!dragging)return;
-      try{fab.releasePointerCapture(e.pointerId)}catch{}
+      if(!dragging||e.pointerId!==activePointer)return;
+      const tap=e.type!=="pointercancel"&&!moved;
+      blockClick=true;
       home();
+      try{fab.releasePointerCapture(e.pointerId)}catch{}
+      activePointer=null;
+      if(tap&&!fab.hidden)openFabAction(fab);
     };
     fab.addEventListener("pointerup",finish);
-    fab.addEventListener("pointercancel",finish);
-    fab.addEventListener("lostpointercapture",()=>{if(dragging)home()});
+    fab.addEventListener("pointercancel",e=>finish({...e,type:"pointercancel",pointerId:e.pointerId}));
+    fab.addEventListener("lostpointercapture",()=>{if(dragging){blockClick=true;home();activePointer=null}});
     fab.addEventListener("click",e=>{
-      if(moved){e.preventDefault();e.stopImmediatePropagation();moved=false}
+      if(blockClick&&e.detail!==0){e.preventDefault();e.stopImmediatePropagation()}
     },true);
   });
   updatePageFabVisibility();
