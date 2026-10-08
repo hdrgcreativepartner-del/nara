@@ -5,6 +5,7 @@ const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 const js=fs.readFileSync(new URL("../app.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../styles.css",import.meta.url),"utf8");
 const sw=fs.readFileSync(new URL("../sw.js",import.meta.url),"utf8");
+const median=fs.readFileSync(new URL("../median-bridge.js",import.meta.url),"utf8");
 
 assert.ok(!html.includes('id="onboarding"'),"Blocking onboarding must not exist");
 assert.ok(html.includes('id="profilePromptForm"'),"Non-blocking profile prompt must exist inside app");
