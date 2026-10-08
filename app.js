@@ -961,7 +961,7 @@ document.addEventListener("click",e=>{
 });
 function initFinanceFab(){
   const fab=$("#financeFab");if(!fab)return;
-  localStorage.removeItem("nara-finance-fab-y");
+  if(localStorage&&typeof localStorage.removeItem==="function")localStorage.removeItem("nara-finance-fab-y");
   fab.style.removeProperty("top");
   fab.style.removeProperty("bottom");
 }
