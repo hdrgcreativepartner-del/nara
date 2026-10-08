@@ -13,10 +13,11 @@ let recognition=null,voiceSession=false,voiceFinal="",voiceDraft="",voiceSubmitR
 let financeFabDrag={active:false,moved:false,startY:0,startOffset:0};
 const FINANCE_FAB_OFFSET_KEY="nara-finance-fab-offset";
 function clamp(n,min,max){return Math.max(min,Math.min(max,n))}
-function financeFabOffset(){const n=Number(localStorage.getItem(FINANCE_FAB_OFFSET_KEY)||0);return Number.isFinite(n)?clamp(n,0,Math.max(0,innerHeight-220)):0}
+function viewportHeight(){return typeof window!=="undefined"&&Number(window.innerHeight)?Number(window.innerHeight):800}
+function financeFabOffset(){const n=Number(localStorage.getItem(FINANCE_FAB_OFFSET_KEY)||0);return Number.isFinite(n)?clamp(n,0,Math.max(0,viewportHeight()-220)):0}
 function setFinanceFabOffset(value,persist=false){
   const fab=$("#financeFab");if(!fab)return;
-  const v=clamp(Number(value)||0,0,Math.max(0,innerHeight-220));
+  const v=clamp(Number(value)||0,0,Math.max(0,viewportHeight()-220));
   fab.style.setProperty("--finance-fab-offset",v+"px");
   if(persist)localStorage.setItem(FINANCE_FAB_OFFSET_KEY,String(Math.round(v)));
 }
@@ -204,6 +205,7 @@ function splitClauses(text){
 }
 function financeType(t){
   const raw=String(t||"").toLowerCase(),s=normalizeUserLanguage(t).toLowerCase();
+  if(/\b(bayar|membayar)\b.{0,28}\b(komisi|fee|honor|upah|bonus)\b/.test(s))return"expense";
   if(/\b(dibayar|kebayar|terbayar)\b/.test(raw))return"income";
   if(/(?:client|klien|customer|pelanggan).{0,30}(?:bayar|transfer|lunasi)|(?:bayaran|pembayaran)\s+dari/.test(s))return"income";
   if(/\b(pemasukan|pendapatan|income|terima|ditransfer|transfer masuk|dapat pembayaran|dapat bayaran|dapat uang|gajian|gaji masuk|fee(?:\s+masuk)?|honor(?:\s+masuk)?|komisi|bonus|upah|bayaran|hasil kerja|orderan cair)\b/.test(s))return"income";

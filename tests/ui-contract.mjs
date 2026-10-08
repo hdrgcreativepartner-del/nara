@@ -66,4 +66,6 @@ assert.ok(js.includes('kind==="finance-choice"'),"Unknown money input must ask i
 assert.ok(html.includes('id="financeFab"')&&html.includes("finance-fab-mini"),"Finance add control must be a compact floating action button");
 assert.ok(js.includes("initFinanceFab")&&js.includes("FINANCE_FAB_OFFSET_KEY"),"Finance FAB must support persisted vertical dragging");
 assert.ok(css.includes(".finance-fab-mini.expanded"),"Finance FAB must expand from compact to labeled state");
+assert.ok(css.includes("#chatForm.composer:focus-within"),"Chat composer focus must stay neutral without a blue frame");
+assert.ok(js.includes("bayar|membayar")&&js.includes("komisi|fee|honor|upah|bonus"),"Paying commission/fee/honor must resolve as expense before income noun matching");
 console.log("NARA UI contract passed: income intelligence, colloquial language normalization, bottom finance CTA, custom edit date picker.");
