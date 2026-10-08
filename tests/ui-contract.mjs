@@ -5,6 +5,7 @@ const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
 const js=fs.readFileSync(new URL("../app.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../styles.css",import.meta.url),"utf8");
 const sw=fs.readFileSync(new URL("../sw.js",import.meta.url),"utf8");
+const median=fs.readFileSync(new URL("../median-bridge.js",import.meta.url),"utf8");
 
 assert.ok(!html.includes('id="onboarding"'),"Blocking onboarding must not exist");
 assert.ok(html.includes('id="profilePromptForm"'),"Non-blocking profile prompt must exist inside app");
@@ -64,7 +65,7 @@ assert.ok(html.includes('id="dateDone"')&&html.includes('id="dateCancel"'),"Edit
 assert.ok(html.includes("finance-add-dock"),"Finance add action must stay at the bottom of the finance page");
 assert.ok(js.includes('kind==="finance-choice"'),"Unknown money input must ask income vs expense");
 assert.ok(html.includes('id="financeFab"'),"Finance add action must be a floating FAB");
-assert.ok(js.includes("initFinanceFab")&&!js.includes("setPointerCapture"),"Finance FAB must stay fixed and must not be draggable");
+assert.ok(js.includes("initPageFabs")&&js.includes("setPointerCapture")&&js.includes("translate3d(0,0,0)"),"Page FABs must be temporarily draggable and snap back to their fixed home position");
 assert.ok(css.includes("#page-chat .send")&&css.includes("background:#111915!important"),"Chat send button must not use the blue frame/fill");
 assert.ok(css.includes("#chatForm.composer:focus-within"),"Chat composer must stay neutral without a blue frame");
 assert.ok(css.includes("bottom:calc(94px + env(safe-area-inset-bottom))"),"Finance FAB must stay fixed above bottom navigation");
@@ -72,4 +73,7 @@ assert.ok(html.includes('id="todayFab"')&&html.includes('id="notesFab"')&&html.i
 assert.ok(css.includes(".page-fab")&&css.includes("position:fixed!important"),"Primary page add actions must use a shared fixed FAB style");
 assert.ok(html.includes('id="accountAvatarInput"')&&html.includes('id="accountAvatarImage"'),"Account page must support profile photo upload");
 assert.ok(js.includes("resizeProfileImage")&&js.includes("state.profile.photo"),"Profile photos must be compressed and persisted locally");
+assert.ok(js.includes("initPageFabs")&&js.includes("pointermove")&&js.includes("translate3d(0,0,0)"),"All page FABs must be draggable temporarily and snap back home");
+assert.ok(median.includes("waitForBridge")&&median.includes("enableForegroundNotifications(true)"),"Median OneSignal bridge must wait for native readiness and enable foreground pushes");
+assert.ok(html.includes('id="testReminder"'),"Notification settings must provide a local popup test");
 console.log("NARA UI contract passed: unified fixed FABs, profile photo, income intelligence, colloquial language normalization, custom edit date picker.");

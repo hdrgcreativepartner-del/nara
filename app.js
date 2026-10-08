@@ -827,9 +827,10 @@ async function requestNotifications(){
   try{const p=await Notification.requestPermission();if(status)status.textContent=p==="granted"?"Notifikasi browser sudah aktif.":"Izin notifikasi belum diberikan."}catch{if(status)status.textContent="Gagal meminta izin notifikasi."}
 }
 async function initMedianNotifications(){
-  if(!(window.NaraMedian&&window.NaraMedian.isAvailable()))return;
+  const status=$("#notificationStatus");
+  if(!(window.NaraMedian&&window.NaraMedian.isAvailable())){if(status&&NARA_ENV.isMedian)status.textContent="Median terdeteksi, menunggu JavaScript Bridge…";return}
   try{
-    await window.NaraMedian.init({
+    const initResult=await window.NaraMedian.init({
       externalId:window.NaraMedian.getAnonymousExternalId(),
       onStatus:info=>{
         state.settings.push={...(state.settings.push||{}),oneSignalId:info.oneSignalId||"",subscriptionId:info.subscription&&info.subscription.id||"",optedIn:!!(info.subscription&&info.subscription.optedIn)};
@@ -841,10 +842,18 @@ async function initMedianNotifications(){
         if(agendaId){state.settings.agendaRange="month";go("today");setTimeout(()=>{const el=document.querySelector('[data-agenda-id="'+CSS.escape(String(agendaId))+'"]');if(el)el.scrollIntoView({behavior:"smooth",block:"center"})},120)}
       }
     });
-  }catch(e){const status=$("#notificationStatus");if(status)status.textContent="Bridge Median terdeteksi, tetapi OneSignal belum siap."}
+    if(status&&initResult&&!initResult.ok)status.textContent="OneSignal belum siap: "+(initResult.message||"bridge error");
+  }catch(e){if(status)status.textContent="Bridge Median terdeteksi, tetapi OneSignal belum siap."}
 }
 function queueReminderForPush(r){
-  if(window.NaraMedian&&window.NaraMedian.isAvailable())window.NaraMedian.syncReminder(r).catch(()=>{});
+  if(window.NaraMedian&&window.NaraMedian.isAvailable()){
+    window.NaraMedian.syncReminder(r).then(result=>{
+      if(result&&result.message==="backend-not-configured"){
+        state.settings.push={...(state.settings.push||{}),schedulerReady:false};
+        try{localStorage.setItem(KEY,JSON.stringify(state))}catch{}
+      }
+    }).catch(()=>{});
+  }
 }
 function renderSettings(){if($("#defaultReminderLead"))$("#defaultReminderLead").value=String(state.settings.reminderLead||30)}
 
@@ -961,8 +970,39 @@ document.addEventListener("click",e=>{
   const delHabit=e.target.closest(".delete-habit");if(delHabit){const h=state.habits.find(x=>x.id===delHabit.dataset.id);if(h){state.habits=state.habits.filter(x=>x.id!==h.id);state.goals=state.goals.filter(g=>g.habitName!==h.name);save()}}
   const dot=e.target.closest(".daydot");if(dot){const h=state.habits.find(x=>x.id===dot.dataset.habit),d=dot.dataset.date;if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
 });
-function initFinanceFab(){
-  if(localStorage&&typeof localStorage.removeItem==="function")localStorage.removeItem("nara-finance-fab-y");
+function initPageFabs(){
+  if(typeof document==="undefined")return;
+  document.querySelectorAll(".page-fab").forEach(fab=>{
+    let dragging=false,startX=0,startY=0,dx=0,dy=0,moved=false;
+    const reset=()=>{
+      fab.classList.remove("dragging");
+      fab.style.transition="transform .28s cubic-bezier(.2,.85,.25,1)";
+      fab.style.transform="translate3d(0,0,0)";
+      setTimeout(()=>{fab.style.transition=""},320);
+      dragging=false;dx=0;dy=0;
+    };
+    fab.addEventListener("pointerdown",e=>{
+      if(e.button!==undefined&&e.button!==0)return;
+      dragging=true;moved=false;startX=e.clientX;startY=e.clientY;
+      fab.classList.add("dragging");
+      fab.style.transition="none";
+      try{fab.setPointerCapture(e.pointerId)}catch{}
+    });
+    fab.addEventListener("pointermove",e=>{
+      if(!dragging)return;
+      dx=e.clientX-startX;dy=e.clientY-startY;
+      if(Math.hypot(dx,dy)>6)moved=true;
+      const pad=10,rect=fab.getBoundingClientRect();
+      const minX=-rect.left+pad,maxX=(window.innerWidth||360)-rect.right-pad;
+      const minY=-rect.top+pad,maxY=(window.innerHeight||800)-rect.bottom-pad;
+      dx=clamp(dx,minX,maxX);dy=clamp(dy,minY,maxY);
+      fab.style.transform=`translate3d(${dx}px,${dy}px,0)`;
+      e.preventDefault();
+    });
+    const end=e=>{if(!dragging)return;try{fab.releasePointerCapture(e.pointerId)}catch{};reset()};
+    fab.addEventListener("pointerup",end);fab.addEventListener("pointercancel",end);
+    fab.addEventListener("click",e=>{if(moved){e.preventDefault();e.stopImmediatePropagation();moved=false}},true);
+  })
 }
 
 document.addEventListener("submit",e=>{const f=e.target.closest("[data-goal-form]");if(!f)return;e.preventDefault();const id=f.dataset.goalForm,g=state.goals.find(x=>x.id===id),input=f.querySelector("[data-goal-input]"),title=(input&&input.value||"").trim();if(g&&title){g.steps=g.steps||[];g.steps.push({id:uid(),title:sentenceCase(naturalizeText(title)),done:false});g.completed=false;g.progress=goalProgress(g);save()}})
@@ -973,7 +1013,7 @@ $("#quickAdd").addEventListener("click",()=>openQuick());
 $("#closeDialog").addEventListener("click",()=>$("#quickDialog").close());
 function resizeProfileImage(file,maxSize=512,quality=.82){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=reject;reader.onload=()=>{const img=new Image();img.onerror=reject;img.onload=()=>{const scale=Math.min(1,maxSize/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;const ctx=canvas.getContext("2d");ctx.drawImage(img,0,0,w,h);resolve(canvas.toDataURL("image/jpeg",quality))};img.src=reader.result};reader.readAsDataURL(file)})}
 $("#quickType").addEventListener("change",syncQuick);$("#quickForm").addEventListener("submit",quickSubmit);$("#noteSearch").addEventListener("input",renderNotes);$("#micButton").addEventListener("click",startVoice);$("#tryVoice").addEventListener("click",startVoice);$("#voiceStatus").addEventListener("click",startVoice);$("#stopVoice").addEventListener("click",submitVoice);$("#accountNameForm").addEventListener("submit",e=>{e.preventDefault();updateAccountName($("#accountName").value)});$("#accountAvatarButton").addEventListener("click",()=>$("#accountAvatarInput").click());$("#accountAvatarInput").addEventListener("change",async e=>{const file=e.target.files&&e.target.files[0];if(!file)return;if(!file.type.startsWith("image/")){alert("Pilih file gambar.");return}try{state.profile.photo=await resizeProfileImage(file);save()}catch{alert("Foto profil belum bisa diproses. Coba gambar lain.")}e.target.value=""});
-$("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());
+$("#downloadBackup").addEventListener("click",downloadBackup);$("#restoreBackup").addEventListener("change",e=>restoreBackupFile(e.target.files[0]));$("#resetNara").addEventListener("click",resetAllData);$("#defaultReminderLead").addEventListener("change",e=>{state.settings.reminderLead=Number(e.target.value)||30;save()});$("#enableNotifications").addEventListener("click",requestNotifications);$("#testReminder").addEventListener("click",()=>showReminder({title:"Tes pengingat NARA",time:new Intl.DateTimeFormat("id-ID",{hour:"2-digit",minute:"2-digit"}).format(new Date())},5));$("#editForm").addEventListener("submit",saveEditor);$("#closeEditDialog").addEventListener("click",()=>$("#editDialog").close());
 $("#openEditDatePicker").addEventListener("click",openEditDatePicker);
 $("#closeDatePicker").addEventListener("click",closeEditDatePicker);
 $("#dateCancel").addEventListener("click",closeEditDatePicker);
@@ -986,7 +1026,7 @@ $("#datePickerDialog").addEventListener("click",e=>{if(e.target===$("#datePicker
 $("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});
 $("#profilePromptSkip").addEventListener("click",()=>{$("#profilePromptForm").hidden=true});
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
-$("#quickDate").value=localISO();renderAll();initMedianNotifications();initFinanceFab();
+$("#quickDate").value=localISO();renderAll();initMedianNotifications();initPageFabs();
 window.addEventListener("load",()=>{
   if("serviceWorker"in navigator)navigator.serviceWorker.getRegistrations().then(list=>list.forEach(reg=>reg.unregister())).catch(()=>{});
   if("caches"in window)caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key)))).catch(()=>{});
