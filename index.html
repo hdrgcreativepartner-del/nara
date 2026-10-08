@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=6.2.4">
+  <link rel="manifest" href="./manifest.webmanifest?v=6.2.5">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=6.2.4">
+  <link rel="stylesheet" href="./styles.css?v=6.2.5">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -195,9 +195,9 @@
       <div class="setting-title"><div class="backup-icon blue"><svg><use href="#ico-bell"/></svg></div><div><small>PENGINGAT</small><h3>Notifikasi agenda</h3><p>Pilih kapan NARA mengingatkan sebelum agenda dimulai.</p></div></div>
       <div class="setting-controls">
         <select id="defaultReminderLead"><option value="30">30 menit sebelumnya</option><option value="60">60 menit sebelumnya</option></select>
-        <button id="enableNotifications" class="secondary-button" type="button">Aktifkan notifikasi</button>
+        <button id="enableNotifications" class="secondary-button" type="button">Aktifkan notifikasi</button><button id="testReminder" class="secondary-button" type="button">Tes popup reminder</button>
       </div>
-      <small id="notificationStatus" class="setting-help">Web: popup aktif saat NARA terbuka. Build Median: push background membutuhkan backend scheduler + provider push.</small>
+      <small id="notificationStatus" class="setting-help">Status notifikasi akan muncul di sini. Popup lokal bekerja saat NARA terbuka; push background membutuhkan OneSignal + scheduler server.</small>
     </article>
     <article class="card reset-card">
       <div class="setting-title"><div class="backup-icon danger"><svg><use href="#ico-reset"/></svg></div><div><small>RESET</small><h3>Mulai dari awal</h3><p>Hapus semua data lokal NARA di browser ini.</p></div></div>
@@ -205,7 +205,7 @@
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.2.4</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.2.5</small></div><span>Beta</span></div>
     </article>
   </div>
   <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
@@ -307,8 +307,8 @@
 </form>
 </dialog>
 
-<script src="./median-bridge.js?v=6.2.4"></script>
-<script src="./app.js?v=6.2.4"></script>
+<script src="./median-bridge.js?v=6.2.5"></script>
+<script src="./app.js?v=6.2.5"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");

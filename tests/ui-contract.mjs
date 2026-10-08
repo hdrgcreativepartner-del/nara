@@ -72,4 +72,7 @@ assert.ok(html.includes('id="todayFab"')&&html.includes('id="notesFab"')&&html.i
 assert.ok(css.includes(".page-fab")&&css.includes("position:fixed!important"),"Primary page add actions must use a shared fixed FAB style");
 assert.ok(html.includes('id="accountAvatarInput"')&&html.includes('id="accountAvatarImage"'),"Account page must support profile photo upload");
 assert.ok(js.includes("resizeProfileImage")&&js.includes("state.profile.photo"),"Profile photos must be compressed and persisted locally");
+assert.ok(js.includes("initPageFabs")&&js.includes("pointermove")&&js.includes("translate3d(0,0,0)"),"All page FABs must be draggable temporarily and snap back home");
+assert.ok(median.includes("waitForBridge")&&median.includes("enableForegroundNotifications(true)"),"Median OneSignal bridge must wait for native readiness and enable foreground pushes");
+assert.ok(html.includes('id="testReminder"'),"Notification settings must provide a local popup test");
 console.log("NARA UI contract passed: unified fixed FABs, profile photo, income intelligence, colloquial language normalization, custom edit date picker.");

@@ -1104,3 +1104,11 @@ dialog.action-sheet-dialog[open] .action-sheet{
 .account-avatar-button img{width:100%;height:100%;object-fit:cover;display:block}
 .account-avatar-button>i{position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#2563eb;color:#fff;border:2px solid #fff;font-style:normal;font-size:15px;font-weight:800}
 #topAvatar.has-photo{background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;color:transparent!important}
+
+/* NARA v6.2.5 — draggable-to-preview, always snap home */
+.page-fab.dragging{
+  transition:none!important;
+  box-shadow:0 20px 44px rgba(17,25,21,.30)!important;
+  cursor:grabbing!important;
+}
+.page-fab{will-change:transform}
