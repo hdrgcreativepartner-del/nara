@@ -64,7 +64,12 @@ assert.ok(html.includes('id="dateDone"')&&html.includes('id="dateCancel"'),"Edit
 assert.ok(html.includes("finance-add-dock"),"Finance add action must stay at the bottom of the finance page");
 assert.ok(js.includes('kind==="finance-choice"'),"Unknown money input must ask income vs expense");
 assert.ok(html.includes('id="financeFab"'),"Finance add action must be a floating FAB");
-assert.ok(js.includes("initFinanceFab")&&js.includes("nara-finance-fab-y"),"Finance FAB must support persisted vertical dragging");
+assert.ok(js.includes("initFinanceFab")&&!js.includes("setPointerCapture"),"Finance FAB must stay fixed and must not be draggable");
 assert.ok(css.includes("#page-chat .send")&&css.includes("background:#111915!important"),"Chat send button must not use the blue frame/fill");
 assert.ok(css.includes("#chatForm.composer:focus-within"),"Chat composer must stay neutral without a blue frame");
-console.log("NARA UI contract passed: income intelligence, colloquial language normalization, bottom finance CTA, custom edit date picker.");
+assert.ok(css.includes("bottom:calc(94px + env(safe-area-inset-bottom))"),"Finance FAB must stay fixed above bottom navigation");
+assert.ok(html.includes('id="todayFab"')&&html.includes('id="notesFab"')&&html.includes('id="goalsFab"'),"Today, Notes, and Goals pages must use the same fixed FAB pattern");
+assert.ok(css.includes(".page-fab")&&css.includes("position:fixed!important"),"Primary page add actions must use a shared fixed FAB style");
+assert.ok(html.includes('id="accountAvatarInput"')&&html.includes('id="accountAvatarImage"'),"Account page must support profile photo upload");
+assert.ok(js.includes("resizeProfileImage")&&js.includes("state.profile.photo"),"Profile photos must be compressed and persisted locally");
+console.log("NARA UI contract passed: unified fixed FABs, profile photo, income intelligence, colloquial language normalization, custom edit date picker.");
