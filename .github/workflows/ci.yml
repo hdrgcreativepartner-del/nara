@@ -20,6 +20,8 @@ jobs:
         run: node tests/smoke.mjs
       - name: Contextual conversation tests
         run: node tests/conversation.mjs
+      - name: Optional AI backend validation
+        run: node tests/ai-worker.mjs
       - name: First-run UI contract
         run: node tests/ui-contract.mjs
       - name: Navigation and FAB behavior

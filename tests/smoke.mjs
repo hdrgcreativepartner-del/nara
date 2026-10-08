@@ -172,8 +172,8 @@ reset();
 const unknown=run("aku lagi bingung hari ini");
 assert.equal(get("state.notes.length"),0);
 assert.equal(get("state.reminders.length"),0);
-assert.equal(get("state.pending.kind"),"intent-choice");
-assert.match(unknown.text,/belum yakin/i);
+assert.equal(get("state.pending"),null);
+assert.match(unknown.text,/mendengarkan/i);
 run("Tidak perlu disimpan");
 assert.equal(get("state.pending"),null);
 
@@ -293,7 +293,7 @@ assert.equal(get("state.transactions[0].amount"),200000);
 
 reset();
 run("aku bingung iki");
-assert.equal(get("state.pending.kind"),"intent-choice");
+assert.equal(get("state.pending"),null);
 run("Pendapatan 500 rb");
 assert.equal(get("state.transactions.length"),1);
 assert.equal(get("state.transactions[0].type"),"income");
@@ -318,7 +318,7 @@ assert.equal(get("state.transactions[0].amount"),20000);
 
 reset();
 run("sesuk jam 9 budal ke Jember");
-assert.equal(get("state.reminders[0].date"),"2026-10-09");
+assert.equal(get("state.reminders[0].date"),get("addDays(1)"));
 assert.equal(get("state.reminders[0].time"),"09:00");
 
 reset();

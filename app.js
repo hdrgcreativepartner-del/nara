@@ -16,7 +16,7 @@ function fresh(){
   return {profile:{name:""},settings:{reminderLead:30,agendaRange:"today"},pending:null,lastCreated:null,conversation:null,messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],liabilities:[],receivables:[],reminders:[],notes:[],habits:[],goals:[]};
 }
 function load(){try{const base=fresh(),saved=JSON.parse(localStorage.getItem(KEY)||"{}")||{};return {...base,...saved,profile:{...base.profile,...(saved.profile||{})},settings:{...base.settings,...(saved.settings||{})},liabilities:Array.isArray(saved.liabilities)?saved.liabilities:[],receivables:Array.isArray(saved.receivables)?saved.receivables:[]}}catch{return fresh()}}
-function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
+function save(){reconcileLedger();localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
 function msg(role,text,result="",actions=[]){state.messages.push({id:uid(),role,text,result,actions:Array.isArray(actions)?actions:[],at:new Date().toISOString()})}
 function firstName(){return ((state.profile&&state.profile.name)||"").trim().split(/\s+/)[0]||""}
 function greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
@@ -24,6 +24,25 @@ function greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<1
 function normalizeUserLanguage(text){
   let s=String(text||"");
   const replacements=[
+    [/\b(?:membayar|mbayari|nyicil|mencicil|ngangsur|mengangsur)\b/gi,"bayar"],
+    [/\b(?:membeli|mundhut|blonjo)\b/gi,"beli"],
+    [/\b(?:meminjam|pinjem)\b/gi,"pinjam uang"],
+    [/\b(?:utang|utangku|utange|utangnya)\b/gi,"hutang"],
+    [/\b(?:marang|nang|ning)\b/gi,"ke"],
+    [/\b(?:aku|kulo|kula|gue|gua)\b/gi,"aku"],
+    [/\b(?:maneh|maning)\b/gi,"lagi"],
+    [/\b(?:durung)\b/gi,"belum"],
+    [/\b(?:seng|sing)\b/gi,"yang"],
+    [/\b(?:kesel|sambat)\b/gi,"capek"],
+    [/\b(?:piro|pinten)\b/gi,"berapa"],
+    [/\b(?:duwe)\b/gi,"punya"],
+    [/\b(?:limang|limo)\b/gi,"lima"],
+    [/\b(?:rong|loro)\b/gi,"dua"],
+    [/\b(?:telung|telu)\b/gi,"tiga"],
+    [/\b(?:patang|papat)\b/gi,"empat"],
+    [/\b(?:sepuluh|sedasa)\b/gi,"sepuluh"],
+    [/\bselawe\b/gi,"dua puluh lima"],
+    [/\bsatus\b/gi,"seratus"],
     [/\b(?:gk|ngga|enggak|ora)\b/gi,"tidak"],
     [/\b(?:udah|dah|sampun)\b/gi,"sudah"],
     [/\b(?:pengin|pengen|pingin)\b/gi,"ingin"],
@@ -207,19 +226,66 @@ function debtIntent(t){
   return null;
 }
 function counterpartyFromText(t){
-  const m=String(t).match(/(?:dari|ke|kepada|sama)\s+([A-Za-z][A-Za-z .'-]{1,28})/i);
-  return m?sentenceCase(m[1].trim().replace(/\b(sebesar|senilai|rp|ribu|rb|juta|jt)\b.*$/i,"").trim()):"";
+  const clean=String(t).replace(/\b(?:sebesar|senilai|seharga|nominal|rp)\b.*$/i,"").replace(/\d.*$/,"").trim();
+  const m=clean.match(/(?:dari|ke|kepada|sama)\s+([\p{L}][\p{L} .'-]*)/iu)||clean.match(/(?:hutang|utang|piutang)\s+(?!(?:lagi|baru|sudah|lunas)\b)([\p{L}][\p{L} .'-]*)/iu);
+  return m?sentenceCase(m[1].replace(/\s+(?:lagi|dulu|ya|dong)$/i,"").trim()):"";
+}
+// The ledger is authoritative. Older card-only balances become opening entries once.
+function reconcileLedger(){
+  for(const [key,link,payment,opening] of [['liabilities','linkedDebtId','debt_payment','liability_opening'],['receivables','linkedReceivableId','receivable_payment','receivable_opening']]){
+    for(const item of state[key]){
+      let rows=state.transactions.filter(t=>t[link]===item.id);
+      if(!item.ledgerVersion){
+        if(!rows.some(t=>t.type!==payment)){
+          const paid=rows.filter(t=>t.type===payment).reduce((n,t)=>n+t.amount,0);
+          const principal=Math.max(0,Number(item.remaining??(item.done?0:item.amount))||0)+paid;
+          state.transactions.push({id:uid(),type:opening,amount:principal,title:item.title,category:key==='liabilities'?'Debt':'Receivable',date:item.date||localISO(),cashImpact:0,[link]:item.id});
+        }
+        item.ledgerVersion=1;rows=state.transactions.filter(t=>t[link]===item.id);
+      }
+      item.amount=rows.filter(t=>t.type!==payment).reduce((n,t)=>n+t.amount,0);
+      const paid=rows.filter(t=>t.type===payment).reduce((n,t)=>n+t.amount,0);
+      item.remaining=Math.max(0,item.amount-paid);item.overpaid=Math.max(0,paid-item.amount);item.done=item.remaining===0;
+    }
+  }
+}
+function updateLedgerTransaction(id,patch){
+  reconcileLedger();
+  const row=state.transactions.find(t=>t.id===id);if(!row)return 'Transaksi tidak ditemukan.';
+  const amount=patch.amount??row.amount;if(!Number.isSafeInteger(amount)||amount<=0)return 'Nominal harus rupiah bulat lebih dari nol.';
+  const link=row.linkedDebtId?'linkedDebtId':row.linkedReceivableId?'linkedReceivableId':null;
+  if(link){
+    const payment=link==='linkedDebtId'?'debt_payment':'receivable_payment';
+    const others=state.transactions.filter(t=>t[link]===row[link]&&t.id!==id);
+    const principal=others.filter(t=>t.type!==payment).reduce((n,t)=>n+t.amount,0)+(row.type!==payment?amount:0);
+    const paid=others.filter(t=>t.type===payment).reduce((n,t)=>n+t.amount,0)+(row.type===payment?amount:0);
+    if(paid>principal)return 'Perubahan ini membuat pembayaran melebihi pokok hutang/piutang. Koreksi pembayaran terkait terlebih dahulu.';
+  }
+  const sign=Math.sign(accountingCashImpact(row));Object.assign(row,patch,{amount,cashImpact:sign*amount});
+  reconcileLedger();rememberFocus([{type:'tx',id}]);return null;
+}
+function deleteLedgerTransaction(id){
+  reconcileLedger();const row=state.transactions.find(t=>t.id===id);if(!row)return;
+  const link=row.linkedDebtId?'linkedDebtId':row.linkedReceivableId?'linkedReceivableId':null;
+  const payment=['debt_payment','receivable_payment'].includes(row.type);
+  if(link&&!payment){
+    state.transactions=state.transactions.filter(t=>t[link]!==row[link]);
+    const key=link==='linkedDebtId'?'liabilities':'receivables';state[key]=state[key].filter(t=>t.id!==row[link]);
+  }else state.transactions=state.transactions.filter(t=>t.id!==id);
+  reconcileLedger();
 }
 function accountingCashImpact(t){return typeof t.cashImpact==="number"?t.cashImpact:(t.type==="income"?t.amount:t.type==="expense"?-t.amount:0)}
 function cashBalance(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>a+accountingCashImpact(t),0)}
-function openLiabilityTotal(){return state.liabilities.filter(x=>!x.done).reduce((a,x)=>a+(x.remaining??x.amount),0)}
-function openReceivableTotal(){return state.receivables.filter(x=>!x.done).reduce((a,x)=>a+(x.remaining??x.amount),0)}
+function openLiabilityTotal(){reconcileLedger();return state.liabilities.filter(x=>!x.done).reduce((a,x)=>a+(x.remaining??x.amount),0)}
+function openReceivableTotal(){reconcileLedger();return state.receivables.filter(x=>!x.done).reduce((a,x)=>a+(x.remaining??x.amount),0)}
 function createLiability(source,amount,kind="cash-loan"){
   const creditor=counterpartyFromText(source),title=creditor?`Hutang kepada ${creditor}`:"Hutang",id=uid();
   const debt={id,title,creditor,amount,remaining:amount,kind,date:parseDate(source),done:false,sourceText:source,createdAt:new Date().toISOString()};
   state.liabilities.push(debt);
   if(kind==="cash-loan")state.transactions.push({id:uid(),type:"financing_in",amount,title:`Pinjaman diterima${creditor?" dari "+creditor:""}`,category:"Debt",date:debt.date,cashImpact:amount,createdAt:new Date().toISOString(),linkedDebtId:id});
   if(kind==="credit-purchase")state.transactions.push({id:uid(),type:"expense",amount,title:smartFinanceTitle(source,"Pembelian secara hutang"),category:categoryFor(source),date:debt.date,cashImpact:0,createdAt:new Date().toISOString(),linkedDebtId:id});
+  if(kind==="opening")state.transactions.push({id:uid(),type:"liability_opening",amount,title,category:"Debt",date:debt.date,cashImpact:0,linkedDebtId:id});
+  debt.ledgerVersion=1;
   return debt;
 }
 function createReceivable(source,amount){
@@ -231,6 +297,7 @@ function createReceivable(source,amount){
 }
 function payLiabilityFromText(text){
   const s=String(text).toLowerCase();if(!/\b(bayar|melunasi|lunas)\b.*\b(hutang|utang)\b|\b(hutang|utang)\b.*\b(bayar|lunas)\b/.test(s))return null;
+  reconcileLedger();
   const amount=parseAmount(text),open=state.liabilities.filter(x=>!x.done&&(x.remaining??x.amount)>0);
   const creditor=counterpartyFromText(text).toLowerCase().trim();
   let items=creditor?open.filter(x=>(x.creditor||"").toLowerCase().trim()===creditor):open;
@@ -238,8 +305,13 @@ function payLiabilityFromText(text){
   const parties=new Set(items.map(x=>(x.creditor||x.title).toLowerCase().trim()));
   if(parties.size>1)return {reply:"Pembayaran ini untuk hutang kepada siapa? Sebutkan namanya agar aku tidak mengurangi hutang orang lain."};
   items=items.slice().sort((a,b)=>(a.createdAt||a.date||"").localeCompare(b.createdAt||b.date||""));
-  const total=items.reduce((sum,x)=>sum+(x.remaining??x.amount),0),requested=amount||total;
-  let available=Math.min(requested,total),paid=0;const allocations=[];
+  const total=items.reduce((sum,x)=>sum+(x.remaining??x.amount),0);
+  if(!amount&&!/\b(?:lunasi|melunasi|lunas)\b/.test(s))return{reply:'Berapa nominal pembayaran hutangnya? Belum ada pembayaran dicatat.'};
+  if(amount!==null&&amount<=0)return{reply:'Nominal pembayaran harus lebih dari nol. Belum ada pembayaran dicatat.'};
+  const requested=amount??total;
+  if(requested>total){state.debtReview={creditor:items[0].creditor||"",requested,total};return{reply:`Kamu menyebut ${rupiah(requested)}, tetapi sisa hutang${creditor?' kepada '+sentenceCase(creditor):''} hanya ${rupiah(total)}. Pembayaran belum dicatat; kelebihannya belum dicatat. Periksa pokok hutangnya atau tulis nominal pembayaran yang benar.`}}
+  state.debtReview={creditor:items[0].creditor||"",requested,total};
+  let available=requested,paid=0;const allocations=[];
   for(const item of items){
     if(!available)break;
     const part=Math.min(available,item.remaining??item.amount);
@@ -261,7 +333,7 @@ function receiveReceivableFromText(text){
 }
 function smartFinanceTitle(text,fallback="Transaksi"){
   let s=naturalizeText(text)
-    .replace(/\b(aku|saya|tadi|hari ini|sebesar|senilai|rp|pemasukan|pendapatan|income|pengeluaran|expense)\b/gi," ")
+    .replace(/\b(aku|saya|tadi|hari ini|sebesar|senilai|seharga|dengan total|total harga|rp|pemasukan|pendapatan|income|pengeluaran|expense)\b/gi," ")
     .replace(/\b(dapat|terima)\s+(?:bayaran|pembayaran|uang)?\b/gi," ")
     .replace(/\b\d+(?:[.,]\d+)?\s*(?:ribu|rb|k|juta|jt)?\b/gi," ")
     .replace(/\s+/g," ").trim();
@@ -532,7 +604,7 @@ function unknownIntentPrompt(text){
     return{text:`Aku menangkap nominal ${rupiah(amount)}. Ini pemasukan atau pengeluaran?`,actions:["Pemasukan","Pengeluaran","Bukan transaksi"]};
   }
   state.pending={kind:"intent-choice",source:text};
-  return{text:"Aku belum yakin kamu ingin aku melakukan apa dengan kalimat itu. Mau aku jadikan catatan, agenda, target, atau tidak perlu disimpan?",actions:["Jadikan catatan","Buat agenda","Jadikan target","Tidak perlu disimpan"]};
+  return{text:"Aku belum yakin kamu ingin aku melakukan apa dengan kalimat itu. Mau aku jadikan catatan, agenda, target, atau tidak perlu disimpan?",actions:["Jadikan catatan","Buat agenda","Jadikan target","Tidak perlu disimpan"],aiEligible:true};
 }
 
 // Local conversation memory: only use explicit recent context, never guess an old record.
@@ -602,13 +674,20 @@ function contextualFollowup(text){
   if(focus.length>1)return{text:'Ada beberapa catatan dalam konteks terakhir. Yang ingin kamu lanjutkan yang mana?',actions:focus.map((item,i)=>`Pilih ${i+1}: ${contextRow(item).title}`)};
   const item=focus[0],row=contextRow(item),changes=[];
   if(item.type==='tx'){
-    if(row.linkedDebtId||row.linkedReceivableId)return{text:'Transaksi ini terhubung dengan hutang atau piutang. Sebutkan pembayaran yang ingin diperbarui agar saldo dan sisa kewajibannya tetap sesuai.',actions:[]};
+    if(row.linkedDebtId||row.linkedReceivableId){
+      const amount=parseAmount(text);if(!amount)return{text:'Sebutkan nominal koreksi, misalnya “ralat 10rb”.',actions:[]};
+      const error=updateLedgerTransaction(row.id,{amount});return{text:error||`Nominal diperbarui menjadi ${rupiah(amount)}. Kartu hutang/piutang dan kas sudah dihitung ulang.`,actions:[]};
+    }
     const amount=parseAmount(text)||(/^\D*(?:nominal|salah|ralat|maksudnya)\D*(\d+)\s*$/.test(s)?Number(s.match(/(\d+)\s*$/)[1]):null);
     if(amount&&!/\b(?:tambahkan|tambahi)\b/.test(s)){row.amount=amount;changes.push(`nominal ${rupiah(amount)}`)}
     if(/\b(?:pemasukan|pendapatan|income|uang masuk)\b/.test(s)){row.type='income';changes.push('jenis pemasukan')}
     else if(/\b(?:pengeluaran|expense|uang keluar)\b/.test(s)){row.type='expense';changes.push('jenis pengeluaran')}
     if(hasDateContext(text)){row.date=parseDate(text);changes.push(`tanggal ${prettyDate(row.date)}`)}
     if(changes.length&&typeof row.cashImpact==='number')row.cashImpact=row.type==='income'?row.amount:-row.amount;
+  }else if(item.type==='liability'||item.type==='receivable'){
+    const link=item.type==='liability'?'linkedDebtId':'linkedReceivableId';
+    const tx=state.transactions.find(t=>t[link]===row.id&&!['debt_payment','receivable_payment'].includes(t.type));
+    const amount=parseAmount(text);if(tx&&amount){const error=updateLedgerTransaction(tx.id,{amount});return{text:error||`Pokok ${row.title} diperbarui menjadi ${rupiah(amount)}. Sisa: ${rupiah(row.remaining)}.`,actions:[]}}
   }else if(item.type==='reminder'){
     if(hasDateContext(text)){row.date=parseDate(text);changes.push(`tanggal ${prettyDate(row.date)}`)}
     const time=parseTime(text);if(time){row.time=time;changes.push(`jam ${time}`)}
@@ -628,7 +707,24 @@ function contextualFollowup(text){
   return{text:`Konteks terakhirku adalah “${row.title}”. Sebutkan perubahan yang kamu inginkan${item.type==='tx'?', misalnya “ralat 75rb” atau “itu pemasukan”':item.type==='reminder'?', misalnya “pindah ke besok jam 3 sore”':''}.`,actions:[]};
 }
 function smartResponse(input,choiceSource=null){
+  reconcileLedger();
   const text=normalizeUserLanguage(input),s=text.toLowerCase();
+  if(/^(?:coba |tolong )?(?:cek|periksa|hitung)(?: ulang| lagi| kembali)?[.!?]*$/i.test(s)){
+    const party=state.debtReview?.creditor;
+    const rows=party?state.liabilities.filter(x=>(x.creditor||'').toLowerCase()===party.toLowerCase()):state.liabilities;
+    const principal=rows.reduce((n,x)=>n+x.amount,0),remaining=rows.reduce((n,x)=>n+x.remaining,0);
+    return{text:`Aku cek ulang dari transaksi yang tersimpan${party?' untuk '+party:''}: pokok hutang ${rupiah(principal)}, pembayaran ${rupiah(principal-remaining)}, sisa ${rupiah(remaining)}.${state.debtReview?.requested?' Nominal pembayaran terakhir yang kamu minta: '+rupiah(state.debtReview.requested)+'.':''} Jika ada yang keliru, edit nominal di Keuangan; kartu hutang akan ikut berubah.`,actions:[]};
+  }
+  if(/\b(?:capek|lelah|sedih|cemas|stress|stres|kewalahan|bingung|putus asa)\b/.test(s)&&!parseAmount(text)&&!startsNoteCommand(input))return{text:'Kedengarannya ini sedang terasa berat. Kamu ingin aku mendengarkan dulu, membantu merangkum masalahnya, atau menyusun satu langkah kecil yang bisa dilakukan hari ini?',actions:[],aiEligible:true};
+  if(/^(?:motivasi|semangati|beri semangat|aku butuh semangat)/i.test(s))return{text:'Kamu tidak harus menyelesaikan semuanya sekaligus. Pilih satu hal yang paling mungkin diselesaikan hari ini. Apa yang ingin kamu mulai?',actions:[],aiEligible:true};
+  if(!startsNoteCommand(input)){
+    const clauses=text.split(/[,;\n]+\s*|\s+(?:lalu|kemudian)\s+/).map(x=>x.trim()).filter(Boolean);
+    if(clauses.length>1&&clauses.every(x=>debtIntent(x)&&parseAmount(x))){
+      const replies=[];for(const clause of clauses){const r=smartResponse(clause);replies.push(r.text);if(state.pending)break}return{text:replies.join('\n'),actions:[]};
+    }
+  }
+  if(/\b(?:tidak|belum|jangan|bukan|akan|mau|ingin)\b.{0,20}\b(?:hutang|pinjam)\b|\b(?:hutang|pinjam)\b.*\b(?:besok|lusa)\b/.test(s))return{text:'Aku pahami sebagai rencana atau penyangkalan; belum ada hutang maupun transaksi yang dicatat.',actions:[]};
+  if(/-\s*\d+(?:[.,]\d+)?\s*(?:ribu|juta|rupiah|k)\b/.test(s)&&debtIntent(text))return{text:'Nominal hutang atau pembayaran harus lebih dari nol. Belum ada transaksi dicatat.',actions:[]};
   const noteChoice=/^jadikan catatan[.!]?$/i.test(text);
   if(startsNoteCommand(input)&&!noteChoice){state.pending=null;return saveExplicitNote(String(input).trim())}
   if(noteChoice){
@@ -638,7 +734,7 @@ function smartResponse(input,choiceSource=null){
   if(state.pending?.kind==="note-content"&&!/^(?:batal|batalkan|cancel|lupakan)$/i.test(text)){
     state.pending=null;return saveExplicitNote("Catat: "+String(input).trim());
   }
-  if(/^(?:batal|batalkan|cancel|lupakan|ganti topik|topik baru)(?:\s+(?:saja|aja|dulu|yang tadi))?[.!]?$/i.test(s)){state.pending=null;state.conversation=null;return{text:'Oke, pembahasan yang belum selesai aku batalkan. Catatan yang sudah tersimpan tetap ada. Mau lanjut membahas apa?',actions:[]}}
+  if(/^(?:tidak perlu disimpan|batal|batalkan|cancel|lupakan|ganti topik|topik baru)(?:\s+(?:saja|aja|dulu|yang tadi))?[.!]?$/i.test(s)){state.pending=null;state.conversation=null;return{text:'Oke, pembahasan yang belum selesai aku batalkan. Catatan yang sudah tersimpan tetap ada. Mau lanjut membahas apa?',actions:[]}}
   const query=state.pending&&!/^(?:berapa|cek|lihat|tampilkan|rekap|ringkas|apa|ada|daftar)\b/.test(s)?null:conversationQuery(text);if(query)return query;
   if(/^(?:hai|halo|hello|hi|ass?alamu.?alaikum|pagi|siang|sore|malam)(?:\s+nara)?[.!?]*$/i.test(s))return{text:`${/alaikum/.test(s)?'Waalaikumsalam. ':''}${greeting()}${firstName()?', '+firstName():''}. Cerita saja; aku bisa membantu mencatat uang, agenda, ide, atau targetmu.`,actions:[]};
   if(/^(?:terima kasih|makasih|thanks|matur nuwun|sip|oke|ok|baik|siap)(?:\s+nara)?[.!]*$/i.test(s))return{text:state.pending?'Sama-sama. Kita masih punya informasi yang perlu dilengkapi; lanjutkan saat kamu siap.':'Sama-sama. Kalau ada detail tambahan atau koreksi, sampaikan saja.',actions:[]};
@@ -693,6 +789,10 @@ function coreSmartResponse(text){
   if(completedHabit)return{text:`Bagus, “${completedHabit.name}” sudah aku tandai selesai untuk hari ini.`,actions:[]};
   const intent=classifyIntent(text);
   if(intent.type==="liability"){
+    if(/^hutang\s+(?!(?:ke|kepada|sama)\b)/i.test(text)&&counterpartyFromText(text)){
+      const d=createLiability(text,intent.amount,'opening');
+      return{text:`${d.title} bertambah ${rupiah(d.amount)}. Total sisa kepada ${d.creditor}: ${rupiah(state.liabilities.filter(x=>x.creditor.toLowerCase()===d.creditor.toLowerCase()).reduce((n,x)=>n+x.remaining,0))}. Ini dicatat sebagai pokok hutang tanpa menambah kas; jika uang pinjaman baru diterima, gunakan “pinjam uang dari …”.`,actions:[]};
+    }
     state.pending={kind:"debt-kind",source:text,amount:intent.amount};
     return{text:`Aku tangkap kamu berhutang ${rupiah(intent.amount)}. Ini uang pinjaman yang masuk ke kas, atau hutang karena membeli sesuatu?`,actions:["Pinjaman masuk kas","Hutang pembelian"]};
   }
@@ -789,9 +889,10 @@ function drainChatTurns(){
   if(chatReplyBusy||!chatTurnQueue.length)return;
   chatReplyBusy=true;
   const turn=chatTurnQueue.shift();
-  setTimeout(()=>{
+  setTimeout(async()=>{
     try{
-      const response=smartResponse(turn.text,turn.choiceSource),reply=response.text||"Coba ceritakan sedikit lebih lengkap ya.";
+      const local=smartResponse(turn.text,turn.choiceSource);
+      const response=local.aiEligible?await optionalAIReply(turn.text,local):local,reply=response.text||"Coba ceritakan sedikit lebih lengkap ya.";
       msg("assistant",reply,"",response.actions||[]);save();speak(reply,turn.voice);renderChat(chatTurnQueue.length>0);scrollChatToBottom(true);
     }finally{chatReplyBusy=false;drainChatTurns()}
   },turn.voice?420:180);
@@ -928,7 +1029,7 @@ function renderAccount(){
   if($("#backupReminderCount"))$("#backupReminderCount").textContent=state.reminders.length;
   if($("#backupHabitCount"))$("#backupHabitCount").textContent=state.habits.length;if($("#backupDebtCount"))$("#backupDebtCount").textContent=state.liabilities.length+state.receivables.length;
 }
-function renderAll(){renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile();renderAccount();renderSettings()}
+function renderAll(){reconcileLedger();renderChat();renderToday();renderFinance();renderNotes();renderGoals();renderSummary();renderProfile();renderAccount();renderSettings()}
 
 function go(page){
   $$(".page").forEach(x=>x.classList.toggle("active",x.id===`page-${page}`));$$(".navbtn[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));updatePageFabVisibility();
@@ -1012,7 +1113,7 @@ function openEditor(kind,id){
 }
 function saveEditor(e){e.preventDefault();if(!editContext)return;const {kind,id}=editContext,title=$("#editTitle").value.trim();if(!title)return;
   if(kind==="note"){const x=state.notes.find(x=>x.id===id);if(x){x.title=title;x.body=$("#editBody").value.trim()||title}}
-  if(kind==="tx"){const x=state.transactions.find(x=>x.id===id);if(x){x.title=title;x.amount=Number($("#editAmount").value.replace(/\D/g,""))||x.amount;x.date=$("#editDate").value||x.date;x.category=categoryFor(title)}}
+  if(kind==="tx"){const x=state.transactions.find(x=>x.id===id);if(x){const error=updateLedgerTransaction(id,{title,amount:Number($("#editAmount").value.replace(/\D/g,"")),date:$("#editDate").value||x.date});if(error){alert(error);return}}}
   if(kind==="reminder"){const x=state.reminders.find(x=>x.id===id);if(x){x.title=title;x.date=$("#editDate").value||x.date;x.time=$("#editTime").value;x.leadMinutes=Number($("#editLead").value)||30;x.notified=false}}
   if(kind==="habit"){const x=state.habits.find(x=>x.id===id);if(x){const old=x.name;x.name=title;state.goals.filter(g=>g.habitName===old).forEach(g=>{g.habitName=title;g.title=title})}}
   if(kind==="target"){const x=state.goals.find(x=>x.id===id);if(x){x.title=targetTitle(title);x.period=$("#editTargetPeriod").value||x.period}}
@@ -1172,7 +1273,7 @@ document.addEventListener("click",e=>{
   const act=e.target.closest("[data-action]");if(act){openFabAction(act)}
   const ht=e.target.closest(".habit-toggle");if(ht){const h=state.habits.find(x=>x.id===ht.dataset.id),d=localISO();if(h){h.doneDates=h.doneDates.includes(d)?h.doneDates.filter(x=>x!==d):[...h.doneDates,d];save()}}
   const done=e.target.closest(".reminder-done");if(done){const r=state.reminders.find(x=>x.id===done.dataset.id);if(r){r.done=!r.done;r.completedAt=r.done?new Date().toISOString():null;save()}}
-  const delTx=e.target.closest(".delete-tx");if(delTx){state.transactions=state.transactions.filter(x=>x.id!==delTx.dataset.id);save()}
+  const delTx=e.target.closest(".delete-tx");if(delTx){const id=delTx.dataset.id,row=state.transactions.find(x=>x.id===id);const linked=row&&(row.linkedDebtId||row.linkedReceivableId)&&!['debt_payment','receivable_payment'].includes(row.type);askConfirm("Hapus transaksi?",linked?"Pokok hutang/piutang beserta pembayaran terkait akan dihapus. Kartu dan kas dihitung ulang.":"Transaksi dihapus. Jika ini pembayaran, sisa hutang/piutang akan bertambah kembali.","Hapus",()=>{deleteLedgerTransaction(id);save()})}
   const delNote=e.target.closest(".delete-note");if(delNote){state.notes=state.notes.filter(x=>x.id!==delNote.dataset.id);save()}
   const targetCollapse=e.target.closest("[data-target-collapse]");if(targetCollapse){const g=state.goals.find(x=>x.id===targetCollapse.dataset.targetCollapse);if(g){g.collapsed=!g.collapsed;save()}}
   const targetStep=e.target.closest(".target-step-check");if(targetStep){const g=state.goals.find(x=>x.id===targetStep.dataset.goal),s=g&&g.steps&&g.steps.find(x=>x.id===targetStep.dataset.step);if(s){s.done=!s.done;g.completed=g.steps.length>0&&g.steps.every(x=>x.done);g.progress=goalProgress(g);save()}}
@@ -1288,3 +1389,27 @@ window.addEventListener("load",()=>{
   if("serviceWorker"in navigator)navigator.serviceWorker.getRegistrations().then(list=>list.forEach(reg=>reg.unregister())).catch(()=>{});
   if("caches"in window)caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key)))).catch(()=>{});
 });
+// Optional, explicitly enabled remote conversation. Never mutates financial records.
+async function optionalAIReply(text,fallback){
+  const endpoint=state.settings.aiEndpoint;
+  const token=typeof sessionStorage!=='undefined'?sessionStorage.getItem('nara-ai-access'):null;
+  if(!state.settings.aiEnabled||!endpoint||!token)return fallback;
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+  try{
+    const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},signal:controller.signal,body:JSON.stringify({message:text,history:state.messages.slice(-7,-1).map(m=>({role:m.role,content:String(m.text).slice(0,1200)}))})});
+    if(!response.ok)throw new Error('AI unavailable');const data=await response.json();
+    if(typeof data.reply!=='string'||!data.reply.trim())throw new Error('Invalid reply');
+    return{text:data.reply.slice(0,4000)+'\n\nJawaban AI • belum menyimpan atau mengubah data.',actions:fallback.actions||[]};
+  }catch{return{...fallback,text:fallback.text+'\nAI tambahan sedang tidak tersedia; mode lokal tetap berjalan.'}}
+  finally{clearTimeout(timer)}
+}
+if(document.querySelector('#saveAISettings'))document.querySelector('#saveAISettings').addEventListener('click',()=>{
+  const enabled=$('#aiEnabled').checked,endpoint=$('#aiEndpoint').value.trim(),token=$('#aiAccessToken').value.trim();
+  if(enabled){try{const url=new URL(endpoint);if(url.protocol!=='https:'||url.username||url.password)throw new Error()}catch{alert('Masukkan alamat HTTPS backend AI yang kamu kelola.');return}
+    if(!token&&!sessionStorage.getItem('nara-ai-access')){alert('Masukkan kode akses backend AI untuk sesi ini.');return}
+  }
+  state.settings.aiEnabled=enabled;state.settings.aiEndpoint=endpoint;
+  if(token)sessionStorage.setItem('nara-ai-access',token);if(!enabled)sessionStorage.removeItem('nara-ai-access');
+  $('#aiAccessToken').value='';save();$('#aiStatus').textContent=enabled?'AI diaktifkan untuk sesi ini.':'Mode lokal aktif.';
+});
+if(document.querySelector('#aiEnabled')){document.querySelector('#aiEnabled').checked=!!state.settings.aiEnabled;document.querySelector('#aiEndpoint').value=state.settings.aiEndpoint||''}

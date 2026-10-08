@@ -1,0 +1,10 @@
+name = "nara-conversation-ai"
+main = "worker.mjs"
+compatibility_date = "2026-10-08"
+
+[ai]
+binding = "AI"
+
+[vars]
+ALLOWED_ORIGIN = "https://hdrgcreativepartner-del.github.io"
+AI_MODEL = "@cf/zai-org/glm-4.7-flash"

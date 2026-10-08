@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=6.3.5">
+  <link rel="manifest" href="./manifest.webmanifest?v=6.4.0">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=6.3.5">
+  <link rel="stylesheet" href="./styles.css?v=6.4.0">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -187,7 +187,7 @@
         <button id="downloadBackup" class="download-button" type="button"><svg><use href="#ico-download"/></svg><span>Unduh backup</span></button>
         <label class="restore-button"><svg><use href="#ico-upload"/></svg><span>Pulihkan backup</span><input id="restoreBackup" type="file" accept="application/json,.json" hidden></label>
       </div>
-      <small class="backup-note">File hanya berada di perangkatmu. NARA tidak mengirim data ini ke server.</small>
+      <small class="backup-note">File hanya berada di perangkatmu. Backup tidak dikirim ke server. Jika AI tambahan diaktifkan, cuplikan percakapan dikirim ke backend pilihanmu.</small>
     </article>
 
     <article class="card notification-card">
@@ -198,13 +198,22 @@
       </div>
       <small id="notificationStatus" class="setting-help">Status notifikasi akan muncul di sini. Popup lokal bekerja saat NARA terbuka; push background membutuhkan OneSignal + scheduler server.</small>
     </article>
+    <article class="card">
+      <h3>AI tambahan (opsional)</h3>
+      <p>Untuk percakapan bebas, penjelasan, rangkuman, dan dukungan. Pencatatan uang tetap dihitung dan divalidasi NARA.</p>
+      <p><label>Alamat backend AI <input id="aiEndpoint" type="url" placeholder="https://nara-ai.nama.workers.dev" style="width:100%"></label></p>
+      <p><label>Kode akses sesi <input id="aiAccessToken" type="password" autocomplete="off" style="width:100%"></label></p>
+      <p><label><input id="aiEnabled" type="checkbox"> Izinkan pengiriman pesan dan 6 pesan sebelumnya ke backend AI yang saya pilih.</label></p>
+      <button id="saveAISettings" class="secondary-button" type="button">Simpan pengaturan AI</button>
+      <p id="aiStatus">Mode lokal tetap tersedia tanpa AI. Backend perlu diaktifkan terlebih dahulu.</p>
+    </article>
     <article class="card reset-card">
       <div class="setting-title"><div class="backup-icon danger"><svg><use href="#ico-reset"/></svg></div><div><small>RESET</small><h3>Mulai dari awal</h3><p>Hapus semua data lokal NARA di browser ini.</p></div></div>
       <button id="resetNara" class="danger-button" type="button">Reset semua data</button>
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.3.5</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.4.0</small></div><span>Beta</span></div>
     </article>
   </div>
   <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
@@ -306,8 +315,8 @@
 </form>
 </dialog>
 
-<script src="./median-bridge.js?v=6.3.5"></script>
-<script src="./app.js?v=6.3.5"></script>
+<script src="./median-bridge.js?v=6.4.0"></script>
+<script src="./app.js?v=6.4.0"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");
