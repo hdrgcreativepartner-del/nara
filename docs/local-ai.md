@@ -29,3 +29,12 @@ Kartu hutang dan rincian dihitung ulang dari transaksi, termasuk pada render lan
 `node tests/local-ai.mjs` menguji lifecycle dengan worker tiruan, timeout, pembatalan, retry, perangkat tidak didukung, dan preservasi cache model. `tests/conversation.mjs` menguji draft AI tidak tepercaya, validasi, konfirmasi ganda, overpayment, rollback saat storage penuh, serta screenshot hutang 35k + 65k yang sudah dibayar seluruhnya tetapi kartu lama masih 65k. Test ini tidak menggantikan inference nyata di GPU target atau pengujian Android Median.
 
 Sumber runtime: https://webllm.mlc.ai/docs/ ; model: https://huggingface.co/mlc-ai/Qwen2.5-0.5B-Instruct-q4f32_1-MLC
+
+
+## v6.5.1 — embedded WebView compatibility
+
+The default new selection is `qwen-wasm`: Qwen2.5-0.5B-Instruct ONNX q4 through Transformers.js 3.8.1, `device: wasm`, one thread, running in the dedicated worker. It does not require WebGPU or SharedArrayBuffer. Existing model preferences are preserved; Median users previously selecting GPU should select **Kompatibel**. CPU responses can be slow and memory-intensive. A compatible runtime does not guarantee enough RAM or CDN/model connectivity on every phone. No automatic second large model download is attempted after a GPU failure.
+
+Both modes now have stage messages, a 3-minute no-progress watchdog, a 15-minute overall load limit, cancellation and retry. GPU availability is checked inside the worker as well as the page. The capability check is bounded to 8 seconds. Worker/runtime/model failures release the controls and provide actionable status. The CPU path uses free downloadable model weights, not remote inference. All AI outputs still pass the existing JSON draft validation before storage.
+
+Validation: unit tests cover CPU controller selection with no WebGPU, stalled downloads, late worker messages, worker creation failure, cancellation and retry. Actual execution inside the user's Median APK requires device verification; do not interpret mocked lifecycle tests as real model inference tests.

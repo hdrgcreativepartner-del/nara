@@ -315,3 +315,14 @@ assert.equal(get('JSON.stringify(state.transactions)'),durableTransactions);
 assert.match(get('state.messages.at(-1).text'),/belum disimpan/);
 localStorage.setItem=originalSet;
 console.log('Screenshot stale-card repair, untrusted AI drafts, confirmation, duplicate guard and storage rollback passed.');
+
+// Shared date/time pickers update only the field that opened them.
+el('#quickDate').value='2026-01-31';get("openDatePicker('quickDate')");
+assert.equal(get('datePickerView.getDate()'),1);
+get("datePickerView.setMonth(datePickerView.getMonth()+1); renderDatePicker()");
+assert.match(el('#datePickerMonth').textContent,/Februari/);
+get("datePickerSelected='2026-02-12';commitEditDate()");assert.equal(el('#quickDate').value,'2026-02-12');
+el('#quickTime').value='09:05';get("openTimePicker('quickTime')");
+el('#pickerHour').value='23';el('#pickerMinute').value='59';get('commitTimePicker()');assert.equal(el('#quickTime').value,'23:59');
+el('#pickerHour').value='24';get('commitTimePicker()');assert.equal(el('#quickTime').value,'23:59');assert.match(el('#timePickerError').textContent,/00–23/);
+console.log('Shared picker targets, end-of-month navigation and 24-hour validation passed.');

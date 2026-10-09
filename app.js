@@ -1092,20 +1092,32 @@ function runAgendaSheetAction(action){
   if(action==="delete"){closeAgendaSheet();askConfirm("Hapus agenda?","Agenda ini akan dihapus permanen.","Hapus",()=>{state.reminders=state.reminders.filter(x=>x.id!==id);save()})}
 }
 
-let datePickerView=new Date(),datePickerSelected="";
+let datePickerView=new Date(),datePickerSelected="",datePickerTarget="editDate",timePickerTarget="";
 function renderDatePicker(){
   const y=datePickerView.getFullYear(),m=datePickerView.getMonth(),names=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
-  $("#datePickerHeading").textContent=names[m]+" "+y;$("#datePickerMonth").textContent=names[m]+" "+y;
+  $("#datePickerHeading").textContent=datePickerSelected?new Date(datePickerSelected+"T12:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"}):"Pilih tanggal";$("#datePickerMonth").textContent=names[m]+" "+y;
   const first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),offset=(first.getDay()+6)%7;
   let html="";for(let i=0;i<offset;i++)html+='<span class="date-empty"></span>';
-  for(let d=1;d<=days;d++){const iso=`${y}-${pad(m+1)}-${pad(d)}`,today=iso===localISO(),sel=iso===datePickerSelected;html+=`<button type="button" class="date-day ${today?"today":""} ${sel?"selected":""}" data-date-value="${iso}">${d}</button>`}
+  for(let d=1;d<=days;d++){const iso=`${y}-${pad(m+1)}-${pad(d)}`,today=iso===localISO(),sel=iso===datePickerSelected;html+=`<button type="button" class="date-day ${today?"today":""} ${sel?"selected":""}" data-date-value="${iso}" aria-label="${d} ${names[m]} ${y}" aria-pressed="${sel}">${d}</button>`}
   $("#datePickerGrid").innerHTML=html;
 }
-function openEditDatePicker(){
-  const current=$("#editDate").value||localISO();datePickerSelected=current;datePickerView=new Date(current+"T12:00:00");renderDatePicker();$("#datePickerDialog").showModal();
+function openDatePicker(target){
+  datePickerTarget=target;
+  const value=$("#"+target).value,current=/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(+new Date(value+"T12:00:00"))?value:localISO();
+  datePickerSelected=current;datePickerView=new Date(current+"T12:00:00");datePickerView.setDate(1);renderDatePicker();$("#datePickerDialog").showModal();
+}
+function openEditDatePicker(){openDatePicker("editDate")}
+function openTimePicker(target){
+  timePickerTarget=target;const value=$("#"+target).value||"09:00",parts=value.split(":");
+  $("#pickerHour").value=parts[0];$("#pickerMinute").value=parts[1];$("#timePickerDialog").showModal();
+}
+function commitTimePicker(){
+  const h=$("#pickerHour").value,m=$("#pickerMinute").value;
+  if(!/^\d{1,2}$/.test(h)||!/^\d{1,2}$/.test(m)||Number(h)>23||Number(m)>59){$("#timePickerError").textContent="Jam 00–23 dan menit 00–59.";return}
+  $("#"+timePickerTarget).value=pad(Number(h))+":"+pad(Number(m));$("#timePickerError").textContent="";$("#timePickerDialog").close();
 }
 function closeEditDatePicker(){if($("#datePickerDialog").open)$("#datePickerDialog").close()}
-function commitEditDate(){if(datePickerSelected)$("#editDate").value=datePickerSelected;closeEditDatePicker()}
+function commitEditDate(){if(datePickerSelected)$("#"+datePickerTarget).value=datePickerSelected;closeEditDatePicker()}
 function openEditor(kind,id){
   if($("#agendaSheet")&&$("#agendaSheet").open)$("#agendaSheet").close();
   if($("#confirmDialog")&&$("#confirmDialog").open)$("#confirmDialog").close();
@@ -1387,8 +1399,8 @@ $("#closeDatePicker").addEventListener("click",closeEditDatePicker);
 $("#dateCancel").addEventListener("click",closeEditDatePicker);
 $("#dateDone").addEventListener("click",commitEditDate);
 $("#dateToday").addEventListener("click",()=>{datePickerSelected=localISO();datePickerView=new Date();renderDatePicker()});
-$("#datePrevMonth").addEventListener("click",()=>{datePickerView.setMonth(datePickerView.getMonth()-1);renderDatePicker()});
-$("#dateNextMonth").addEventListener("click",()=>{datePickerView.setMonth(datePickerView.getMonth()+1);renderDatePicker()});
+$("#datePrevMonth").addEventListener("click",()=>{datePickerView.setDate(1);datePickerView.setMonth(datePickerView.getMonth()-1);renderDatePicker()});
+$("#dateNextMonth").addEventListener("click",()=>{datePickerView.setDate(1);datePickerView.setMonth(datePickerView.getMonth()+1);renderDatePicker()});
 $("#datePickerGrid").addEventListener("click",e=>{const b=e.target.closest("[data-date-value]");if(b){datePickerSelected=b.dataset.dateValue;renderDatePicker()}});
 $("#datePickerDialog").addEventListener("click",e=>{if(e.target===$("#datePickerDialog"))closeEditDatePicker()});$("#confirmCancel").addEventListener("click",closeConfirm);$("#confirmOk").addEventListener("click",()=>{const fn=confirmAction;closeConfirm();if(typeof fn==="function")fn()});$("#confirmDialog").addEventListener("click",e=>{if(e.target===$("#confirmDialog"))closeConfirm()});$("#closeAgendaSheet").addEventListener("click",closeAgendaSheet);$("#agendaSheet").addEventListener("click",e=>{if(e.target===$("#agendaSheet"))closeAgendaSheet()});$("#closeVoiceMode").addEventListener("click",cancelVoice);$("#voiceCancel").addEventListener("click",cancelVoice);$("#voiceDone").addEventListener("click",submitVoice);$("#dismissReminderToast").addEventListener("click",()=>$("#reminderToast").hidden=true);
 $("#profilePromptForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#profilePromptName").value.trim();if(n)updateAccountName(n)});
@@ -1501,9 +1513,9 @@ if(typeof document!=='undefined')document.addEventListener('click',e=>{const but
 if(globalThis.NaraLocalAI){
   NaraLocalAI.onStatus(({status,text,progress})=>{
     if(!$('#localAIStatus'))return;$('#localAIStatus').textContent=text;$('#loadLocalAI').disabled=status==='loading';$('#localAIModel').disabled=status==='loading';
-    $('#localAIProgress').hidden=status!=='loading';$('#localAIProgress').value=Math.max(0,Math.min(1,Number(progress)||0));
+    $('#localAIProgress').hidden=status!=='loading';if(Number.isFinite(progress))$('#localAIProgress').value=Math.max(0,Math.min(1,progress));else $('#localAIProgress').removeAttribute('value');$('#stopLocalAI').disabled=status!=='loading'&&status!=='ready';$('#loadLocalAI').textContent=status==='loading'?'Sedang memuat…':status==='ready'?'AI sudah aktif':'Unduh / aktifkan AI lokal';
   });
-  $('#localAIModel').value=state.settings.localAIModel||'Qwen2.5-0.5B-Instruct-q4f32_1-MLC';
+  $('#localAIModel').value=state.settings.localAIModel||'qwen-wasm';
   $('#loadLocalAI').addEventListener('click',async()=>{
     state.settings.localAIModel=$('#localAIModel').value;state.settings.localAIMode=true;state.settings.aiEnabled=false;
     if($('#aiEnabled'))$('#aiEnabled').checked=false;if(!save())return;
@@ -1515,8 +1527,27 @@ if(globalThis.NaraLocalAI){
 function showDebtAudit(){
   reconcileLedger();
   const groups=[['Hutang',state.liabilities,'linkedDebtId','debt_payment'],['Piutang',state.receivables,'linkedReceivableId','receivable_payment']];
-  $('#debtAuditBody').innerHTML=groups.map(([label,items,link,payment])=>`<h3>${label}</h3>${items.length?items.map(item=>{const paid=state.transactions.filter(t=>t[link]===item.id&&t.type===payment).reduce((n,t)=>n+t.amount,0);return `<section class="audit-row"><b>${esc(item.title)}</b><p>Pokok: ${rupiah(item.amount)}<br>Pembayaran: ${rupiah(paid)}<br>Sisa saat ini: <strong>${rupiah(item.remaining)}</strong> · ${item.done?'Lunas':'Aktif'}</p>${item.overpaid?'<p>Periksa pembayaran: melebihi pokok '+rupiah(item.overpaid)+'.</p>':''}</section>`}).join(''):'<p>Belum ada data.</p>'}`).join('');
+  $('#debtAuditBody').innerHTML=groups.map(([label,items,link,payment])=>{
+    const records=items.filter(item=>item.amount>0||item.remaining>0||item.overpaid>0);
+    const total=records.reduce((n,item)=>n+item.remaining,0);
+    return `<section class="audit-group"><div class="audit-group-heading"><h3>${label}</h3><span>${records.length} catatan</span></div><div class="audit-total"><span>${label==='Hutang'?'Total belum dibayar':'Total belum diterima'}</span><strong>${rupiah(total)}</strong></div>${records.length?records.map(item=>{
+      const paid=state.transactions.filter(t=>t[link]===item.id&&t.type===payment).reduce((n,t)=>n+t.amount,0);
+      return `<article class="audit-record"><header><h4>${esc(item.title)}</h4><span class="audit-badge ${item.done?'is-paid':''}">${item.done?'Lunas':'Aktif'}</span></header><dl><div><dt>Jumlah awal</dt><dd>${rupiah(item.amount)}</dd></div><div><dt>${label==='Hutang'?'Sudah dibayar':'Sudah diterima'}</dt><dd>${rupiah(paid)}</dd></div><div class="audit-balance"><dt>Sisa ${label.toLowerCase()}</dt><dd>${rupiah(item.remaining)}</dd></div></dl>${item.overpaid?'<p class="audit-warning">Pembayaran melebihi jumlah awal '+rupiah(item.overpaid)+'. Periksa transaksi terkait.</p>':''}</article>`;
+    }).join(''):'<p class="audit-empty">Belum ada catatan '+label.toLowerCase()+'.</p>'}</section>`;
+  }).join('');
   $('#debtAuditDialog').showModal();
 }
 if($('#showDebtAudit'))$('#showDebtAudit').addEventListener('click',showDebtAudit);
 if($('#closeDebtAudit'))$('#closeDebtAudit').addEventListener('click',()=>$('#debtAuditDialog').close());
+
+// Shared pickers keep create/edit/AI review consistent in the browser and Median.
+for(const id of ['editDate','quickDate','aiProposalDate'])$('#'+id).addEventListener('click',()=>openDatePicker(id));
+for(const id of ['editTime','quickTime','aiProposalTime'])$('#'+id).addEventListener('click',()=>{$('#timePickerError').textContent='';openTimePicker(id)});
+$('#timePickerForm').addEventListener('submit',e=>{e.preventDefault();commitTimePicker()});
+for(const id of ['closeTimePicker','timeCancel'])$('#'+id).addEventListener('click',()=>$('#timePickerDialog').close());
+$('#timeNow').addEventListener('click',()=>{const now=new Date();$('#pickerHour').value=pad(now.getHours());$('#pickerMinute').value=pad(now.getMinutes())});
+
+for(const id of ['editDate','quickDate','aiProposalDate','editTime','quickTime','aiProposalTime']){
+  const input=$('#'+id);input.setAttribute?.('role','button');input.setAttribute?.('aria-haspopup','dialog');
+  input.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});
+}

@@ -27,10 +27,21 @@ assert.equal(ai.status,'off');assert.equal(ai.pending.size,0);
 context.navigator.gpu=null;
 const unavailable=new LocalAI(make);await assert.rejects(unavailable.load('test'));
 assert.equal(unavailable.status,'unsupported');
+// CPU mode must work without navigator.gpu; a stalled download must release controls.
+const cpu=new LocalAI(make);let cpuLoad=cpu.load('qwen-wasm');await tick();
+assert.equal(cpu.status,'loading');assert.equal(worker.last.model,'qwen-wasm');
+worker.onmessage({data:{type:'progress',text:'model 42%',progress:.42}});
+worker.onmessage({data:{id:worker.last.id,result:true}});await cpuLoad;
+assert.equal(cpu.status,'ready');cpu.stop();
+cpuLoad=cpu.load('qwen-wasm');await tick();const oldWorker=worker;
+[...jobs.values()][0]();await assert.rejects(cpuLoad);assert.equal(cpu.status,'off');assert.equal(cpu.pending.size,0);
+oldWorker.onmessage({data:{type:'progress',text:'stale',progress:.8}});assert.equal(cpu.status,'off');
+const broken=new LocalAI(()=>{throw Error('worker disabled')});await assert.rejects(broken.load('qwen-wasm'));assert.equal(broken.status,'off');
+console.log('CPU without WebGPU, stalled download recovery, stale progress and worker creation failure passed.');
 console.log('Local AI lifecycle: ready, generation, cancel, load failure, timeout, retry and unsupported device passed (mock worker).');
 
 // The service worker may remove old app-shell caches, never model or other apps' data.
-const events={},deleted=[];const swContext=vm.createContext({URL,Response,fetch:async()=>{throw Error('offline')},self:{location:{href:'https://example.com/nara/sw.js',origin:'https://example.com'},clients:{claim:async()=>{}},addEventListener:(type,fn)=>events[type]=fn},caches:{keys:async()=>['nara-shell-old','nara-shell-6.5.0','webllm/model','another-app'],delete:async key=>deleted.push(key)}});
+const events={},deleted=[];const swContext=vm.createContext({URL,Response,fetch:async()=>{throw Error('offline')},self:{location:{href:'https://example.com/nara/sw.js',origin:'https://example.com'},clients:{claim:async()=>{}},addEventListener:(type,fn)=>events[type]=fn},caches:{keys:async()=>['nara-shell-old','nara-shell-6.5.1','webllm/model','another-app'],delete:async key=>deleted.push(key)}});
 vm.runInContext(fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8'),swContext);
 let activated;events.activate({waitUntil:p=>activated=p});await activated;
 assert.deepEqual(deleted,['nara-shell-old']);

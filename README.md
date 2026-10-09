@@ -57,3 +57,10 @@ Tombol tambah hanya tersedia pada Hari ini, Keuangan, Catatan, dan Target. Tombo
 AI lokal WebLLM + Qwen2.5 tersedia di Akun. Unduh/aktifkan model pada perangkat WebGPU yang kompatibel; tanpa API key. Model membantu percakapan dan usulan pencatatan, dengan preview, koreksi, konfirmasi, serta validasi ledger sebelum simpan. Tidak ada fallback otomatis ke cloud pada mode lokal.
 
 Cache model dipertahankan; shell memakai network-first untuk update dan fallback offline. Rincian hutang menjelaskan pokok/pembayaran/sisa berdasarkan ledger. Kegagalan penyimpanan mengembalikan state terakhir yang tersimpan. Lihat [panduan AI lokal](docs/local-ai.md) untuk kebutuhan perangkat, privasi, keterbatasan, dan pengujian.
+
+
+### v6.5.1
+- Mode AI lokal kompatibel (CPU/WASM) untuk WebView tanpa WebGPU, status unduhan bertahap, batas waktu macet, batal/coba kembali.
+- Tombol Ubah foto terpisah dengan ikon kamera; gambar tersembunyi tidak mengambil ruang.
+- Rincian hutang/piutang dalam dialog putih dengan saldo, status, dan angka yang rapi; catatan kosong bekas penghapusan tidak ditampilkan.
+- Pemilih tanggal/waktu konsisten untuk tambah, edit, dan usulan AI; navigasi bulan diperbaiki untuk tanggal akhir bulan.
