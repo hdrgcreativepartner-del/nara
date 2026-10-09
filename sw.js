@@ -1,7 +1,7 @@
 // Network-first app shell; model caches belong to WebLLM and must be preserved.
-const CACHE='nara-shell-6.5.2';
+const CACHE='nara-shell-6.5.3';
 const ROOT=new URL('./',self.location.href).href;
-const FILES=['./','./index.html','./styles.css?v=6.5.2','./app.js?v=6.5.2','./local-ai.js?v=6.5.2','./local-ai-worker.mjs?v=6.5.2','./median-bridge.js?v=6.5.2','./manifest.webmanifest?v=6.5.2','./icon.svg','./assets/nara-header.webp','./assets/nara-splash.webp'];
+const FILES=['./','./index.html','./styles.css?v=6.5.3','./app.js?v=6.5.3','./local-ai.js?v=6.5.3','./local-ai-worker.mjs?v=6.5.3','./median-bridge.js?v=6.5.3','./manifest.webmanifest?v=6.5.3','./icon.svg','./assets/nara-header.webp','./assets/nara-splash.webp'];
 const RUNTIME='https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.85/lib/index.js';
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES.map(p=>new URL(p,ROOT).href))).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('nara-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

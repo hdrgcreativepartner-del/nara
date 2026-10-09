@@ -69,3 +69,7 @@ Cache model dipertahankan; shell memakai network-first untuk update dan fallback
 - Setiap kartu hutang/piutang dapat diedit: pihak terkait, jumlah awal, tanggal, serta pengaruh kas. Transaksi pokok/pembayaran tetap terhubung dan saldo dihitung ulang.
 - Koreksi “masuk kas itu hutangnya” memperbarui catatan yang sama; pengulangan nominal/pihak meminta pilihan koreksi atau pencatatan baru.
 - Penghapusan catatan ganda dilakukan manual dengan konfirmasi, tidak berdasarkan kemiripan nama/nominal secara otomatis.
+
+### v6.5.3
+- Jawaban teks biasa dari AI CPU ditampilkan sebagai percakapan tanpa mengubah data; JSON tidak valid tetap ditolak.
+- Konteks dan panjang jawaban CPU dibatasi agar pemrosesan lebih ringan, dengan status percakapan yang terbaca.

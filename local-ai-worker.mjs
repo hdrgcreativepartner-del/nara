@@ -36,7 +36,7 @@ self.onmessage=async({data})=>{
     }else if(type==='generate'){
       let text;
       if(mode==='cpu'&&pipe){
-        const output=await pipe(data.messages,{max_new_tokens:256,do_sample:false,return_full_text:false});
+        const output=await pipe(data.messages,{max_new_tokens:192,do_sample:false,return_full_text:false});
         const generated=output[0]?.generated_text;
         text=typeof generated==='string'?generated:generated?.at(-1)?.content;
       }else if(engine){

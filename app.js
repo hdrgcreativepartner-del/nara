@@ -990,7 +990,7 @@ function sendText(text,choiceSource=null){
   chatTurnQueue.push({text:t,voice:voiceSession,choiceSource,messageId:state.messages[state.messages.length-1].id});drainChatTurns();
 }
 function renderChat(showTyping=false){
-  const s=$("#chatStream");s.innerHTML=state.messages.map((m,index)=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}${m.aiProposal&&!m.aiProposal.applied?`<button type="button" class="ai-draft-button" data-ai-draft="${esc(m.id)}">Tinjau usulan AI</button>`:""}${m.actions&&m.actions.length?`<div class="chat-actions">${m.actions.map(a=>`<button type="button" data-chat-choice="${esc(a)}" data-source-message="${esc(state.messages.slice(0,index).findLast(x=>x.role==="user")?.id||"")}">${esc(a)}</button>`).join("")}</div>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing"><i></i><i></i><i></i></span></div>`:"");
+  const s=$("#chatStream");s.innerHTML=state.messages.map((m,index)=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}${m.aiProposal&&!m.aiProposal.applied?`<button type="button" class="ai-draft-button" data-ai-draft="${esc(m.id)}">Tinjau usulan AI</button>`:""}${m.actions&&m.actions.length?`<div class="chat-actions">${m.actions.map(a=>`<button type="button" data-chat-choice="${esc(a)}" data-source-message="${esc(state.messages.slice(0,index).findLast(x=>x.role==="user")?.id||"")}">${esc(a)}</button>`).join("")}</div>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing" role="status"><i></i><i></i><i></i><small>NARA sedang memproses…</small></span></div>`:"");
   syncChatSafeArea();
 }
 function txTotals(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>{if(t.type==="income")a.income+=t.amount;if(t.type==="expense")a.expense+=t.amount;return a},{income:0,expense:0})}
@@ -1528,9 +1528,13 @@ function validateAIProposal(raw){
   if(p.kind==='reminder'&&(!p.date||!p.time))return null;
   return p;
 }
-function parseLocalAIReply(raw,source){
+function parseLocalAIReply(raw,source,allowPlain=false){
   if(typeof raw!=='string'||raw.length>16000)throw new Error('Invalid model output');
-  const parsed=JSON.parse(raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''));
+  const clean=raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');let parsed;
+  try{parsed=JSON.parse(clean)}catch(error){
+    if(!allowPlain||!clean||/^[{[]/.test(clean))throw error;
+    return {text:'Jawaban AI lokal — belum mengubah data:\n'+clean.slice(0,2400),actions:[],proposal:null};
+  }
   if(typeof parsed.reply!=='string'||!parsed.reply.trim())throw new Error('Missing reply');
   const p=validateAIProposal(parsed.proposal);
   if(p){p.id=uid();p.source=source;p.createdAt=Date.now()}
@@ -1539,9 +1543,10 @@ function parseLocalAIReply(raw,source){
 async function intelligentReply(turn,fallback){
   if(!globalThis.NaraLocalAI||NaraLocalAI.status!=='ready')return state.settings.localAIMode?{...fallback,text:fallback.text+'\nAI lokal belum siap. Aktifkan melalui Akun → AI lokal.'}:optionalAIReply(turn.text,fallback);
   const index=state.messages.findIndex(m=>m.id===turn.messageId);
-  const history=state.messages.slice(Math.max(0,index-4),Math.max(0,index)).map(m=>({role:m.role,content:m.text.slice(0,500)}));
+  const cpu=NaraLocalAI.model==='qwen-wasm';
+  const history=state.messages.slice(Math.max(0,index-(cpu?2:4)),Math.max(0,index)).map(m=>({role:m.role,content:m.text.slice(0,cpu?200:500)}));
   const system=`Kamu NARA, asisten pribadi Indonesia: teliti mencatat, rapi merangkum, memotivasi realistis dan mendengarkan dengan empati. Pahami Indonesia, slang, Jawa; jika ragu tanyakan satu hal. Jangan mendiagnosis atau mengaku psikolog. Bedakan rencana, negasi, fakta, koreksi dan pertanyaan. Tidak boleh mengklaim sudah menyimpan/menghapus/mengubah data. Tidak bisa mengedit/menghapus data lewat AI. Untuk koreksi, arahkan ke Keuangan. Hari ini ${localISO()}. Balas HANYA JSON: {"reply":"jawaban singkat Indonesia","proposal":null}. Bila jelas meminta pencatatan baru, proposal boleh {"kind":"expense|income|liability|debt_payment|note|reminder|target","title":"keterangan","amount":angka_rupiah,"party":"nama pemberi hutang","date":"YYYY-MM-DD","time":"HH:mm"}. Jangan membuat proposal untuk rencana membeli, curhat, negasi, pertanyaan, atau informasi belum lengkap. Hutang = liability, bayar hutang = debt_payment. Angka/nama/tanggal harus dari pengguna. Untuk catatan sertakan isi lengkap pada title. Jangan mengarang saldo atau fakta dari riwayat. Semua proposal ditinjau pengguna sebelum disimpan.`;
-  try{const response=parseLocalAIReply(await NaraLocalAI.generate([{role:'system',content:system},...history,{role:'user',content:turn.text.slice(0,1400)}]),turn.text);if(['intent-choice','finance-choice'].includes(state.pending?.kind))state.pending=null;return response}
+  try{const response=parseLocalAIReply(await NaraLocalAI.generate([{role:'system',content:cpu?`Kamu NARA, asisten Indonesia yang teliti, ramah dan empatik. Jawab singkat 1–2 kalimat. Pahami slang dan Jawa; tanyakan jika ambigu. Jangan mengarang fakta/saldo, mengaku psikolog, atau mengklaim sudah menyimpan data. Hari ini ${localISO()}. Untuk koreksi data arahkan ke tombol Edit di Keuangan. Balas JSON seperti {"reply":"jawaban untuk pengguna","proposal":null}. Hanya untuk permintaan pencatatan baru yang jelas, proposal boleh {"kind":"expense|income|liability|debt_payment|note|reminder|target","title":"keterangan","amount":angka,"party":"nama","date":"YYYY-MM-DD","time":"HH:mm"}. Semua isian harus berasal dari pesan pengguna. Rencana, negasi, pertanyaan dan curhat tidak boleh menjadi proposal.`:system},...history,{role:'user',content:turn.text.slice(0,cpu?900:1400)}]),turn.text,cpu);if(['intent-choice','finance-choice'].includes(state.pending?.kind))state.pending=null;return response}
   catch{return{...fallback,text:fallback.text+'\nAI lokal belum berhasil memahami pesan ini. Tidak ada data yang diubah oleh AI.'}}
 }
 let aiProposalMessageId=null;

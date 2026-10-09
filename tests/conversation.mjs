@@ -354,3 +354,9 @@ run('Hutang ke ibu 40rb uangnya masuk kas');run('Catat hutang baru');assert.equa
 run('jangan ubah hutang itu masuk kas');assert.equal(get('cashBalance()'),80000);
 reset();run('Hutang ibu 40 rb');run('mau masuk kas itu hutangnya');assert.equal(get('cashBalance()'),0);
 console.log('Screenshot debt cash clarification, repeat-safe conversion, duplicate choice and ledger card editing passed.');
+
+const plainAI=get(`parseLocalAIReply('Gotong royong berarti bekerja bersama untuk tujuan bersama.','jelaskan',true)`);
+assert.equal(plainAI.proposal,null);assert.match(plainAI.text,/belum mengubah data/);
+assert.throws(()=>get(`parseLocalAIReply('{"proposal":','x',true)`));
+assert.throws(()=>get(`parseLocalAIReply('teks biasa','x')`));
+console.log('Plain CPU replies are read-only; malformed structured actions stay rejected.');

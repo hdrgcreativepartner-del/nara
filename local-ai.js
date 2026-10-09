@@ -1,7 +1,7 @@
 /* NARA local inference controller. No conversation requests leave the device. */
 (function(root){
   class LocalAI {
-    constructor(makeWorker){this.makeWorker=makeWorker||(()=>new Worker('./local-ai-worker.mjs?v=6.5.2',{type:'module'}));this.worker=null;this.pending=new Map();this.seq=0;this.generation=0;this.status='off';this.model='';this.loading=null;this.busy=false;this.listeners=[];this.watchdog=null}
+    constructor(makeWorker){this.makeWorker=makeWorker||(()=>new Worker('./local-ai-worker.mjs?v=6.5.3',{type:'module'}));this.worker=null;this.pending=new Map();this.seq=0;this.generation=0;this.status='off';this.model='';this.loading=null;this.busy=false;this.listeners=[];this.watchdog=null}
     onStatus(fn){this.listeners.push(fn);fn({status:this.status,text:'AI lokal belum dimuat.'})}
     notify(status,text,progress){this.status=status;this.listeners.forEach(fn=>fn({status,text,progress}))}
     async supported(){if(!root.navigator?.gpu)return false;let timer;try{return !!(await Promise.race([root.navigator.gpu.requestAdapter(),new Promise(resolve=>{timer=setTimeout(()=>resolve(null),8000)})]))}catch{return false}finally{clearTimeout(timer)}}
