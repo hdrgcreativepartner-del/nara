@@ -279,3 +279,39 @@ assert.equal(get('openReceivableTotal()'),20000);
 get('save()');get('Object.assign(state,load())');
 assert.equal(get('openReceivableTotal()'),20000,'Reload preserves ledger');
 console.log('Ledger reconciliation, CRUD, reload, migration, A debts, Jawa and excess validation passed');
+
+// Screenshot regression: stale card says 65k although both payments exist.
+reset();get('createLiability("Pinjam uang dari Ibu",35000);createLiability("Pinjam uang dari Ibu",65000)');
+run('bayar hutang ke Ibu 100rb');
+get('state.liabilities[1].remaining=65000;state.liabilities[1].done=false');
+get('renderFinance()');
+assert.match(el('#liabilityTotal').textContent,/Rp\s*0/);
+assert.equal(get('state.liabilities.filter(x=>!x.done).length'),0);
+assert.match(run('coba cek lagi').text,/pokok hutang Rp\s*100\.000, pembayaran Rp\s*100\.000, sisa Rp\s*0/);
+
+reset();
+assert.equal(get('validateAIProposal({kind:"delete",title:"semua"})'),null);
+assert.equal(get('validateAIProposal({kind:"expense",title:"Kopi",amount:-1})'),null);
+assert.equal(get('validateAIProposal({kind:"expense",title:"Kopi",amount:1.5})'),null);
+assert.equal(get('validateAIProposal({kind:"reminder",title:"Rapat",date:"2026-02-31",time:"08:00"})'),null);
+assert.throws(()=>get('parseLocalAIReply("not-json","source")'));
+get('state.messages.push({id:"draft",role:"assistant",text:"Usulan",aiProposal:{id:"p",kind:"expense",title:"Kopi",amount:12000,source:"kopi"}})');
+assert.equal(get('state.transactions.length'),0,'Model output must not save');
+assert.equal(get('commitAIProposal("draft",{kind:"expense",title:"Kopi",amount:12000})'),null);
+assert.equal(get('state.transactions.length'),1);
+assert.match(get('commitAIProposal("draft",{kind:"expense",title:"Kopi",amount:12000})'),/sudah disimpan/);
+assert.equal(get('state.transactions.length'),1,'Double confirmation must not duplicate');
+reset();run('hutang A 5rb');get('save()');
+get('state.messages.push({id:"paydraft",role:"assistant",text:"Usulan",aiProposal:{id:"p",source:"bayar"}})');
+assert.match(get('commitAIProposal("paydraft",{kind:"debt_payment",title:"Bayar A",party:"A",amount:6000})'),/belum dicatat/);
+assert.equal(get('openLiabilityTotal()'),5000);
+assert.equal(get('commitAIProposal("paydraft",{kind:"debt_payment",title:"Bayar A",party:"A",amount:2000})'),null);
+assert.equal(get('openLiabilityTotal()'),3000);
+// Storage failure rolls back the entire latest mutation, including success messages.
+get('save()');const durableTransactions=get('JSON.stringify(state.transactions)');
+const originalSet=localStorage.setItem;localStorage.setItem=()=>{throw Error('QuotaExceededError')};
+run('beli laptop 8 juta');assert.equal(get('save()'),false);
+assert.equal(get('JSON.stringify(state.transactions)'),durableTransactions);
+assert.match(get('state.messages.at(-1).text'),/belum disimpan/);
+localStorage.setItem=originalSet;
+console.log('Screenshot stale-card repair, untrusted AI drafts, confirmation, duplicate guard and storage rollback passed.');

@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=6.4.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=6.5.0">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=6.4.0">
+  <link rel="stylesheet" href="./styles.css?v=6.5.0">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -119,7 +119,7 @@
       <div class="sectionhead"><div><small>KEUANGAN PRIBADI</small><h2>Keuangan</h2></div></div>
       <article class="financehero"><small>Total saldo tercatat</small><strong id="balanceTotal">Rp0</strong><div><span><small>Pemasukan bulan ini</small><b id="monthIncome">Rp0</b></span><span><small>Pengeluaran bulan ini</small><b id="monthExpense">Rp0</b></span></div></article>
       <div class="liability-grid">
-        <article class="card liability-card"><div><small>KEWAJIBAN</small><h3>Hutang aktif</h3></div><strong id="liabilityTotal">Rp0</strong><span id="liabilityCount">0 hutang</span><div id="liabilityList" class="mini-ledger empty">Belum ada hutang aktif.</div></article>
+        <article class="card liability-card"><div><small>KEWAJIBAN</small><h3>Hutang aktif</h3></div><strong id="liabilityTotal">Rp0</strong><span id="liabilityCount">0 hutang</span><p class="ledger-history">Saldo dihitung ulang dari transaksi tersimpan.</p><button id="showDebtAudit" class="secondary-button" type="button">Periksa rincian</button><div id="liabilityList" class="mini-ledger empty">Belum ada hutang aktif.</div></article>
         <article class="card receivable-card"><div><small>ASET</small><h3>Piutang aktif</h3></div><strong id="receivableTotal">Rp0</strong><span id="receivableCount">0 piutang</span><div id="receivableList" class="mini-ledger empty">Belum ada piutang aktif.</div></article>
       </div>
       <div class="finance-insights">
@@ -198,7 +198,18 @@
       </div>
       <small id="notificationStatus" class="setting-help">Status notifikasi akan muncul di sini. Popup lokal bekerja saat NARA terbuka; push background membutuhkan OneSignal + scheduler server.</small>
     </article>
-    <article class="card">
+    <article class="card local-ai-card">
+      <small>DI PERANGKATMU</small><h3>AI lokal NARA</h3>
+      <p>Bantu memahami percakapan, merangkum, dan menyusun usulan catatan tanpa mengirim chat ke server AI.</p>
+      <label for="localAIModel">Pilih model</label>
+      <select id="localAIModel"><option value="Qwen2.5-0.5B-Instruct-q4f32_1-MLC">Ringan — Qwen 0.5B</option><option value="Qwen2.5-1.5B-Instruct-q4f32_1-MLC">Lebih besar — Qwen 1.5B</option></select>
+      <p class="setting-help">Unduhan awal ratusan MB hingga lebih dari 1 GB. Memerlukan WebGPU dan memori yang cukup. Model kecil dapat salah memahami bahasa; periksa usulan sebelum menyimpan.</p>
+      <div class="setting-controls"><button id="loadLocalAI" type="button" class="secondary-button">Unduh / aktifkan AI lokal</button><button id="stopLocalAI" type="button" class="secondary-button">Hentikan AI</button></div>
+      <progress id="localAIProgress" max="1" value="0" hidden></progress>
+      <p id="localAIStatus" role="status" aria-live="polite">AI lokal belum dimuat.</p>
+      <p class="setting-help">Model yang tersimpan dapat dipakai lagi tanpa unduhan ulang selama cache tidak dihapus. NARA tetap bisa mencatat jika AI tidak tersedia.</p>
+    </article>
+    <details class="card"><summary>AI online — pengaturan lanjutan</summary>
       <h3>AI tambahan (opsional)</h3>
       <p>Untuk percakapan bebas, penjelasan, rangkuman, dan dukungan. Pencatatan uang tetap dihitung dan divalidasi NARA.</p>
       <p><label>Alamat backend AI <input id="aiEndpoint" type="url" placeholder="https://nara-ai.nama.workers.dev" style="width:100%"></label></p>
@@ -206,14 +217,14 @@
       <p><label><input id="aiEnabled" type="checkbox"> Izinkan pengiriman pesan dan 6 pesan sebelumnya ke backend AI yang saya pilih.</label></p>
       <button id="saveAISettings" class="secondary-button" type="button">Simpan pengaturan AI</button>
       <p id="aiStatus">Mode lokal tetap tersedia tanpa AI. Backend perlu diaktifkan terlebih dahulu.</p>
-    </article>
+    </details>
     <article class="card reset-card">
       <div class="setting-title"><div class="backup-icon danger"><svg><use href="#ico-reset"/></svg></div><div><small>RESET</small><h3>Mulai dari awal</h3><p>Hapus semua data lokal NARA di browser ini.</p></div></div>
       <button id="resetNara" class="danger-button" type="button">Reset semua data</button>
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.4.0</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.5.0</small></div><span>Beta</span></div>
     </article>
   </div>
   <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
@@ -315,8 +326,20 @@
 </form>
 </dialog>
 
-<script src="./median-bridge.js?v=6.4.0"></script>
-<script src="./app.js?v=6.4.0"></script>
+<dialog id="debtAuditDialog"><h3>Rincian kewajiban &amp; aset</h3><p>Angka ini adalah kondisi sekarang. Balasan chat lama merupakan riwayat saat pesan dibuat.</p><div id="debtAuditBody"></div><button id="closeDebtAudit" type="button" class="secondary-button">Tutup</button></dialog>
+<dialog id="aiProposalDialog"><form id="aiProposalForm" class="ai-proposal-form">
+<h3>Periksa usulan AI</h3><p id="aiProposalSource"></p>
+<label>Jenis<select id="aiProposalKind"><option value="expense">Pengeluaran</option><option value="income">Pemasukan</option><option value="liability">Pokok hutang (tanpa kas masuk)</option><option value="debt_payment">Bayar hutang</option><option value="note">Catatan</option><option value="reminder">Agenda</option><option value="target">Target</option></select></label>
+<label>Judul / keterangan<textarea id="aiProposalTitle" required maxlength="2000"></textarea></label>
+<label>Nominal rupiah (untuk keuangan)<input id="aiProposalAmount" type="number" min="1" step="1"></label>
+<label>Nama pemberi hutang (untuk hutang)<input id="aiProposalParty" maxlength="80"></label>
+<label>Tanggal<input id="aiProposalDate" type="date"></label><label>Jam (untuk agenda)<input id="aiProposalTime" type="time"></label>
+<p id="aiProposalError" role="alert"></p><p>Belum ada data disimpan. Pastikan jenis, nama, nominal, dan waktunya benar.</p>
+<div class="setting-controls"><button type="button" id="cancelAIProposal">Batal</button><button type="submit" class="secondary-button">Konfirmasi &amp; simpan</button></div>
+</form></dialog>
+<script src="./median-bridge.js?v=6.5.0"></script>
+<script src="./local-ai.js?v=6.5.0"></script>
+<script src="./app.js?v=6.5.0"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");

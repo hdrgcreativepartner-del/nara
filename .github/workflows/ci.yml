@@ -15,11 +15,13 @@ jobs:
         with:
           node-version: "22"
       - name: JavaScript syntax
-        run: node --check app.js && node --check sw.js
+        run: node --check app.js && node --check sw.js && node --check local-ai.js && node --check local-ai-worker.mjs
       - name: Conversational smoke tests
         run: node tests/smoke.mjs
       - name: Contextual conversation tests
         run: node tests/conversation.mjs
+      - name: Local AI lifecycle and cache safety
+        run: node tests/local-ai.mjs
       - name: Optional AI backend validation
         run: node tests/ai-worker.mjs
       - name: First-run UI contract

@@ -1171,3 +1171,7 @@ body>.page-fab.returning{
 @media(min-width:980px){
   body>.page-fab{right:30px!important;bottom:30px!important}
 }
+
+.local-ai-card select,.ai-proposal-form input,.ai-proposal-form select,.ai-proposal-form textarea{width:100%;box-sizing:border-box;border:1px solid #dce1e0;border-radius:12px;padding:12px;font:inherit;background:var(--surface,#fff);color:inherit}.local-ai-card p{line-height:1.55}.local-ai-card progress{width:100%;margin-top:16px}.local-ai-card .setting-controls{flex-wrap:wrap;gap:10px}#aiProposalDialog{width:min(92vw,520px);max-height:85dvh;overflow:auto;border:0;border-radius:22px;padding:24px}#aiProposalDialog::backdrop{background:#10171488}.ai-proposal-form{display:grid;gap:14px}.ai-proposal-form label{display:grid;gap:6px}.ai-proposal-form p{margin:0;line-height:1.5}#aiProposalError{color:#ac3030}.local-ai-card button:disabled{opacity:.5}.ledger-detail{display:block;width:100%;border:0;background:none;text-align:left;padding:10px 0;font:inherit;color:inherit;cursor:pointer}.ledger-detail b{float:right}.ledger-history{font-size:12px;line-height:1.5;color:#69736f}#localAIStatus{overflow-wrap:anywhere}.ai-draft-button{padding:10px 14px;border-radius:18px;border:1px solid #cfdbd5;margin-top:12px;background:#f2f6f4;color:#173d2d;font:inherit}
+
+#debtAuditDialog{border:0;border-radius:22px;padding:24px;width:min(90vw,520px);max-height:80dvh;overflow:auto}#debtAuditDialog::backdrop{background:#10171488}.audit-row{padding:12px 0;border-bottom:1px solid #dce1e0}.audit-row p{line-height:1.7}

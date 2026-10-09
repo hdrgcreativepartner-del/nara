@@ -51,3 +51,9 @@ Tombol tambah hanya tersedia pada Hari ini, Keuangan, Catatan, dan Target. Tombo
 - Bahasa lokal diperluas (membayar, nyicil, utang, nyilih, nang, limang ewu, rong ewu); cakupan berupa pola teruji, bukan seluruh KBBI atau semua dialek.
 - Dukungan emosional ringan lebih empatik. Backend AI percakapan opsional tersedia, belum di-deploy: lihat [setup AI](docs/ai-setup.md). AI tidak menulis ledger.
 - Data lama tanpa transaksi sumber dibuatkan saldo pembuka sebesar saldo yang masih tersimpan. Riwayat yang sebelumnya sudah hilang tidak dapat direkonstruksi otomatis.
+
+## v6.5.0 — AI lokal opsional
+
+AI lokal WebLLM + Qwen2.5 tersedia di Akun. Unduh/aktifkan model pada perangkat WebGPU yang kompatibel; tanpa API key. Model membantu percakapan dan usulan pencatatan, dengan preview, koreksi, konfirmasi, serta validasi ledger sebelum simpan. Tidak ada fallback otomatis ke cloud pada mode lokal.
+
+Cache model dipertahankan; shell memakai network-first untuk update dan fallback offline. Rincian hutang menjelaskan pokok/pembayaran/sisa berdasarkan ledger. Kegagalan penyimpanan mengembalikan state terakhir yang tersimpan. Lihat [panduan AI lokal](docs/local-ai.md) untuk kebutuhan perangkat, privasi, keterbatasan, dan pengujian.

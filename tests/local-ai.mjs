@@ -1,0 +1,37 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const jobs=new Map();let timerId=0;
+const context=vm.createContext({navigator:{gpu:{requestAdapter:async()=>({})}},setTimeout:fn=>{jobs.set(++timerId,fn);return timerId},clearTimeout:id=>jobs.delete(id),console});
+vm.runInContext(fs.readFileSync(new URL('../local-ai.js',import.meta.url),'utf8'),context);
+const LocalAI=context.NaraLocalAIClass;
+let worker;
+const make=()=>worker={terminated:false,terminate(){this.terminated=true},postMessage(m){this.last=m}};
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+const ai=new LocalAI(make);
+const loading=ai.load('test');await tick();
+assert.equal(ai.status,'loading');
+worker.onmessage({data:{id:worker.last.id,result:true}});await loading;
+assert.equal(ai.status,'ready');
+const result=ai.generate([{role:'user',content:'halo'}]);
+worker.onmessage({data:{id:worker.last.id,result:'{"reply":"Hai","proposal":null}'}});
+assert.match(await result,/Hai/);assert.equal(ai.busy,false);
+const cancelled=ai.generate([]);ai.stop();await assert.rejects(cancelled);
+assert.equal(worker.terminated,true);assert.equal(ai.pending.size,0);
+const pending=ai.load('test');await tick();
+worker.onmessage({data:{id:worker.last.id,error:'quota or download error'}});await assert.rejects(pending);
+assert.equal(ai.status,'off');
+const again=ai.load('test');await tick();worker.onmessage({data:{id:worker.last.id,result:true}});await again;
+const timeout=ai.generate([]);[...jobs.values()][0]();await assert.rejects(timeout);
+assert.equal(ai.status,'off');assert.equal(ai.pending.size,0);
+context.navigator.gpu=null;
+const unavailable=new LocalAI(make);await assert.rejects(unavailable.load('test'));
+assert.equal(unavailable.status,'unsupported');
+console.log('Local AI lifecycle: ready, generation, cancel, load failure, timeout, retry and unsupported device passed (mock worker).');
+
+// The service worker may remove old app-shell caches, never model or other apps' data.
+const events={},deleted=[];const swContext=vm.createContext({URL,Response,fetch:async()=>{throw Error('offline')},self:{location:{href:'https://example.com/nara/sw.js',origin:'https://example.com'},clients:{claim:async()=>{}},addEventListener:(type,fn)=>events[type]=fn},caches:{keys:async()=>['nara-shell-old','nara-shell-6.5.0','webllm/model','another-app'],delete:async key=>deleted.push(key)}});
+vm.runInContext(fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8'),swContext);
+let activated;events.activate({waitUntil:p=>activated=p});await activated;
+assert.deepEqual(deleted,['nara-shell-old']);
+console.log('Model cache preservation passed.');

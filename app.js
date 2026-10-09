@@ -8,15 +8,21 @@ const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",m
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const fmtDate=s=>new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short",year:"numeric"}).format(new Date(s+"T12:00:00"));
 const state=load();
+let durableState=JSON.stringify(state);
 const NARA_ENV={isMedian:/median|MedianIOS|MedianAndroid/i.test((navigator&&navigator.userAgent)||"")};
 if(typeof document!=="undefined"&&document.documentElement&&document.documentElement.classList)document.documentElement.classList.toggle("median-app",NARA_ENV.isMedian);
 let recognition=null,voiceSession=false,voiceFinal="",voiceDraft="",voiceSubmitRequested=false,voiceListening=false;
 
 function fresh(){
-  return {profile:{name:""},settings:{reminderLead:30,agendaRange:"today"},pending:null,lastCreated:null,conversation:null,messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],liabilities:[],receivables:[],reminders:[],notes:[],habits:[],goals:[]};
+  return {profile:{name:""},settings:{reminderLead:30,agendaRange:"today",localAIMode:true},pending:null,lastCreated:null,conversation:null,messages:[{id:uid(),role:"assistant",text:"Hai. Cerita saja seperti biasa. Misalnya: “makan 25 ribu”, “besok jam 10 rapat”, atau “bulan ini olahraga 3 kali seminggu”.",at:new Date().toISOString()}],transactions:[],liabilities:[],receivables:[],reminders:[],notes:[],habits:[],goals:[]};
 }
 function load(){try{const base=fresh(),saved=JSON.parse(localStorage.getItem(KEY)||"{}")||{};return {...base,...saved,profile:{...base.profile,...(saved.profile||{})},settings:{...base.settings,...(saved.settings||{})},liabilities:Array.isArray(saved.liabilities)?saved.liabilities:[],receivables:Array.isArray(saved.receivables)?saved.receivables:[]}}catch{return fresh()}}
-function save(){reconcileLedger();localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
+function save(){
+  reconcileLedger();
+  try{const serialized=JSON.stringify(state);localStorage.setItem(KEY,serialized);durableState=serialized}
+  catch{for(const key of Object.keys(state))delete state[key];Object.assign(state,JSON.parse(durableState));msg('assistant','Penyimpanan perangkat penuh atau tidak tersedia. Perubahan terakhir belum disimpan. Unduh backup dan kosongkan ruang sebelum mencoba lagi.');renderAll();return false}
+  renderAll();return true;
+}
 function msg(role,text,result="",actions=[]){state.messages.push({id:uid(),role,text,result,actions:Array.isArray(actions)?actions:[],at:new Date().toISOString()})}
 function firstName(){return ((state.profile&&state.profile.name)||"").trim().split(/\s+/)[0]||""}
 function greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<19?"Selamat sore":"Selamat malam"}
@@ -177,7 +183,7 @@ function parseDate(t){
   }
   return localISO();
 }
-function categoryLabel(c){return ({Transport:"Transportasi",Food:"Makan & minum",Bills:"Tagihan",Family:"Keluarga",Work:"Pekerjaan",Shopping:"Belanja",Other:"Lainnya"})[c]||c}
+function categoryLabel(c){return ({Transport:"Transportasi",Food:"Makan & minum",Bills:"Tagihan",Family:"Keluarga",Work:"Pekerjaan",Shopping:"Belanja",Debt:"Hutang",Receivable:"Piutang",Other:"Lainnya"})[c]||c}
 function categoryFor(t){
   const s=normalizeUserLanguage(t).toLowerCase();
   if(/bensin|parkir|tol|ojek|grab|gojek|transport/.test(s))return"Transport";
@@ -601,7 +607,7 @@ function unknownIntentPrompt(text){
   const amount=parseAmount(text);
   if(amount){
     state.pending={kind:"finance-choice",source:text,amount};
-    return{text:`Aku menangkap nominal ${rupiah(amount)}. Ini pemasukan atau pengeluaran?`,actions:["Pemasukan","Pengeluaran","Bukan transaksi"]};
+    return{text:`Aku menangkap nominal ${rupiah(amount)}. Ini pemasukan atau pengeluaran?`,actions:["Pemasukan","Pengeluaran","Bukan transaksi"],aiEligible:true};
   }
   state.pending={kind:"intent-choice",source:text};
   return{text:"Aku belum yakin kamu ingin aku melakukan apa dengan kalimat itu. Mau aku jadikan catatan, agenda, target, atau tidak perlu disimpan?",actions:["Jadikan catatan","Buat agenda","Jadikan target","Tidak perlu disimpan"],aiEligible:true};
@@ -889,21 +895,24 @@ function drainChatTurns(){
   if(chatReplyBusy||!chatTurnQueue.length)return;
   chatReplyBusy=true;
   const turn=chatTurnQueue.shift();
+  let turnSnapshot;
   setTimeout(async()=>{
     try{
+      turnSnapshot=JSON.stringify(state);
       const local=smartResponse(turn.text,turn.choiceSource);
-      const response=local.aiEligible?await optionalAIReply(turn.text,local):local,reply=response.text||"Coba ceritakan sedikit lebih lengkap ya.";
-      msg("assistant",reply,"",response.actions||[]);save();speak(reply,turn.voice);renderChat(chatTurnQueue.length>0);scrollChatToBottom(true);
-    }finally{chatReplyBusy=false;drainChatTurns()}
+      const response=local.aiEligible?await intelligentReply(turn,local):local,reply=response.text||"Coba ceritakan sedikit lebih lengkap ya.";
+      msg("assistant",reply,"",response.actions||[]);if(response.proposal)state.messages[state.messages.length-1].aiProposal=response.proposal;if(!save())return;speak(reply,turn.voice);renderChat(chatTurnQueue.length>0);scrollChatToBottom(true);
+    }catch(e){if(turnSnapshot){for(const key of Object.keys(state))delete state[key];Object.assign(state,JSON.parse(turnSnapshot))}msg('assistant','Permintaan belum dapat diselesaikan. Periksa data terakhir sebelum mencoba lagi.');try{save()}catch{}renderChat();}
+    finally{chatReplyBusy=false;drainChatTurns()}
   },turn.voice?420:180);
 }
 function sendText(text,choiceSource=null){
   const t=text.trim();if(!t)return;
   msg("user",t);renderChat(true);scrollChatToBottom(true);
-  chatTurnQueue.push({text:t,voice:voiceSession,choiceSource});drainChatTurns();
+  chatTurnQueue.push({text:t,voice:voiceSession,choiceSource,messageId:state.messages[state.messages.length-1].id});drainChatTurns();
 }
 function renderChat(showTyping=false){
-  const s=$("#chatStream");s.innerHTML=state.messages.map((m,index)=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}${m.actions&&m.actions.length?`<div class="chat-actions">${m.actions.map(a=>`<button type="button" data-chat-choice="${esc(a)}" data-source-message="${esc(state.messages.slice(0,index).findLast(x=>x.role==="user")?.id||"")}">${esc(a)}</button>`).join("")}</div>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing"><i></i><i></i><i></i></span></div>`:"");
+  const s=$("#chatStream");s.innerHTML=state.messages.map((m,index)=>`<div class="bubble ${m.role}">${esc(m.text).replace(/\n/g,"<br>")}${m.result?`<span class="result">${esc(m.result)}</span>`:""}${m.aiProposal&&!m.aiProposal.applied?`<button type="button" class="ai-draft-button" data-ai-draft="${esc(m.id)}">Tinjau usulan AI</button>`:""}${m.actions&&m.actions.length?`<div class="chat-actions">${m.actions.map(a=>`<button type="button" data-chat-choice="${esc(a)}" data-source-message="${esc(state.messages.slice(0,index).findLast(x=>x.role==="user")?.id||"")}">${esc(a)}</button>`).join("")}</div>`:""}</div>`).join("")+(showTyping?`<div class="bubble assistant"><span class="typing"><i></i><i></i><i></i></span></div>`:"");
   syncChatSafeArea();
 }
 function txTotals(filter=()=>true){return state.transactions.filter(filter).reduce((a,t)=>{if(t.type==="income")a.income+=t.amount;if(t.type==="expense")a.expense+=t.amount;return a},{income:0,expense:0})}
@@ -952,11 +961,11 @@ function renderToday(){
 }
 
 function row(icon,title,sub,value,klass=""){return `<div class="row"><div class="rowicon">${icon}</div><div class="rowmain"><strong>${esc(title)}</strong><span>${esc(sub)}</span></div>${value?`<div class="rowvalue ${klass}">${esc(value)}</div>`:""}</div>`}
-function renderFinance(){
+function renderFinance(){reconcileLedger();
   const total=txTotals(),month=localISO().slice(0,7),mt=txTotals(t=>t.date.startsWith(month));
   $("#balanceTotal").textContent=rupiah(cashBalance());$("#monthIncome").textContent=rupiah(mt.income);$("#monthExpense").textContent=rupiah(mt.expense);$("#sideBalance").textContent=rupiah(cashBalance());
   const recent=[...state.transactions].sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).slice(0,12);
-  $("#transactionList").classList.toggle("empty",!recent.length);$("#transactionList").innerHTML=recent.length?recent.map(t=>`<div class="row"><div class="rowicon">${t.type==="income"?"+":"−"}</div><div class="rowmain"><strong>${esc(t.title)}</strong><span>${esc(categoryLabel(t.category))} · ${fmtDate(t.date)}</span></div><div class="rowvalue ${accountingCashImpact(t)>0?"good":accountingCashImpact(t)<0?"bad":""}">${accountingCashImpact(t)>0?"+":accountingCashImpact(t)<0?"−":"•"} ${rupiah(t.amount)}</div><div class="row-actions"><button class="edit-action edit-tx" data-id="${t.id}" aria-label="Edit transaksi"><svg><use href="#ico-edit"/></svg></button><button class="rowaction delete-tx" data-id="${t.id}" aria-label="Hapus transaksi">×</button></div></div>`).join(""):"Belum ada transaksi.";
+  $("#transactionList").classList.toggle("empty",!recent.length);$("#transactionList").innerHTML=recent.length?recent.map(t=>`<div class="row"><div class="rowicon">${accountingCashImpact(t)>0?"+":accountingCashImpact(t)<0?"−":"•"}</div><div class="rowmain"><strong>${esc(t.title)}</strong><span>${esc(categoryLabel(t.category))} · ${fmtDate(t.date)}</span></div><div class="rowvalue ${accountingCashImpact(t)>0?"good":accountingCashImpact(t)<0?"bad":""}">${accountingCashImpact(t)>0?"+":accountingCashImpact(t)<0?"−":"•"} ${rupiah(t.amount)}</div><div class="row-actions"><button class="edit-action edit-tx" data-id="${t.id}" aria-label="Edit transaksi"><svg><use href="#ico-edit"/></svg></button><button class="rowaction delete-tx" data-id="${t.id}" aria-label="Hapus transaksi">×</button></div></div>`).join(""):"Belum ada transaksi.";
   const cats={};state.transactions.filter(t=>t.type==="expense"&&t.date.startsWith(month)).forEach(t=>cats[t.category]=(cats[t.category]||0)+t.amount);
   const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...entries.map(x=>x[1])),sum=entries.reduce((a,x)=>a+x[1],0);
   $("#categoryBreakdown").classList.toggle("empty",!entries.length);$("#categoryBreakdown").innerHTML=entries.length?entries.map(([k,v])=>`<div class="cat"><span>${esc(categoryLabel(k))}</span><b>${rupiah(v)}</b><div class="bar"><i style="width:${Math.round(v/max*100)}%"></i></div></div>`).join(""):"Belum ada data.";
@@ -968,6 +977,7 @@ function renderFinance(){
   const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const iso=localISO(d),tt=txTotals(t=>t.date===iso);days.push({d,iso,...tt})}
   const peak=Math.max(1,...days.flatMap(x=>[x.income,x.expense]));$("#cashflowTrend").textContent=rupiah(days.reduce((a,x)=>a+x.income-x.expense,0));
   $("#cashflowChart").innerHTML=days.map(x=>`<div class="cash-day"><div class="cash-bars"><i class="cash-bar income" style="height:${Math.max(2,x.income/peak*100)}%"></i><i class="cash-bar expense" style="height:${Math.max(2,x.expense/peak*100)}%"></i></div><small>${new Intl.DateTimeFormat("id-ID",{weekday:"short"}).format(x.d).slice(0,3)}</small></div>`).join("");
+  reconcileLedger();
   const debts=state.liabilities.filter(x=>!x.done),receivables=state.receivables.filter(x=>!x.done);
   $("#liabilityTotal").textContent=rupiah(openLiabilityTotal());$("#liabilityCount").textContent=debts.length+" hutang";
   $("#receivableTotal").textContent=rupiah(openReceivableTotal());$("#receivableCount").textContent=receivables.length+" piutang";
@@ -1386,8 +1396,7 @@ $("#profilePromptSkip").addEventListener("click",()=>{$("#profilePromptForm").hi
 const dn=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long"}).format(new Date());$("#dateLabel").textContent=dn;
 $("#quickDate").value=localISO();renderAll();initMedianNotifications();initPageFabs();
 window.addEventListener("load",()=>{
-  if("serviceWorker"in navigator)navigator.serviceWorker.getRegistrations().then(list=>list.forEach(reg=>reg.unregister())).catch(()=>{});
-  if("caches"in window)caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key)))).catch(()=>{});
+  if("serviceWorker"in navigator)navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 });
 // Optional, explicitly enabled remote conversation. Never mutates financial records.
 async function optionalAIReply(text,fallback){
@@ -1408,8 +1417,106 @@ if(document.querySelector('#saveAISettings'))document.querySelector('#saveAISett
   if(enabled){try{const url=new URL(endpoint);if(url.protocol!=='https:'||url.username||url.password)throw new Error()}catch{alert('Masukkan alamat HTTPS backend AI yang kamu kelola.');return}
     if(!token&&!sessionStorage.getItem('nara-ai-access')){alert('Masukkan kode akses backend AI untuk sesi ini.');return}
   }
-  state.settings.aiEnabled=enabled;state.settings.aiEndpoint=endpoint;
+  state.settings.aiEnabled=enabled;state.settings.aiEndpoint=endpoint;state.settings.localAIMode=!enabled;if(enabled&&globalThis.NaraLocalAI)NaraLocalAI.stop();
   if(token)sessionStorage.setItem('nara-ai-access',token);if(!enabled)sessionStorage.removeItem('nara-ai-access');
   $('#aiAccessToken').value='';save();$('#aiStatus').textContent=enabled?'AI diaktifkan untuk sesi ini.':'Mode lokal aktif.';
 });
 if(document.querySelector('#aiEnabled')){document.querySelector('#aiEnabled').checked=!!state.settings.aiEnabled;document.querySelector('#aiEndpoint').value=state.settings.aiEndpoint||''}
+
+// Local model output is an untrusted draft, never a ledger command.
+const localAIKinds=new Set(['expense','income','liability','debt_payment','note','reminder','target']);
+function validateAIProposal(raw){
+  if(!raw||typeof raw!=='object'||!localAIKinds.has(raw.kind))return null;
+  const title=typeof raw.title==='string'?raw.title.trim().slice(0,2000):'';
+  if(!title)return null;
+  const p={kind:raw.kind,title,amount:Number(raw.amount),party:typeof raw.party==='string'?raw.party.trim().slice(0,80):'',date:typeof raw.date==='string'?raw.date:'',time:typeof raw.time==='string'?raw.time:''};
+  if(['income','expense','liability','debt_payment'].includes(p.kind)&&(!Number.isSafeInteger(p.amount)||p.amount<=0||p.amount>1e12))return null;
+  if(['liability','debt_payment'].includes(p.kind)&&(!p.party||! /^[\p{L}][\p{L} .'-]*$/u.test(p.party)))return null;
+  if(p.date&&!/^\d{4}-\d{2}-\d{2}$/.test(p.date))return null;
+  if(p.date){const d=new Date(p.date+'T12:00:00Z');if(!Number.isFinite(+d)||d.toISOString().slice(0,10)!==p.date)return null}
+  if(p.time&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(p.time))return null;
+  if(p.kind==='reminder'&&(!p.date||!p.time))return null;
+  return p;
+}
+function parseLocalAIReply(raw,source){
+  if(typeof raw!=='string'||raw.length>16000)throw new Error('Invalid model output');
+  const parsed=JSON.parse(raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''));
+  if(typeof parsed.reply!=='string'||!parsed.reply.trim())throw new Error('Missing reply');
+  const p=validateAIProposal(parsed.proposal);
+  if(p){p.id=uid();p.source=source;p.createdAt=Date.now()}
+  return {text:p?'Aku menafsirkan pesanmu menjadi usulan '+({expense:'pengeluaran',income:'pemasukan',liability:'hutang',debt_payment:'pembayaran hutang',note:'catatan',reminder:'agenda',target:'target'}[p.kind])+'. Tinjau detailnya sebelum disimpan.':parsed.reply.slice(0,2400)+'\n\nAI lokal • belum mengubah data.',actions:[],proposal:p};
+}
+async function intelligentReply(turn,fallback){
+  if(!globalThis.NaraLocalAI||NaraLocalAI.status!=='ready')return state.settings.localAIMode?{...fallback,text:fallback.text+'\nAI lokal belum siap. Aktifkan melalui Akun → AI lokal.'}:optionalAIReply(turn.text,fallback);
+  const index=state.messages.findIndex(m=>m.id===turn.messageId);
+  const history=state.messages.slice(Math.max(0,index-4),Math.max(0,index)).map(m=>({role:m.role,content:m.text.slice(0,500)}));
+  const system=`Kamu NARA, asisten pribadi Indonesia: teliti mencatat, rapi merangkum, memotivasi realistis dan mendengarkan dengan empati. Pahami Indonesia, slang, Jawa; jika ragu tanyakan satu hal. Jangan mendiagnosis atau mengaku psikolog. Bedakan rencana, negasi, fakta, koreksi dan pertanyaan. Tidak boleh mengklaim sudah menyimpan/menghapus/mengubah data. Tidak bisa mengedit/menghapus data lewat AI. Untuk koreksi, arahkan ke Keuangan. Hari ini ${localISO()}. Balas HANYA JSON: {"reply":"jawaban singkat Indonesia","proposal":null}. Bila jelas meminta pencatatan baru, proposal boleh {"kind":"expense|income|liability|debt_payment|note|reminder|target","title":"keterangan","amount":angka_rupiah,"party":"nama pemberi hutang","date":"YYYY-MM-DD","time":"HH:mm"}. Jangan membuat proposal untuk rencana membeli, curhat, negasi, pertanyaan, atau informasi belum lengkap. Hutang = liability, bayar hutang = debt_payment. Angka/nama/tanggal harus dari pengguna. Untuk catatan sertakan isi lengkap pada title. Jangan mengarang saldo atau fakta dari riwayat. Semua proposal ditinjau pengguna sebelum disimpan.`;
+  try{const response=parseLocalAIReply(await NaraLocalAI.generate([{role:'system',content:system},...history,{role:'user',content:turn.text.slice(0,1400)}]),turn.text);if(['intent-choice','finance-choice'].includes(state.pending?.kind))state.pending=null;return response}
+  catch{return{...fallback,text:fallback.text+'\nAI lokal belum berhasil memahami pesan ini. Tidak ada data yang diubah oleh AI.'}}
+}
+let aiProposalMessageId=null;
+function openAIProposal(id){
+  const message=state.messages.find(m=>m.id===id),p=message?.aiProposal;
+  if(!p||p.applied)return;
+  aiProposalMessageId=id;$('#aiProposalSource').textContent='Pesan asli: '+p.source;
+  $('#aiProposalKind').value=p.kind;$('#aiProposalTitle').value=p.title;$('#aiProposalAmount').value=Number.isFinite(p.amount)?p.amount:'';
+  $('#aiProposalParty').value=p.party;$('#aiProposalDate').value=p.date||localISO();$('#aiProposalTime').value=p.time;$('#aiProposalError').textContent='';$('#aiProposalDialog').showModal();
+}
+function commitAIProposal(messageId,raw){
+  const message=state.messages.find(m=>m.id===messageId),draft=message?.aiProposal;
+  if(!draft||draft.applied)return 'Usulan sudah disimpan atau tidak ditemukan.';
+  const p=validateAIProposal(raw);if(!p)return 'Lengkapi judul, nominal positif, nama pemberi hutang, serta tanggal/jam yang valid sesuai jenis catatan.';
+  let row,reply;
+  if(p.kind==='debt_payment'){
+    reconcileLedger();const open=state.liabilities.filter(x=>(x.creditor||'').toLowerCase()===p.party.toLowerCase()&&x.remaining>0);
+    const total=open.reduce((n,x)=>n+x.remaining,0);
+    if(!open.length||p.amount>total)return `Sisa hutang kepada ${p.party}: ${rupiah(total)}. Pembayaran belum dicatat; periksa nama dan nominal.`;
+    // Encode only validated fields; names cannot introduce a second command.
+    const oldIds=new Set(state.transactions.map(t=>t.id));
+    const result=payLiabilityFromText(`bayar hutang ke ${p.party} ${p.amount/1000} ribu`);
+    if(!result?.paid)return result?.reply||'Pembayaran belum dicatat.';
+    for(const t of state.transactions.filter(t=>!oldIds.has(t.id)))t.date=p.date||localISO();
+    reply=result.reply;
+  }else if(p.kind==='income'||p.kind==='expense'){
+    row={id:uid(),type:p.kind,title:p.title,amount:p.amount,date:p.date||localISO(),category:categoryFor(p.title),createdAt:new Date().toISOString()};state.transactions.push(row);rememberFocus([{type:'tx',id:row.id}]);
+  }else if(p.kind==='liability'){
+    row=createLiability(`hutang ke ${p.party}`,p.amount,'opening');row.creditor=p.party;row.title=`Hutang kepada ${p.party}`;row.date=p.date||localISO();const tx=state.transactions.find(t=>t.linkedDebtId===row.id);tx.title=row.title;tx.date=row.date;rememberFocus([{type:'liability',id:row.id}]);
+  }else if(p.kind==='note'){
+    row={id:uid(),title:p.title.split('\n')[0].slice(0,100),body:p.title,date:p.date||localISO(),createdAt:new Date().toISOString()};state.notes.push(row);rememberFocus([{type:'note',id:row.id}]);
+  }else if(p.kind==='reminder'){
+    row={id:uid(),title:p.title,date:p.date,time:p.time,done:false,notified:false,leadMinutes:state.settings.reminderLead||30,createdAt:new Date().toISOString()};state.reminders.push(row);rememberFocus([{type:'reminder',id:row.id}]);
+  }else if(p.kind==='target'){
+    row={id:uid(),title:p.title,period:'monthly',steps:[],progress:0,completed:false,createdAt:new Date().toISOString()};state.goals.push(row);rememberFocus([{type:'target',id:row.id}]);
+  }
+  draft.applied=true;state.pending=null;msg('assistant',reply||`Sudah disimpan setelah konfirmasimu: “${p.title}”${['income','expense','liability'].includes(p.kind)?' — '+rupiah(p.amount):''}.`);
+  if(!save())return 'Penyimpanan gagal. Data belum disimpan; kosongkan ruang perangkat lalu coba lagi.';
+  if(p.kind==='reminder')queueReminderForPush(row);return null;
+}
+if($('#aiProposalForm'))$('#aiProposalForm').addEventListener('submit',e=>{
+  e.preventDefault();const error=commitAIProposal(aiProposalMessageId,{kind:$('#aiProposalKind').value,title:$('#aiProposalTitle').value,amount:$('#aiProposalAmount').value,party:$('#aiProposalParty').value,date:$('#aiProposalDate').value,time:$('#aiProposalTime').value});
+  if(error){$('#aiProposalError').textContent=error;return}$('#aiProposalDialog').close();aiProposalMessageId=null;
+});
+if($('#cancelAIProposal'))$('#cancelAIProposal').addEventListener('click',()=>{$('#aiProposalDialog').close();aiProposalMessageId=null});
+if(typeof document!=='undefined')document.addEventListener('click',e=>{const button=e.target.closest('[data-ai-draft]');if(button)openAIProposal(button.dataset.aiDraft)});
+if(globalThis.NaraLocalAI){
+  NaraLocalAI.onStatus(({status,text,progress})=>{
+    if(!$('#localAIStatus'))return;$('#localAIStatus').textContent=text;$('#loadLocalAI').disabled=status==='loading';$('#localAIModel').disabled=status==='loading';
+    $('#localAIProgress').hidden=status!=='loading';$('#localAIProgress').value=Math.max(0,Math.min(1,Number(progress)||0));
+  });
+  $('#localAIModel').value=state.settings.localAIModel||'Qwen2.5-0.5B-Instruct-q4f32_1-MLC';
+  $('#loadLocalAI').addEventListener('click',async()=>{
+    state.settings.localAIModel=$('#localAIModel').value;state.settings.localAIMode=true;state.settings.aiEnabled=false;
+    if($('#aiEnabled'))$('#aiEnabled').checked=false;if(!save())return;
+    try{await NaraLocalAI.load(state.settings.localAIModel)}catch{}
+  });
+  $('#stopLocalAI').addEventListener('click',()=>{NaraLocalAI.stop();state.settings.localAIMode=true;save()});
+}
+
+function showDebtAudit(){
+  reconcileLedger();
+  const groups=[['Hutang',state.liabilities,'linkedDebtId','debt_payment'],['Piutang',state.receivables,'linkedReceivableId','receivable_payment']];
+  $('#debtAuditBody').innerHTML=groups.map(([label,items,link,payment])=>`<h3>${label}</h3>${items.length?items.map(item=>{const paid=state.transactions.filter(t=>t[link]===item.id&&t.type===payment).reduce((n,t)=>n+t.amount,0);return `<section class="audit-row"><b>${esc(item.title)}</b><p>Pokok: ${rupiah(item.amount)}<br>Pembayaran: ${rupiah(paid)}<br>Sisa saat ini: <strong>${rupiah(item.remaining)}</strong> · ${item.done?'Lunas':'Aktif'}</p>${item.overpaid?'<p>Periksa pembayaran: melebihi pokok '+rupiah(item.overpaid)+'.</p>':''}</section>`}).join(''):'<p>Belum ada data.</p>'}`).join('');
+  $('#debtAuditDialog').showModal();
+}
+if($('#showDebtAudit'))$('#showDebtAudit').addEventListener('click',showDebtAudit);
+if($('#closeDebtAudit'))$('#closeDebtAudit').addEventListener('click',()=>$('#debtAuditDialog').close());
