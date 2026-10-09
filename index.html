@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=6.5.1">
+  <link rel="manifest" href="./manifest.webmanifest?v=6.5.2">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=6.5.1">
+  <link rel="stylesheet" href="./styles.css?v=6.5.2">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -202,7 +202,7 @@
       <p>Bantu memahami percakapan, merangkum, dan menyusun usulan catatan tanpa mengirim chat ke server AI.</p>
       <label for="localAIModel">Pilih model</label>
       <select id="localAIModel"><option value="qwen-wasm">Kompatibel — Qwen 0.5B (tanpa WebGPU)</option><option value="Qwen2.5-0.5B-Instruct-q4f32_1-MLC">GPU — Qwen 0.5B</option><option value="Qwen2.5-1.5B-Instruct-q4f32_1-MLC">GPU — Qwen 1.5B</option></select>
-      <p class="setting-help">Untuk aplikasi Median, mulai dengan mode Kompatibel. Unduhan awal ratusan MB; gunakan Wi-Fi dan biarkan aplikasi terbuka. Mode ini memakai CPU sehingga jawaban bisa lebih lambat. Model tetap dapat keliru; periksa usulannya.</p>
+      <p class="setting-help">Untuk aplikasi Median, mulai dengan mode Kompatibel. Unduhan model kompatibel sekitar 750 MB, ditambah berkas mesin AI; gunakan Wi-Fi dan biarkan aplikasi terbuka. Mode ini memakai CPU sehingga jawaban bisa lebih lambat. Model tetap dapat keliru; periksa usulannya.</p>
       <div class="setting-controls"><button id="loadLocalAI" type="button" class="secondary-button">Unduh / aktifkan AI lokal</button><button id="stopLocalAI" type="button" class="secondary-button">Hentikan AI</button></div>
       <progress id="localAIProgress" max="1" value="0" hidden></progress>
       <p id="localAIStatus" role="status" aria-live="polite">AI lokal belum dimuat.</p>
@@ -223,7 +223,7 @@
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.5.1</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.5.2</small></div><span>Beta</span></div>
     </article>
   </div>
   <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
@@ -334,7 +334,17 @@
 </form>
 </dialog>
 
-<dialog id="debtAuditDialog" aria-labelledby="debtAuditTitle"><div class="audit-header"><small>RINGKASAN KEUANGAN</small><h2 id="debtAuditTitle">Hutang &amp; piutang</h2><p>Saldo terkini berdasarkan transaksi tersimpan.</p></div><div id="debtAuditBody" class="audit-body"></div><footer class="audit-footer"><p>Edit atau hapus transaksi di halaman Keuangan untuk memperbarui saldo.</p><button id="closeDebtAudit" type="button" class="secondary-button">Tutup rincian</button></footer></dialog>
+<dialog id="debtAuditDialog" aria-labelledby="debtAuditTitle"><div class="audit-header"><button id="closeDebtAuditTop" class="audit-close" type="button" aria-label="Tutup rincian hutang" autofocus>×</button><small>RINGKASAN KEUANGAN</small><h2 id="debtAuditTitle">Hutang &amp; piutang</h2><p>Saldo terkini berdasarkan transaksi tersimpan.</p></div><div id="debtAuditBody" class="audit-body"></div><footer class="audit-footer"><p>Pilih Edit pada catatan yang ingin diperbaiki. Kas dan sisa dihitung ulang dari transaksi terkait.</p><button id="closeDebtAudit" type="button" class="secondary-button">Tutup rincian</button></footer></dialog>
+<dialog id="ledgerEditorDialog" class="center-dialog" aria-labelledby="ledgerEditorHeading"><form id="ledgerEditorForm" class="modal ledger-editor-form">
+<div class="modalhead"><div><small>KOREKSI PENCATATAN</small><h3 id="ledgerEditorHeading">Edit hutang</h3></div></div>
+<label>Nama pihak terkait<input id="ledgerParty" maxlength="80" required></label>
+<div class="formrow"><label>Jumlah awal (Rp)<input id="ledgerPrincipal" inputmode="numeric" required></label><label>Tanggal<input id="ledgerDate" readonly placeholder="Pilih tanggal" required></label></div>
+<label>Jenis pencatatan<select id="ledgerCashKind"></select></label>
+<p id="ledgerPaymentSummary" class="picker-helper"></p><p id="ledgerEditorError" class="ledger-error" role="alert"></p>
+<div class="ledger-editor-actions"><button id="cancelLedgerEdit" type="button" class="secondary-button">Batal</button><button id="saveLedgerRecord" type="submit" class="primary">Simpan perubahan</button></div>
+<details class="ledger-related"><summary>Transaksi &amp; pembayaran terkait</summary><div id="ledgerRelatedRows"></div></details>
+<button id="deleteLedgerRecord" type="button" class="ledger-delete">Hapus catatan ini</button>
+</form></dialog>
 <dialog id="aiProposalDialog"><form id="aiProposalForm" class="ai-proposal-form">
 <h3>Periksa usulan AI</h3><p id="aiProposalSource"></p>
 <label>Jenis<select id="aiProposalKind"><option value="expense">Pengeluaran</option><option value="income">Pemasukan</option><option value="liability">Pokok hutang (tanpa kas masuk)</option><option value="debt_payment">Bayar hutang</option><option value="note">Catatan</option><option value="reminder">Agenda</option><option value="target">Target</option></select></label>
@@ -345,9 +355,9 @@
 <p id="aiProposalError" role="alert"></p><p>Belum ada data disimpan. Pastikan jenis, nama, nominal, dan waktunya benar.</p>
 <div class="setting-controls"><button type="button" id="cancelAIProposal">Batal</button><button type="submit" class="secondary-button">Konfirmasi &amp; simpan</button></div>
 </form></dialog>
-<script src="./median-bridge.js?v=6.5.1"></script>
-<script src="./local-ai.js?v=6.5.1"></script>
-<script src="./app.js?v=6.5.1"></script>
+<script src="./median-bridge.js?v=6.5.2"></script>
+<script src="./local-ai.js?v=6.5.2"></script>
+<script src="./app.js?v=6.5.2"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");

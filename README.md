@@ -64,3 +64,8 @@ Cache model dipertahankan; shell memakai network-first untuk update dan fallback
 - Tombol Ubah foto terpisah dengan ikon kamera; gambar tersembunyi tidak mengambil ruang.
 - Rincian hutang/piutang dalam dialog putih dengan saldo, status, dan angka yang rapi; catatan kosong bekas penghapusan tidak ditampilkan.
 - Pemilih tanggal/waktu konsisten untuk tambah, edit, dan usulan AI; navigasi bulan diperbaiki untuk tanggal akhir bulan.
+
+### v6.5.2
+- Setiap kartu hutang/piutang dapat diedit: pihak terkait, jumlah awal, tanggal, serta pengaruh kas. Transaksi pokok/pembayaran tetap terhubung dan saldo dihitung ulang.
+- Koreksi “masuk kas itu hutangnya” memperbarui catatan yang sama; pengulangan nominal/pihak meminta pilihan koreksi atau pencatatan baru.
+- Penghapusan catatan ganda dilakukan manual dengan konfirmasi, tidak berdasarkan kemiripan nama/nominal secara otomatis.
