@@ -225,13 +225,16 @@ run("Target bulan ini, menyelesaikan Portofolio HDRG Creative Partner");
 assert.equal(get("state.goals[0].title"),"Menyelesaikan Portofolio HDRG Creative Partner");
 assert.equal(get("state.goals[0].steps.length"),0);
 
+const nextSaturday=new Date();
+nextSaturday.setDate(nextSaturday.getDate()+((6-nextSaturday.getDay()+7)%7||7));
+const expectedSaturday=`${nextSaturday.getFullYear()}-${String(nextSaturday.getMonth()+1).padStart(2,'0')}-${String(nextSaturday.getDate()).padStart(2,'0')}`;
 const saturday=vm.runInContext(`parseDate("Sabtu depan")`,context);
-assert.equal(saturday,"2026-10-10");
+assert.equal(saturday,expectedSaturday);
 
 reset();
 run("Sabtu depan jam 9 malam meeting dengan Andi");
 assert.equal(get("state.reminders.length"),1);
-assert.equal(get("state.reminders[0].date"),"2026-10-10");
+assert.equal(get("state.reminders[0].date"),expectedSaturday);
 assert.equal(get("state.reminders[0].time"),"21:00");
 assert.match(get("state.reminders[0].title"),/Meeting dengan Andi/i);
 
@@ -251,13 +254,13 @@ assert.equal(get("state.reminders[0].time"),"12:00");
 
 reset();
 run("sabtu depan jam 7 malam ke Banyuwangi");
-assert.equal(get("state.reminders[0].date"),"2026-10-10");
+assert.equal(get("state.reminders[0].date"),expectedSaturday);
 assert.equal(get("state.reminders[0].time"),"19:00");
 
 reset();
 run("besok jam 10 meeting dengan Budi");
 run("salah, maksudnya Sabtu depan");
-assert.equal(get("state.reminders[0].date"),"2026-10-10");
+assert.equal(get("state.reminders[0].date"),expectedSaturday);
 
 reset();
 const ambiguous=run("kayaknya weekend ini ke Banyuwangi");

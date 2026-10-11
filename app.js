@@ -1039,11 +1039,37 @@ function renderToday(){
 }
 
 function row(icon,title,sub,value,klass=""){return `<div class="row"><div class="rowicon">${icon}</div><div class="rowmain"><strong>${esc(title)}</strong><span>${esc(sub)}</span></div>${value?`<div class="rowvalue ${klass}">${esc(value)}</div>`:""}</div>`}
+let transactionPeriod='all',transactionAnchor=localISO();
+function transactionRange(period=transactionPeriod,anchor=transactionAnchor){
+  if(period==='all')return null;
+  const start=new Date(anchor+'T12:00:00'),end=new Date(anchor+'T12:00:00');
+  if(period==='week'){start.setDate(start.getDate()-(start.getDay()+6)%7);end.setTime(start.getTime());end.setDate(end.getDate()+6)}
+  if(period==='month'){start.setDate(1);end.setMonth(end.getMonth()+1,0)}
+  return {start:localISO(start),end:localISO(end)};
+}
+function filteredTransactions(){
+  const range=transactionRange();
+  return [...state.transactions].filter(t=>!range||(t.date>=range.start&&t.date<=range.end)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.createdAt||'').localeCompare(a.createdAt||''));
+}
+function moveTransactionPeriod(step){
+  const d=new Date(transactionAnchor+'T12:00:00');
+  if(transactionPeriod==='month'){d.setDate(1);d.setMonth(d.getMonth()+step)}else d.setDate(d.getDate()+step*(transactionPeriod==='week'?7:1));
+  transactionAnchor=localISO(d);renderFinance();
+}
+function renderTransactionControls(count){
+  const range=transactionRange();
+  $('#transactionCount').textContent=count+' transaksi';
+  document.querySelectorAll('[data-tx-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.txPeriod===transactionPeriod)));
+  $('#transactionPeriodNav').hidden=!range;$('#transactionAnchor').value=transactionAnchor;
+  const format=iso=>new Date(iso+'T12:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+  $('#transactionPeriodLabel').textContent=!range?'':transactionPeriod==='month'?new Date(transactionAnchor+'T12:00:00').toLocaleDateString('id-ID',{month:'long',year:'numeric'}):transactionPeriod==='week'?format(range.start)+' – '+format(range.end):format(range.start);
+  $('#transactionPeriodHint').textContent=transactionPeriod==='week'?'Senin–Minggu · berdasarkan tanggal transaksi.':range?'Berdasarkan tanggal transaksi. Ketuk periode untuk memilih tanggal.':'Seluruh transaksi, dari yang terbaru.';
+}
 function renderFinance(){reconcileLedger();
   const total=txTotals(),month=localISO().slice(0,7),mt=txTotals(t=>t.date.startsWith(month));
   $("#balanceTotal").textContent=rupiah(cashBalance());$("#monthIncome").textContent=rupiah(mt.income);$("#monthExpense").textContent=rupiah(mt.expense);$("#sideBalance").textContent=rupiah(cashBalance());
-  const recent=[...state.transactions].sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).slice(0,12);
-  $("#transactionList").classList.toggle("empty",!recent.length);$("#transactionList").innerHTML=recent.length?recent.map(t=>`<div class="row"><div class="rowicon">${accountingCashImpact(t)>0?"+":accountingCashImpact(t)<0?"−":"•"}</div><div class="rowmain"><strong>${esc(t.title)}</strong><span>${esc(categoryLabel(t.category))} · ${fmtDate(t.date)}</span></div><div class="rowvalue ${accountingCashImpact(t)>0?"good":accountingCashImpact(t)<0?"bad":""}">${accountingCashImpact(t)>0?"+":accountingCashImpact(t)<0?"−":"•"} ${rupiah(t.amount)}</div><div class="row-actions"><button class="edit-action edit-tx" data-id="${t.id}" aria-label="Edit transaksi"><svg><use href="#ico-edit"/></svg></button><button class="rowaction delete-tx" data-id="${t.id}" aria-label="Hapus transaksi">×</button></div></div>`).join(""):"Belum ada transaksi.";
+  const recent=filteredTransactions();renderTransactionControls(recent.length);
+  $("#transactionList").classList.toggle("empty",!recent.length);$("#transactionList").innerHTML=recent.length?recent.map(t=>`<div class="row"><div class="rowicon">${accountingCashImpact(t)>0?"+":accountingCashImpact(t)<0?"−":"•"}</div><div class="rowmain"><strong>${esc(t.title)}</strong><span>${esc(categoryLabel(t.category))} · ${fmtDate(t.date)}</span></div><div class="rowvalue ${accountingCashImpact(t)>0?"good":accountingCashImpact(t)<0?"bad":""}">${accountingCashImpact(t)>0?"+":accountingCashImpact(t)<0?"−":"•"} ${rupiah(t.amount)}</div><div class="row-actions"><button class="edit-action edit-tx" data-id="${t.id}" aria-label="Edit transaksi"><svg><use href="#ico-edit"/></svg></button><button class="rowaction delete-tx" data-id="${t.id}" aria-label="Hapus transaksi">×</button></div></div>`).join(""):(transactionPeriod==='all'?"Belum ada transaksi.":"Belum ada transaksi pada periode ini.");
   const cats={};state.transactions.filter(t=>t.type==="expense"&&t.date.startsWith(month)).forEach(t=>cats[t.category]=(cats[t.category]||0)+t.amount);
   const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...entries.map(x=>x[1])),sum=entries.reduce((a,x)=>a+x[1],0);
   $("#categoryBreakdown").classList.toggle("empty",!entries.length);$("#categoryBreakdown").innerHTML=entries.length?entries.map(([k,v])=>`<div class="cat"><span>${esc(categoryLabel(k))}</span><b>${rupiah(v)}</b><div class="bar"><i style="width:${Math.round(v/max*100)}%"></i></div></div>`).join(""):"Belum ada data.";
@@ -1195,7 +1221,7 @@ function commitTimePicker(){
   $("#"+timePickerTarget).value=pad(Number(h))+":"+pad(Number(m));$("#timePickerError").textContent="";$("#timePickerDialog").close();
 }
 function closeEditDatePicker(){if($("#datePickerDialog").open)$("#datePickerDialog").close()}
-function commitEditDate(){if(datePickerSelected)$("#"+datePickerTarget).value=datePickerSelected;closeEditDatePicker()}
+function commitEditDate(){if(datePickerSelected)$("#"+datePickerTarget).value=datePickerSelected;closeEditDatePicker();if(datePickerTarget==='transactionAnchor'&&datePickerSelected){transactionAnchor=datePickerSelected;renderFinance()}}
 function openEditor(kind,id){
   if($("#agendaSheet")&&$("#agendaSheet").open)$("#agendaSheet").close();
   if($("#confirmDialog")&&$("#confirmDialog").open)$("#confirmDialog").close();
@@ -1646,3 +1672,9 @@ $('#deleteLedgerRecord').addEventListener('click',()=>{
 });
 
 $('#closeDebtAuditTop').addEventListener('click',()=>$('#debtAuditDialog').close());
+
+$('#transactionFilters').addEventListener('click',e=>{const b=e.target.closest('[data-tx-period]');if(!b)return;transactionPeriod=b.dataset.txPeriod;renderFinance()});
+$('#transactionPrev').addEventListener('click',()=>moveTransactionPeriod(-1));
+$('#transactionNext').addEventListener('click',()=>moveTransactionPeriod(1));
+$('#transactionCurrent').addEventListener('click',()=>{transactionAnchor=localISO();renderFinance()});
+$('#transactionPeriodLabel').addEventListener('click',()=>openDatePicker('transactionAnchor'));

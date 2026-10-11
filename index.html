@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101214">
   <meta name="description" content="NARA — asisten harian untuk membantu mencatat, mengingat, mengatur keuangan, target, dan kebiasaan.">
   <title>NARA — Asisten Harian Pribadi</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=6.5.3">
+  <link rel="manifest" href="./manifest.webmanifest?v=6.5.4">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=6.5.3">
+  <link rel="stylesheet" href="./styles.css?v=6.5.4">
 </head>
 <body>
 <svg class="icon-sprite" aria-hidden="true" width="0" height="0">
@@ -135,7 +135,19 @@
       </div>
       <div class="twocol">
         <article class="card"><div class="cardhead"><h3>Pengeluaran per kategori</h3></div><div id="categoryBreakdown" class="category empty">Belum ada data.</div></article>
-        <article class="card"><div class="cardhead"><h3>Transaksi terbaru</h3></div><div id="transactionList" class="list empty">Belum ada transaksi.</div></article>
+        <article class="card"><div class="cardhead"><h3>Transaksi</h3><span id="transactionCount" class="transaction-count"></span></div>
+          <div id="transactionFilters" class="transaction-filters" role="group" aria-label="Periode transaksi">
+            <button type="button" data-tx-period="all" aria-pressed="true">Semua</button><button type="button" data-tx-period="day" aria-pressed="false">Harian</button><button type="button" data-tx-period="week" aria-pressed="false">Mingguan</button><button type="button" data-tx-period="month" aria-pressed="false">Bulanan</button>
+          </div>
+          <div id="transactionPeriodNav" class="transaction-period-nav" hidden>
+            <button type="button" id="transactionPrev" aria-label="Periode sebelumnya">‹</button>
+            <button type="button" id="transactionPeriodLabel" aria-label="Pilih tanggal periode" aria-haspopup="dialog"></button>
+            <button type="button" id="transactionNext" aria-label="Periode berikutnya">›</button>
+            <button type="button" id="transactionCurrent">Periode ini</button>
+            <input id="transactionAnchor" type="hidden">
+          </div>
+          <p id="transactionPeriodHint" class="transaction-period-hint">Seluruh transaksi, dari yang terbaru.</p>
+          <div id="transactionList" class="list empty">Belum ada transaksi.</div></article>
       </div>
       <div class="finance-add-dock"><button id="financeFab" class="page-fab" type="button" data-action="transaction" aria-label="Tambah transaksi" title="Tambah transaksi"><span aria-hidden="true">＋</span></button></div>
     </section>
@@ -223,7 +235,7 @@
     </article>
     <article class="card privacy-card">
       <div class="privacy-row"><div><small>PENYIMPANAN</small><h3>Lokal di perangkat</h3><p>Versi ini menyimpan data langsung di browser yang kamu gunakan.</p></div><span class="privacy-dot"></span></div>
-      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.5.3</small></div><span>Beta</span></div>
+      <div class="setting-row"><div><b>NARA Web</b><small>Versi 6.5.4</small></div><span>Beta</span></div>
     </article>
   </div>
   <footer class="account-footer">Powered by <b>HDRG Creative Partner</b> <span>|</span> EST. MMXII</footer>
@@ -355,9 +367,9 @@
 <p id="aiProposalError" role="alert"></p><p>Belum ada data disimpan. Pastikan jenis, nama, nominal, dan waktunya benar.</p>
 <div class="setting-controls"><button type="button" id="cancelAIProposal">Batal</button><button type="submit" class="secondary-button">Konfirmasi &amp; simpan</button></div>
 </form></dialog>
-<script src="./median-bridge.js?v=6.5.3"></script>
-<script src="./local-ai.js?v=6.5.3"></script>
-<script src="./app.js?v=6.5.3"></script>
+<script src="./median-bridge.js?v=6.5.4"></script>
+<script src="./local-ai.js?v=6.5.4"></script>
+<script src="./app.js?v=6.5.4"></script>
 <script>
 setTimeout(function(){
   var s=document.getElementById("splash");

@@ -360,3 +360,15 @@ assert.equal(plainAI.proposal,null);assert.match(plainAI.text,/belum mengubah da
 assert.throws(()=>get(`parseLocalAIReply('{"proposal":','x',true)`));
 assert.throws(()=>get(`parseLocalAIReply('teks biasa','x')`));
 console.log('Plain CPU replies are read-only; malformed structured actions stay rejected.');
+
+// History boundaries include Sunday and month/year transitions; all keeps older rows.
+assert.equal(JSON.stringify(get("transactionRange('week','2026-01-04')")),JSON.stringify({start:'2025-12-29',end:'2026-01-04'}));
+assert.equal(JSON.stringify(get("transactionRange('month','2024-02-29')")),JSON.stringify({start:'2024-02-01',end:'2024-02-29'}));
+reset();
+get("state.transactions=Array.from({length:15},(_,i)=>({id:String(i),date:i===14?'2026-10-10':'2026-10-11',createdAt:String(i)}));transactionPeriod='all'");
+assert.equal(get('filteredTransactions().length'),15);
+get("transactionPeriod='day';transactionAnchor='2026-10-10'");
+assert.equal(get('filteredTransactions().length'),1);
+get("transactionPeriod='month';transactionAnchor='2026-01-31';moveTransactionPeriod(1)");
+assert.equal(get('transactionAnchor'),'2026-02-01');
+console.log('Transaction history all/day/week/month boundaries passed.');
