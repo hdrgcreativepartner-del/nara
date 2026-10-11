@@ -2,6 +2,12 @@ import fs from "node:fs";
 import vm from "node:vm";
 import assert from "node:assert/strict";
 
+// Keep relative-date scenarios stable regardless of the CI weekday.
+const RealDate=globalThis.Date;
+class Date extends RealDate {
+  constructor(...args){super(...(args.length?args:['2026-10-08T12:00:00']))}
+  static now(){return new RealDate('2026-10-08T12:00:00').getTime()}
+}
 const elements=new Map();
 function el(key){
   if(!elements.has(key))elements.set(key,{
