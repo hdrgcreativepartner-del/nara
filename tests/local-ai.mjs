@@ -41,7 +41,8 @@ console.log('CPU without WebGPU, stalled download recovery, stale progress and w
 console.log('Local AI lifecycle: ready, generation, cancel, load failure, timeout, retry and unsupported device passed (mock worker).');
 
 // The service worker may remove old app-shell caches, never model or other apps' data.
-const events={},deleted=[];const swContext=vm.createContext({URL,Response,fetch:async()=>{throw Error('offline')},self:{location:{href:'https://example.com/nara/sw.js',origin:'https://example.com'},clients:{claim:async()=>{}},addEventListener:(type,fn)=>events[type]=fn},caches:{keys:async()=>['nara-shell-old','nara-shell-6.5.3','webllm/model','another-app'],delete:async key=>deleted.push(key)}});
+const currentCache=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8').match(/const CACHE='([^']+)'/)[1];
+const events={},deleted=[];const swContext=vm.createContext({URL,Response,fetch:async()=>{throw Error('offline')},self:{location:{href:'https://example.com/nara/sw.js',origin:'https://example.com'},clients:{claim:async()=>{}},addEventListener:(type,fn)=>events[type]=fn},caches:{keys:async()=>['nara-shell-old',currentCache,'webllm/model','another-app'],delete:async key=>deleted.push(key)}});
 vm.runInContext(fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8'),swContext);
 let activated;events.activate({waitUntil:p=>activated=p});await activated;
 assert.deepEqual(deleted,['nara-shell-old']);
